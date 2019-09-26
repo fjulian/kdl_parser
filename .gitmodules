@@ -1,0 +1,3 @@
+[submodule "src/tools/hrl-kdl"]
+	path = src/tools/hrl-kdl
+	url = git@github.com:gt-ros-pkg/hrl-kdl.git
