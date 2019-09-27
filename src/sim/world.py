@@ -3,8 +3,7 @@ import os
 import pybullet_data
 import numpy as np
 import time
-from math import floor
-from scipy.spatial.transform import Rotation as R
+from math import ceil
 
 
 class World:
@@ -23,23 +22,11 @@ class World:
         self.T_s = 1.0 / float(self.f_s)
 
         self.models = []
-        self.objects_list = []
         self.plane_id = 0
+        self.collision_checker = None
+        self.cross_uid = ()
 
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
-
-        self.objects = [("duck_vhacd.urdf", 1.0), ("duck_vhacd.urdf", 1.0), ("duck_vhacd.urdf", 1.0),
-                        ("block.urdf", 1.4), ("block.urdf", 1.4), ("block.urdf", 1.4),
-                        ("block.urdf", 1.6), ("block.urdf", 1.6), ("block.urdf", 1.6),
-                        ("block.urdf", 1.9), ("block.urdf", 1.9), ("block.urdf", 1.9),
-                        ("block.urdf", 1.2), ("block.urdf", 1.2), ("block.urdf", 1.2),
-                        ("block.urdf", 1.7), ("block.urdf", 1.7), ("block.urdf", 1.7)]
-        self.objects_low = np.array([0.3, -0.3, 0.2])
-        self.objects_high = np.array([0.6, 0.3, 1.0])
-        
-        self.collision_checker = None
-
-        self.cross_uid = ()
 
     def sleep(self, seconds):
         if self.sleep_flag:
@@ -53,7 +40,7 @@ class World:
 
     def del_model(self, model):
         model.remove()
-        self. models.remove(model)
+        self.models.remove(model)
 
     def draw_cross(self, point):
         if len(self.cross_uid) > 0:
@@ -76,38 +63,9 @@ class World:
             self.collision_checker()
 
     def step_seconds(self, secs):
-        for i in range(int(floor(secs * 240))):
+        for i in range(int(ceil(secs * self.f_s))):
             self.step_one()
             self.sleep(self.T_s)
-
-    def add_objects(self):
-        for obj in self.objects:
-            pos = np.random.uniform(self.objects_low, self.objects_high)
-            yaw_angel_deg = np.random.uniform(0.0, 360.0, 1)[0]
-            r1 = R.from_euler('z', yaw_angel_deg, degrees=True)
-            orient = r1.as_quat()
-            model = self.add_model(obj[0], pos, orient, scale=obj[1])
-            self.objects_list.append(model)
-
-    def add_block(self):
-        pos = [0.5, 0.2, 0.0]
-        orient = [0.0, 0.0, 0.0, 1.0]
-        model = self.add_model("block.urdf", pos, orient, scale=2)
-        self.objects_list.append(model)
-
-    def add_trays(self):
-        pos = [0.46, 0.0, 0.0]
-        orient = [0.0, 0.0, 0.0, 1.0]
-        scale = 1.2
-        path = "tray/tray.urdf"
-        self.add_model(path, pos, orient, scale=scale)
-
-        # pos = [2.0, -0.5, 0.0]
-        # scale = 0.8
-        # self.add_model(path, pos, orient, scale=scale)
-        #
-        # pos = [2.0, 0.5, 0.0]
-        # self.add_model(path, pos, orient, scale=scale)
 
     def add_plane(self):
         self.plane_id = p.loadURDF("plane.urdf")
@@ -127,7 +85,6 @@ class _Model:
         self.uid = p.loadURDF(model_path, position, orientation, globalScaling=scale,
                               physicsClientId=self._physics_client)
         self.name = p.getBodyInfo(self.uid)
-        # print(f"{self.name}")
 
     def remove(self):
         p.removeBody(self.uid)

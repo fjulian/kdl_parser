@@ -46,7 +46,7 @@ class RobotArm:
         # check_cmd = self.ik(self.start_pos, self.start_orient)
 
         # Standard velocity used for following trajectories
-        self.std_vel = 0.25
+        self.std_vel = 0.3
         self.std_duration = 4
 
         # The robot is loaded in this position initially
@@ -58,7 +58,7 @@ class RobotArm:
     def reset(self):
         self._model = self._world.add_model(
             path=self.urdf_path,
-            position=[0.0, 0.0, 0.05],
+            position=[0.0, 0.0, 0.04],
             orientation=[0.0, 0.0, 0.0, 1.0]
         )
         self.num_joints = p.getNumJoints(self._model.uid)

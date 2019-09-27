@@ -1,12 +1,14 @@
 from sim.world import World
 from sim.robot_arm import RobotArm
 
+from sim.scene_tossing import SceneTossing
 
 def main():
-
     # Create world
     world = World()
-    world.add_plane()
+    scene = SceneTossing(world)
+
+    # Spawn robot
     robot = RobotArm(world)
     robot.reset()
 
@@ -14,9 +16,6 @@ def main():
 
     world.step_seconds(2)
 
-    curr_joints = robot.get_joints()
-    print("Curr joints: ", curr_joints)
-    print("Start joints: ", robot.start_cmd)
 
     world.step_seconds(50)
 
