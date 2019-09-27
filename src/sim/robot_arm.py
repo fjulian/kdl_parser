@@ -18,7 +18,8 @@ class RobotArm:
         self._world = world
         self._model = None
         self.num_joints = 0
-        self.joint_idx = [1, 2, 3, 4, 5, 6, 7]
+        self.joint_idx_arm = [1, 2, 3, 4, 5, 6, 7]
+        self.joint_idx_hand = [0, 0]
 
         # Set up IK solver
         self.urdf_path = os.path.join(os.getcwd(),"data/ridgeback_panda_hand.urdf")
@@ -43,7 +44,7 @@ class RobotArm:
         self.start_cmd = np.array([0, -m_pi/4.0, 0, -3.0*m_pi/4.0, 0, m_pi/2.0, m_pi/4.0])
         self.start_pos, self.start_orient = self.fk(self.start_cmd)
         # check_cmd = self.ik(self.start_pos, self.start_orient)
-        
+
         # Standard velocity used for following trajectories
         self.std_vel = 0.25
         self.std_duration = 4
@@ -65,21 +66,31 @@ class RobotArm:
         for i in range(self.num_joints):
             info = p.getJointInfo(self._model.uid, i)
             joint_name = info[1]
+            # print(joint_name)  # Use this to print all joint names.
             if "panda_joint" in joint_name and len(joint_name) == 12:
                 joint_num = int(joint_name.split("panda_joint")[1])
                 if joint_num < 8:
-                    self.joint_idx[joint_num-1] = i
-        print(self.joint_idx)
+                    self.joint_idx_arm[joint_num-1] = i
+            elif "panda_finger_joint" in joint_name:
+                joint_num = int(joint_name.split("panda_finger_joint")[1])
+                self.joint_idx_hand[joint_num-1] = i
 
     def set_joints(self, desired):
         if desired is None:
             return
-        p.setJointMotorControlArray(self._model.uid, self.joint_idx, p.POSITION_CONTROL, targetPositions=desired)
+        p.setJointMotorControlArray(self._model.uid, self.joint_idx_arm, p.POSITION_CONTROL, targetPositions=desired)
 
-    def transition_cmd_to(self, desired, duration):
-        # Duration is required here, because without forward kinematics, we cannot compute the distance
+    def transition_cmd_to(self, desired, duration=None):
+        desired_pos, desired_orient = self.fk(desired)
+        if duration is None:
+            if self.current_pos_updated:
+                duration = np.linalg.norm(self.current_pos - desired_pos) / self.std_vel
+            else:
+                print("WARNING: Current position not up-to-date. Using standard duration.")
+                duration = self.std_duration
+
         try:
-            cmd_diff = desired - self.current_cmd
+            _ = desired - self.current_cmd
         except TypeError as e:
             if not (self.current_cmd is None or self.current_cmd.tolist() is None):
                 # print("Unexpected None!!")
@@ -89,7 +100,7 @@ class RobotArm:
         if self.current_cmd.tolist() is None or self.current_cmd is None:
             # TODO figure out why current_cmd is still sometimes None...
             self.current_cmd = self.get_joints()
-        if duration > 1e-6:
+        if duration > self._world.T_s:
             diff = (desired - self.current_cmd) / float(duration * self._world.f_s)
             for i in range(1, int(math.ceil(duration * self._world.f_s))):
                 cmd = self.current_cmd + i*diff
@@ -98,13 +109,18 @@ class RobotArm:
                 self._world.sleep(self._world.T_s)
         self.set_joints(desired.tolist())
         self.current_cmd = desired
-        self.current_pos_updated = False
+        self.current_pos = desired_pos
+        self.current_orient = desired_orient
+        self.current_pos_updated = True
 
     def transition_cartesian(self, pos_des, orient_des, duration=None):
-        if duration is None and self.current_pos_updated:
-            duration = np.linalg.norm(self.current_pos - pos_des) / self.std_vel
-        else:
-            duration = self.std_duration
+        if duration is None:
+            if self.current_pos_updated:
+                duration = np.linalg.norm(self.current_pos - pos_des) / self.std_vel
+            else:
+                print("WARNING: Current position not up-to-date. Using standard duration.")
+                duration = self.std_duration
+
         diff_pos = (pos_des - self.current_pos) / float(duration * self._world.f_s)
         diff_orient = (orient_des - self.current_orient) / float(duration * self._world.f_s)
         fail_count = 0
@@ -158,24 +174,21 @@ class RobotArm:
         self.set_joints(cmd.tolist())
 
     def get_joints(self):
-        temp = p.getJointStates(self._model.uid, self.joint_idx)
+        temp = p.getJointStates(self._model.uid, self.joint_idx_arm)
         pos = [a[0] for a in temp]
         return pos
 
     def open_gripper(self):
-        idx = [10, 11]
         pos = [0.038, 0.038]
-        p.setJointMotorControlArray(self._model.uid, idx, p.POSITION_CONTROL, targetPositions=pos)
+        p.setJointMotorControlArray(self._model.uid, self.joint_idx_hand, p.POSITION_CONTROL, targetPositions=pos)
 
     def close_gripper(self):
-        idx = [10, 11]
         pos = [0.0, 0.0]
         forces = [1.5, 1.5]
-        p.setJointMotorControlArray(self._model.uid, idx, p.POSITION_CONTROL, targetPositions=pos, forces=forces)
+        p.setJointMotorControlArray(self._model.uid, self.joint_idx_hand, p.POSITION_CONTROL, targetPositions=pos, forces=forces)
 
     def check_grasp(self):
-        idx = [10, 11]
-        gripper_state = p.getJointStates(self._model.uid, idx)
+        gripper_state = p.getJointStates(self._model.uid, self.joint_idx_hand)
         threshold = 0.01
         # print(gripper_state[0][0])
         # print(gripper_state[1][0])
@@ -212,12 +225,4 @@ class RobotArm:
         return transl, orient
 
     def to_start(self):
-        if self.current_pos_updated:
-            duration = np.linalg.norm(self.current_pos - self.start_pos) / self.std_vel
-        else:
-            duration = self.std_duration
-        self.transition_cmd_to(self.start_cmd, duration)
-        self.current_cmd = self.start_cmd
-        self.current_pos = self.start_pos
-        self.current_pos_updated = True
-        self.current_orient = self.start_orient
+        self.transition_cmd_to(self.start_cmd)

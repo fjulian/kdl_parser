@@ -12,7 +12,7 @@ def main():
 
     robot.to_start()
 
-    world.step_seconds(10)
+    world.step_seconds(2)
 
     curr_joints = robot.get_joints()
     print("Curr joints: ", curr_joints)
