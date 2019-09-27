@@ -1,6 +1,13 @@
 
+## Todo
 
-## Set up virtualenv
+  [ ] Define scene for symbol learning (table, cup, box, cupboard with drawers, ...)
+  [ ] Implement grasping skill
+  [ ] Write tests for robot arm control code.
+
+## Setup Instructions
+
+### Set up virtualenv
 
 ```
 virtualenv -p /usr/bin/python2 --system-site-packages venv
@@ -10,7 +17,7 @@ pip install -r requirements.txt
 
 Python version 2 is used because trac IK does not work with python 3 yet.
 
-## Dependencies
+### Dependencies
 
 Some ROS packages need to be installed:
 
@@ -27,7 +34,7 @@ cd <repo-root>/src/tools/hrl-kdl/hrl_geom
 python setup.py install --prefix <repo-root>/venv
 ```
 
-## Robot Description
+### Robot Description
 
 The file data/ridgeback_panda_hand.urdf can be generated using the command
 
