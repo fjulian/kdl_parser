@@ -44,5 +44,4 @@ class SceneTossing:
         # self.add_model(path, pos, orient, scale=scale)
 
     def reset():
-        # TODO add raising "not implemented" error
-        pass
+        raise NotImplementedError

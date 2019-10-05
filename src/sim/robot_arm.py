@@ -22,7 +22,7 @@ class RobotArm:
         self.joint_idx_hand = [0, 0]
 
         # Set up IK solver
-        self.urdf_path = os.path.join(os.getcwd(),"data/ridgeback_panda_hand.urdf")
+        self.urdf_path = os.path.join(os.getcwd(),"data/box_panda_hand.urdf")
         with open(self.urdf_path) as f:
             if f.mode == 'r':
                 urdf_string = f.read()
@@ -44,6 +44,7 @@ class RobotArm:
         self.start_cmd = np.array([0, -m_pi/4.0, 0, -3.0*m_pi/4.0, 0, m_pi/2.0, m_pi/4.0])
         self.start_pos, self.start_orient = self.fk(self.start_cmd)
         # check_cmd = self.ik(self.start_pos, self.start_orient)
+        print("Arm start position: " + str(self.start_pos))
 
         # Standard velocity used for following trajectories
         self.std_vel = 0.3
@@ -54,6 +55,11 @@ class RobotArm:
         self.current_pos = np.array([0.116133, 0.0, 0.931720])
         self.current_orient = np.array([-0.82533172, 0.56462609, -0.0041196189, 0.002819567719])
         self.current_pos_updated = True
+
+        # Set up velocity setting for driving
+        self._world.velocity_setter = self.velocity_setter
+        self.velocity_trans = [0.0, 0.0, 0.0]
+        self.velocity_turn = 0.0
 
     def reset(self):
         self._model = self._world.add_model(
@@ -226,3 +232,13 @@ class RobotArm:
 
     def to_start(self):
         self.transition_cmd_to(self.start_cmd)
+
+    def update_velocity(self, vel_trans, vel_rot):
+        self.velocity_trans = vel_trans
+        self.velocity_turn = vel_rot
+
+    def velocity_setter(self):
+        p.resetBaseVelocity(self._model.uid, self.velocity_trans, [0.0, 0.0, self.velocity_turn])
+
+    
+

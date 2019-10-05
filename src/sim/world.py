@@ -26,6 +26,8 @@ class World:
         self.collision_checker = None
         self.cross_uid = ()
 
+        self.velocity_setter = None
+
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
     def sleep(self, seconds):
@@ -58,12 +60,14 @@ class World:
         self.cross_uid = (uid1, uid2)
 
     def step_one(self):
+        if self.velocity_setter is not None:
+            self.velocity_setter()
         p.stepSimulation()
         if self.collision_checker is not None:
             self.collision_checker()
 
     def step_seconds(self, secs):
-        for i in range(int(ceil(secs * self.f_s))):
+        for _ in range(int(ceil(secs * self.f_s))):
             self.step_one()
             self.sleep(self.T_s)
 
