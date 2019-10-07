@@ -51,6 +51,3 @@ class SkillNavigation:
                 if not self.check_collisions():
                     return True
         return False
-
-
-

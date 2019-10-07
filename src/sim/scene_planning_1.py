@@ -1,25 +1,33 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import os
+from tools.util import rotate_orient
 
 class ScenePlanning1:
     def __init__(self, world):
         self._world = world
         self._world.add_plane()
 
-        self.objects = []
+        robot_start_orient = np.array([0.92386203, -0.3827257, 0.0, 0.0])
 
-        print(os.path.join(os.getcwd(),"data/table.urdf"))
+        self.objects = []
         self.objects.append(ObjectInfo(name_ = "table",
                                         urdf_path_=os.path.join(os.getcwd(),"data/table/table.urdf"),
-                                        init_pos_=[3.0, 0.0, 0.0],
-                                        init_orient_=[0.0, 0.0, 0.0, 1.0]
+                                        init_pos_=np.array([3.0, 0.0, 0.0]),
+                                        init_orient_=np.array([0.0, 0.0, 0.0, 1.0])
                                         ))
         self.objects.append(ObjectInfo(name_ = "cube1",
                                         urdf_path_="cube_small.urdf",
-                                        init_pos_=[2.5, 0.0, 1.5],
-                                        init_orient_=[0.0, 0.0, 0.0, 1.0],
-                                        
+                                        init_pos_=np.array([2.5, 0.0, 1.5]),
+                                        init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
+                                        grasp_pos_=[
+                                            np.array([0.0, 0.0, 0.0]),
+                                            np.array([0.0, 0.0, 0.0])
+                                        ],
+                                        grasp_orient_=[
+                                            robot_start_orient,
+                                            rotate_orient(robot_start_orient, 'y', 90.0)
+                                        ]
                                         ))
 
         self.add_objects()

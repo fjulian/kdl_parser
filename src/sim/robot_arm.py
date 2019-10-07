@@ -44,7 +44,7 @@ class RobotArm:
         self.start_cmd = np.array([0, -m_pi/4.0, 0, -3.0*m_pi/4.0, 0, m_pi/2.0, m_pi/4.0])
         self.start_pos, self.start_orient = self.fk(self.start_cmd)
         # check_cmd = self.ik(self.start_pos, self.start_orient)
-        print("Arm start position: " + str(self.start_pos))
+        # print("Arm start pose: " + str(self.start_pos) + " " + str(self.start_orient))
 
         # Standard velocity used for following trajectories
         self.std_vel = 0.3
