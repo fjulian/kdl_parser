@@ -20,6 +20,8 @@ class RobotArm:
         self.num_joints = 0
         self.joint_idx_arm = [1, 2, 3, 4, 5, 6, 7]
         self.joint_idx_hand = [0, 0]
+        self.arm_base_link_idx = -100
+        self.arm_ee_link_idx = -100
 
         # Set up IK solver
         self.urdf_path = os.path.join(os.getcwd(),"data/box_panda_hand.urdf")
@@ -77,6 +79,11 @@ class RobotArm:
                 joint_num = int(joint_name.split("panda_joint")[1])
                 if joint_num < 8:
                     self.joint_idx_arm[joint_num-1] = i
+                if joint_num == 1:
+                    # Save the index of the arm base link
+                    self.arm_base_link_idx = info[16]
+            elif "panda_hand_joint" in joint_name:
+                self.arm_ee_link_idx = info[16]
             elif "panda_finger_joint" in joint_name:
                 joint_num = int(joint_name.split("panda_finger_joint")[1])
                 self.joint_idx_hand[joint_num-1] = i
@@ -126,6 +133,8 @@ class RobotArm:
             else:
                 print("WARNING: Current position not up-to-date. Using standard duration.")
                 duration = self.std_duration
+
+        # TODO check if duration is 0.
 
         diff_pos = (pos_des - self.current_pos) / float(duration * self._world.f_s)
         diff_orient = (orient_des - self.current_orient) / float(duration * self._world.f_s)

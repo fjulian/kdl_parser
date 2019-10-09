@@ -1,4 +1,5 @@
 from scipy.spatial.transform import Rotation as R
+import numpy as np
 
 
 def quat_from_rpy(orient_rpy):
@@ -26,6 +27,11 @@ def rotate_orient(orig, axis="z", deg=0.0):
     op = R.from_euler(axis, deg, degrees=True)
     res = op * r
     return res.as_quat()
+
+def homogenous_trafo(translation, rotation):
+    T = np.concatenate((rotation.as_dcm(), translation.reshape(-1,1)), axis=1)
+    T = np.concatenate((T, np.array([[0.0, 0.0, 0.0, 1.0]])), axis=0)
+    return T
 
 class IKError(Exception):
     pass
