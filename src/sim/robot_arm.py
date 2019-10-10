@@ -127,16 +127,19 @@ class RobotArm:
         self.current_pos_updated = True
 
     def transition_cartesian(self, pos_des, orient_des, duration=None):
+        orient_des_rot = R.from_quat(orient_des)
+        pos_ee = pos_des - np.matmul(orient_des_rot.as_dcm(), np.array([0.0,0.0,0.103]))
+
         if duration is None:
             if self.current_pos_updated:
-                duration = np.linalg.norm(self.current_pos - pos_des) / self.std_vel
+                duration = np.linalg.norm(self.current_pos - pos_ee) / self.std_vel
             else:
                 print("WARNING: Current position not up-to-date. Using standard duration.")
                 duration = self.std_duration
 
         # TODO check if duration is 0.
 
-        diff_pos = (pos_des - self.current_pos) / float(duration * self._world.f_s)
+        diff_pos = (pos_ee - self.current_pos) / float(duration * self._world.f_s)
         diff_orient = (orient_des - self.current_orient) / float(duration * self._world.f_s)
         fail_count = 0
         for i in range(1, int(math.ceil(duration * self._world.f_s))):
@@ -154,10 +157,10 @@ class RobotArm:
             self.set_joints(cmd.tolist())
             self._world.step_one()
             self._world.sleep(self._world.T_s)
-        cmd = self.ik(pos_des, orient_des, self.current_cmd)
+        cmd = self.ik(pos_ee, orient_des, self.current_cmd)
         self.current_cmd = cmd
         self.set_joints(cmd.tolist())
-        self.current_pos = pos_des
+        self.current_pos = pos_ee
         self.current_orient = orient_des
         self.current_pos_updated = True
 
