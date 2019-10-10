@@ -8,33 +8,30 @@ class ScenePlanning1:
         self._world = world
         self._world.add_plane()
 
-        robot_start_orient = np.array([0.92386203, -0.3827257, 0.0, 0.0])
-
-        self.objects = []
-        self.objects.append(ObjectInfo(name_ = "table",
-                                        urdf_path_=os.path.join(os.getcwd(),"data/table/table.urdf"),
+        self.objects = dict()
+        self.objects["table"] = ObjectInfo(urdf_path_=os.path.join(os.getcwd(),"data/table/table.urdf"),
                                         init_pos_=np.array([3.0, 0.0, 0.0]),
                                         init_orient_=np.array([0.0, 0.0, 0.0, 1.0])
-                                        ))
-        self.objects.append(ObjectInfo(name_ = "cube1",
-                                        urdf_path_="cube_small.urdf",
-                                        init_pos_=np.array([2.5, 0.0, 1.5]),
-                                        init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
+                                        )
+        self.objects["cube1"] = ObjectInfo(urdf_path_="cube_small.urdf",
+                                        init_pos_=np.array([2.5, 0.0, 0.7]),
+                                        # init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
+                                        init_orient_=rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), 'z', -20.0),
                                         grasp_pos_=[
                                             np.array([0.0, 0.0, 0.0]),
                                             np.array([0.0, 0.0, 0.0])
                                         ],
                                         grasp_orient_=[
-                                            robot_start_orient,
-                                            rotate_orient(robot_start_orient, 'y', 90.0)
+                                            np.array([0.0, 0.0, 0.0, 1.0]),
+                                            rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), 'y', -25.0)
                                         ]
-                                        ))
+                                        )
 
         self.add_objects()
 
     def add_objects(self):
-        for obj in self.objects:
-            obj.model = self._world.add_model(obj.urdf_path, obj.init_pos, obj.init_orient, scale=obj.scale)
+        for key, obj in self.objects.items():
+            self.objects[key].model = self._world.add_model(obj.urdf_path, obj.init_pos, obj.init_orient, scale=obj.scale)
             print("Added object "+obj.urdf_path+". ID: "+str(obj.model.uid))
 
     def reset(self):
@@ -42,8 +39,7 @@ class ScenePlanning1:
 
 
 class ObjectInfo:
-    def __init__(self, name_, urdf_path_, init_pos_, init_orient_, init_scale_=1.0, grasp_pos_=[], grasp_orient_=[]):
-        self.name = name_
+    def __init__(self, urdf_path_, init_pos_, init_orient_, init_scale_=1.0, grasp_pos_=[], grasp_orient_=[]):
         self.urdf_path = urdf_path_
         self.init_pos = init_pos_
         self.init_orient = init_orient_

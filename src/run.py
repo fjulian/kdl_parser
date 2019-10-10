@@ -7,9 +7,13 @@ from sim.scene_planning_1 import ScenePlanning1
 from skills.navigate import SkillNavigation
 from skills.grasping import SkillGrasping
 
+import pybullet as p
+import numpy as np
+from scipy.spatial.transform import Rotation as R
+
 def main():
     # Create world
-    world = World(gui_=False, sleep_=False)
+    world = World(gui_=True, sleep_=True)
     scene = ScenePlanning1(world)
 
     # Spawn robot
@@ -23,23 +27,32 @@ def main():
     # -----------------------------------
     
     robot.to_start()
-
     world.step_seconds(1)
 
-    sk_grasp.grasp_object(2)
-
-    world.step_seconds(1)
+    # temp1 = p.getLinkState(robot._model.uid, robot.arm_base_link_idx)
+    # r_O_O_rob = np.array(temp1[4])
+    # goal_pos = np.array([0.4, 0.2, 0.2])
+    # goal_orient = R.from_quat(robot.start_orient) #* R.from_euler("x",20,degrees=True)
+    # world.draw_cross(goal_pos+r_O_O_rob)
+    # robot.transition_cartesian(goal_pos, goal_orient.as_quat())
+    # world.step_seconds(1)
+    # goal_orient = R.from_euler("y",-90,degrees=True) * goal_orient
+    # robot.transition_cartesian(goal_pos, goal_orient.as_quat())
+    # world.step_seconds(1)
+    # goal_orient = R.from_euler("x",20,degrees=True) * goal_orient
+    # robot.transition_cartesian(goal_pos, goal_orient.as_quat())
+    # world.step_seconds(1)
 
     # Robot velocity control
-    robot.update_velocity([0.1, 0.0, 0.0], 0.1)
+    # robot.update_velocity([0.1, 0.0, 0.0], 0.1)
 
-    world.step_seconds(5)
-
-    # robot.transition_cartesian(robot.start_pos, robot.start_orient)
+    
 
     # Run move skill
-    # res = sk_nav.move_to_object(2)
+    res = sk_nav.move_to_object(2)
     # print("Move result: " + str(res))
+
+    sk_grasp.grasp_object("cube1")
 
     world.step_seconds(50)
 

@@ -1,7 +1,6 @@
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 
-
 def quat_from_rpy(orient_rpy):
     orient_rep = R.from_euler("xyz", orient_rpy.tolist())
     return orient_rep.as_quat()
@@ -32,6 +31,12 @@ def homogenous_trafo(translation, rotation):
     T = np.concatenate((rotation.as_dcm(), translation.reshape(-1,1)), axis=1)
     T = np.concatenate((T, np.array([[0.0, 0.0, 0.0, 1.0]])), axis=0)
     return T
+
+def invert_hom_trafo(hom_trafo):
+    res = np.eye(4)
+    res[:3,:3] = np.transpose(hom_trafo[:3,:3])
+    res[:3,3] = - np.matmul(np.transpose(hom_trafo[:3,:3]), hom_trafo[:3,3])
+    return res
 
 class IKError(Exception):
     pass

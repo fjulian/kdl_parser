@@ -48,16 +48,20 @@ class World:
         if len(self.cross_uid) > 0:
             p.removeUserDebugItem(self.cross_uid[0])
             p.removeUserDebugItem(self.cross_uid[1])
+            p.removeUserDebugItem(self.cross_uid[2])
         start1 = point - np.array([0.1, 0.0, 0.0])
         end1 = point + np.array([0.1, 0.0, 0.0])
         start2 = point - np.array([0.0, 0.1, 0.0])
         end2 = point + np.array([0.0, 0.1, 0.0])
+        start3 = point - np.array([0.0, 0.0, 0.1])
+        end3 = point + np.array([0.0, 0.0, 0.1])
         color = np.array([255, 0, 0]) / 255.0
         width = 1.0
         lifetime = 0
         uid1 = p.addUserDebugLine(start1.tolist(), end1, color.tolist(), width, lifetime)
         uid2 = p.addUserDebugLine(start2.tolist(), end2, color.tolist(), width, lifetime)
-        self.cross_uid = (uid1, uid2)
+        uid3 = p.addUserDebugLine(start3.tolist(), end3, color.tolist(), width, lifetime)
+        self.cross_uid = (uid1, uid2, uid3)
 
     def step_one(self):
         if self.velocity_setter is not None:
