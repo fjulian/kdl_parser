@@ -1,0 +1,81 @@
+<?xml version="1.0" ?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="cupboard_drawers">
+
+<xacro:property name="wall_thickness" value="0.05"/>
+<xacro:property name="total_height" value="1.5"/>
+<xacro:property name="total_width" value="1.5"/>
+<xacro:property name="total_depth" value="1.0"/>
+<xacro:property name="num_drawers" value="3"/>
+<xacro:property name="drawer_spacing" value="0.005"/>
+
+<xacro:macro name="ori_geo" params="width depth height">
+  <origin rpy="0 0 0" xyz="0 0 0"/>
+  <geometry>
+    <box size="${width} ${depth} ${height}"/>
+  </geometry>
+</xacro:macro>
+
+<xacro:macro name="wall" params="prefix width height">
+  <link name="${prefix}_wall">
+    <contact>
+      <lateral_friction value="1.0"/>
+    </contact>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+       <mass value=".2"/>
+       <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <visual>
+      <xacro:ori_geo width="${width}" depth="${wall_thickness}" height="${height}"/>
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <xacro:ori_geo width="${width}" depth="${wall_thickness}" height="${height}"/>
+    </collision>
+  </link>
+</xacro:macro>
+
+
+<link name="base_link"/>
+
+<xacro:wall prefix="fr_bottom" width="${total_width}" height="${total_depth}"/>
+<joint name="fr_bottom_joint" type="fixed">
+  <origin xyz="0 0 ${wall_thickness/2}" rpy="${pi/2} 0 0"/>
+  <parent link="base_link"/>
+  <child link="fr_bottom_wall"/>
+</joint>
+
+<xacro:wall prefix="fr_back" width="${total_width-2*wall_thickness}" height="${total_height-2*wall_thickness}"/>
+<joint name="fr_back_joint" type="fixed">
+  <origin xyz="0 ${total_depth/2-wall_thickness/2} ${total_height/2}" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="fr_back_wall"/>
+</joint>
+
+<xacro:wall prefix="fr_left" width="${total_depth}" height="${total_height-2*wall_thickness}"/>
+<joint name="fr_left_joint" type="fixed">
+  <origin xyz="-${total_width/2-wall_thickness/2} 0 ${total_height/2}" rpy="0 0 ${pi/2}"/>
+  <parent link="base_link"/>
+  <child link="fr_left_wall"/>
+</joint>
+
+<xacro:wall prefix="fr_right" width="${total_depth}" height="${total_height-2*wall_thickness}"/>
+<joint name="fr_right_joint" type="fixed">
+  <origin xyz="${total_width/2-wall_thickness/2} 0 ${total_height/2}" rpy="0 0 ${pi/2}"/>
+  <parent link="base_link"/>
+  <child link="fr_right_wall"/>
+</joint>
+
+<xacro:wall prefix="fr_top" width="${total_width}" height="${total_depth}"/>
+<joint name="fr_top_joint" type="fixed">
+  <origin xyz="0 0 ${total_height-wall_thickness/2}" rpy="${pi/2} 0 0"/>
+  <parent link="base_link"/>
+  <child link="fr_top_wall"/>
+</joint>
+
+
+
+</robot>
+
