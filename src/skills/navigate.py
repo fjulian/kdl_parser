@@ -8,7 +8,7 @@ class SkillNavigation:
         self.robot_uid = robot_uid_
 
     def check_collisions(self):
-        for key, obj in self.scene.objects.items():
+        for _, obj in self.scene.objects.items():
             temp = p.getClosestPoints(self.robot_uid, obj.model.uid, distance=0.5)
             for elem in temp:
                 contact_distance = elem[8]

@@ -26,6 +26,8 @@ class World:
         self.collision_checker = None
         self.cross_uid = ()
 
+        self.forces = []
+
         self.velocity_setter = None
 
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -64,6 +66,8 @@ class World:
         self.cross_uid = (uid1, uid2, uid3)
 
     def step_one(self):
+        for frc in self.forces:
+            p.applyExternalForce(frc[0], frc[1], frc[2], frc[3], frc[4])
         if self.velocity_setter is not None:
             self.velocity_setter()
         p.stepSimulation()

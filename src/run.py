@@ -46,8 +46,6 @@ def main():
     # Robot velocity control
     # robot.update_velocity([0.1, 0.0, 0.0], 0.1)
 
-    
-
     # Run move skill
     res = sk_nav.move_to_object(2)
     # print("Move result: " + str(res))

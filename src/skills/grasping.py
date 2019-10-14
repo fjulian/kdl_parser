@@ -12,15 +12,13 @@ class SkillGrasping:
         obj_info = self.scene.objects[target_name]
         target_id = obj_info.model.uid
 
-        num_grasps = len(obj_info.grasp_pos)
+        # num_grasps = len(obj_info.grasp_pos)
         grasp_id = 1
 
         # Get the object pose
         temp = p.getBasePositionAndOrientation(target_id)
         r_O_O_obj = np.array(temp[0]).reshape((-1,1))
         C_O_obj = R.from_quat(np.array(temp[1]))
-
-        T_O_obj = homogenous_trafo(r_O_O_obj, C_O_obj)
 
         # Get grasp data
         r_Obj_obj_grasp = obj_info.grasp_pos[grasp_id].reshape((-1,1))
