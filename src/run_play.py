@@ -19,15 +19,18 @@ def main():
     cupboard_mdl = world.add_model("data/cupboard_drawers/cupboard_drawers.urdf", position=[0.0, 0.0, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
     # world.add_model("cube_small.urdf", position=[0.0, 0.0, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
 
-    drawer_bottom_link_idx = 5
+    drawer_link_idx = []
     for i in range(p.getNumJoints(cupboard_mdl.uid)):
         info = p.getJointInfo(cupboard_mdl.uid, i)
-        print("================")
-        print(info)
+        joint_name = info[1]
+        if "drawer_joint" in joint_name and len(joint_name) == 13:
+            drawer_link_idx.append(i)
+            print(joint_name)
 
-    world.forces.append((cupboard_mdl.uid, drawer_bottom_link_idx, [0.0, -10.0, 0.0], [0.0, 0.0, 0.0], p.WORLD_FRAME))
+    # world.forces.append((cupboard_mdl.uid, drawer_bottom_link_idx, [0.0, -10.0, 0.0], [0.0, 0.0, 0.0], p.WORLD_FRAME))
 
-    p.setJointMotorControl2(cupboard_mdl.uid, 5, controlMode=p.TORQUE_CONTROL, force=0.0)
+    for i in drawer_link_idx:
+        p.setJointMotorControl2(cupboard_mdl.uid, i, controlMode=p.VELOCITY_CONTROL, force=0.0)
 
     # raw_input()
     world.step_seconds(50)
