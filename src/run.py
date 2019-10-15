@@ -48,10 +48,10 @@ def main():
     # robot.update_velocity([0.1, 0.0, 0.0], 0.1)
 
     # Run move skill
-    res = sk_nav.move_to_object("cube1")
+    res = sk_nav.move_to_object("cupboard")
     # print("Move result: " + str(res))
 
-    sk_grasp.grasp_object("cube1")
+    # sk_grasp.grasp_object("cube1")
 
     world.step_seconds(50)
 

@@ -331,6 +331,19 @@
     <parent link="drawer1_back_wall"/>
     <child link="drawer1_handle"/>
   </joint>
+  <link name="drawer_handle_dummy_link1">
+    <!-- This dummy link is added s.t. the handle is the parent of some link and we can find the handle's index. -->
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+  </link>
+  <joint name="drawer_handle_dummy_joint1" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <parent link="drawer1_handle"/>
+    <child link="drawer_handle_dummy_link1"/>
+  </joint>
   <link name="drawer2_back_wall">
     <contact>
       <lateral_friction value="1.0"/>
@@ -499,6 +512,19 @@
     <parent link="drawer2_back_wall"/>
     <child link="drawer2_handle"/>
   </joint>
+  <link name="drawer_handle_dummy_link2">
+    <!-- This dummy link is added s.t. the handle is the parent of some link and we can find the handle's index. -->
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+  </link>
+  <joint name="drawer_handle_dummy_joint2" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <parent link="drawer2_handle"/>
+    <child link="drawer_handle_dummy_link2"/>
+  </joint>
   <link name="drawer3_back_wall">
     <contact>
       <lateral_friction value="1.0"/>
@@ -666,6 +692,19 @@
     <origin rpy="0 1.57079632679 0" xyz="0 -0.153333333333 -0.32"/>
     <parent link="drawer3_back_wall"/>
     <child link="drawer3_handle"/>
+  </joint>
+  <link name="drawer_handle_dummy_link3">
+    <!-- This dummy link is added s.t. the handle is the parent of some link and we can find the handle's index. -->
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+  </link>
+  <joint name="drawer_handle_dummy_joint3" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <parent link="drawer3_handle"/>
+    <child link="drawer_handle_dummy_link3"/>
   </joint>
 </robot>
 

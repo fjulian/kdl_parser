@@ -1,9 +1,10 @@
 
 ## Todo
 
-  [ ] Define scene for symbol learning (table, cup, box, cupboard with drawers, ...)
-  [ ] Implement grasping skill
-  [ ] Write tests for robot arm control code.
+- [ ] Define scene for symbol learning (table, cup, box, cupboard with drawers, ...)
+- [x] Implement grasping skill
+- [ ] Write tests for robot arm control code.
+
 
 ## Setup Instructions
 

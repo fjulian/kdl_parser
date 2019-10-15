@@ -35,14 +35,22 @@ class SkillNavigation:
         temp = p.getBasePositionAndOrientation(target_id)
         target_pos = np.array(temp[0])
 
+        # Get robot position
         temp = p.getBasePositionAndOrientation(self.robot_uid)
         robot_pos = np.array(temp[0])
+
+        # Get valid nav angles
+        nav_angle = self.scene.objects[target_name].nav_angle
+        if nav_angle is None:
+            alphas = np.arange(0.0, 2.0*np.pi, 2.0*np.pi/10.0)
+        else:
+            alphas = np.array([nav_angle])
 
         # Iterate through points on circles around the target
         # First vary the radius
         for r in np.arange(0.4, 1.5, 0.1):
             # Then vary the angle
-            for alpha in np.arange(0.0, 2.0*np.pi, 2.0*np.pi/10.0):
+            for alpha in alphas:
                 direction_vec = np.array([np.cos(alpha), np.sin(alpha), 0])
                 robot_pos[:2] = target_pos[:2] + r * direction_vec[:2]
                 rotation = R.from_euler('z', np.pi + alpha, degrees=False)

@@ -124,6 +124,19 @@
     <parent link="drawer${index}_back_wall"/>
     <child link="drawer${index}_handle"/>
   </joint>
+  <link name="drawer_handle_dummy_link${index}">
+    <!-- This dummy link is added s.t. the handle is the parent of some link and we can find the handle's index. -->
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="0.1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+  </link>
+  <joint name="drawer_handle_dummy_joint${index}" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="drawer${index}_handle"/>
+    <child link="drawer_handle_dummy_link${index}"/>
+  </joint>
 </xacro:macro>
 
 
