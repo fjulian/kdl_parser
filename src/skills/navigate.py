@@ -28,7 +28,9 @@ class SkillNavigation:
         p.resetBasePositionAndOrientation(self.robot_uid, pos.tolist(), orient.tolist())
         # p.stepSimulation()
 
-    def move_to_object(self, target_id):
+    def move_to_object(self, target_name):
+        target_id = self.scene.objects[target_name].model.uid
+
         # Get the object position
         temp = p.getBasePositionAndOrientation(target_id)
         target_pos = np.array(temp[0])

@@ -27,7 +27,8 @@ def main():
     # -----------------------------------
     
     robot.to_start()
-    world.step_seconds(30)
+    # world.step_seconds(30)
+    world.step_seconds(1)
 
     # temp1 = p.getLinkState(robot._model.uid, robot.arm_base_link_idx)
     # r_O_O_rob = np.array(temp1[4])
@@ -47,7 +48,7 @@ def main():
     # robot.update_velocity([0.1, 0.0, 0.0], 0.1)
 
     # Run move skill
-    res = sk_nav.move_to_object(2)
+    res = sk_nav.move_to_object("cube1")
     # print("Move result: " + str(res))
 
     sk_grasp.grasp_object("cube1")
