@@ -249,6 +249,10 @@ class RobotArm:
         self.velocity_trans = vel_trans
         self.velocity_turn = vel_rot
 
+    def stop_driving(self):
+        self.velocity_trans = [0.0, 0.0, 0.0]
+        self.velocity_turn = 0.0
+
     def velocity_setter(self):
         p.resetBaseVelocity(self._model.uid, self.velocity_trans, [0.0, 0.0, self.velocity_turn])
 

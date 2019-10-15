@@ -42,7 +42,7 @@ class IKError(Exception):
     pass
 
 class ObjectInfo:
-    def __init__(self, urdf_path_, init_pos_, init_orient_, init_scale_=1.0, grasp_pos_=[], grasp_orient_=[], model_=None, nav_angle_=None):
+    def __init__(self, urdf_path_, init_pos_, init_orient_, init_scale_=1.0, grasp_pos_=[], grasp_orient_=[], model_=None, nav_angle_=None, nav_min_dist_=None, grasp_links_=None):
         self.urdf_path = urdf_path_
         self.init_pos = init_pos_
         self.init_orient = init_orient_
@@ -51,3 +51,5 @@ class ObjectInfo:
         self.grasp_orient = grasp_orient_
         self.model = model_
         self.nav_angle = nav_angle_
+        self.nav_min_dist = nav_min_dist_
+        self.grasp_links = grasp_links_

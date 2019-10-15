@@ -2,10 +2,10 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="cupboard_drawers">
 
 <xacro:property name="wall_thickness" value="0.03"/>
-<xacro:property name="total_height" value="1.0"/>
+<xacro:property name="total_height" value="0.9"/>
 <xacro:property name="total_width" value="0.9"/>
 <xacro:property name="total_depth" value="0.6"/>
-<xacro:property name="num_drawers" value="3"/>
+<xacro:property name="num_drawers" value="4"/>
 <xacro:property name="drawer_spacing" value="0.005"/>
 
 <material name="white">
@@ -108,13 +108,13 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder radius="0.02" length="${total_width*0.5}"/>
+        <cylinder radius="0.01" length="${total_width*0.4}"/>
       </geometry>
     </collision>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder radius="0.02" length="${total_width*0.5}"/>
+        <cylinder radius="0.01" length="${total_width*0.4}"/>
       </geometry>
       <material name="silver"/>
     </visual>
@@ -159,6 +159,7 @@
 <xacro:drawer index="1"/>
 <xacro:drawer index="2"/>
 <xacro:drawer index="3"/>
+<xacro:drawer index="4"/>
 
 </robot>
 

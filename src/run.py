@@ -48,10 +48,23 @@ def main():
     # robot.update_velocity([0.1, 0.0, 0.0], 0.1)
 
     # Run move skill
+    # res = sk_nav.move_to_object("cube1")
     res = sk_nav.move_to_object("cupboard")
-    # print("Move result: " + str(res))
 
+    # Grasp the cube
     # sk_grasp.grasp_object("cube1")
+
+    # Grasp the cupboard handle
+    sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
+
+    # Drive back
+    robot.update_velocity([0.0, -0.1, 0.0], 0.0)
+    world.step_seconds(4)
+    robot.stop_driving()
+
+    # Release
+    sk_grasp.release_object()
+    robot.to_start()
 
     world.step_seconds(50)
 

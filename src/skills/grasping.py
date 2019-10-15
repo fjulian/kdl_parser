@@ -8,17 +8,25 @@ class SkillGrasping:
         self.scene = scene_
         self.robot = robot_
 
-    def compute_grasp(self, target_name):
+        self.last_pre_pos = None
+        self.last_pre_orient = None
+
+    def compute_grasp(self, target_name, link_id):
         obj_info = self.scene.objects[target_name]
         target_id = obj_info.model.uid
 
-        # num_grasps = len(obj_info.grasp_pos)
-        grasp_id = 1
+        num_grasps = len(obj_info.grasp_pos)
+        grasp_id = 0
 
         # Get the object pose
-        temp = p.getBasePositionAndOrientation(target_id)
-        r_O_O_obj = np.array(temp[0]).reshape((-1,1))
-        C_O_obj = R.from_quat(np.array(temp[1]))
+        if link_id is None:
+            temp = p.getBasePositionAndOrientation(target_id)
+            r_O_O_obj = np.array(temp[0]).reshape((-1,1))
+            C_O_obj = R.from_quat(np.array(temp[1]))
+        else:
+            temp = p.getLinkState(target_id, link_id)
+            r_O_O_obj = np.array(temp[4]).reshape((-1,1))
+            C_O_obj = R.from_quat(np.array(temp[5]))
 
         # Get grasp data
         r_Obj_obj_grasp = obj_info.grasp_pos[grasp_id].reshape((-1,1))
@@ -50,8 +58,8 @@ class SkillGrasping:
         return np.squeeze(r_R_R_grasp[:3,:]), C_rob_grasp.as_quat()
         # return np.squeeze(r_Rob_rob_ee[:3,:]), C_rob_grasp.as_quat()
 
-    def grasp_object(self, target_name):
-        pos, orient = self.compute_grasp(target_name)
+    def grasp_object(self, target_name, link_id=None):
+        pos, orient = self.compute_grasp(target_name, link_id)
 
         self.robot.open_gripper()
 
@@ -65,3 +73,11 @@ class SkillGrasping:
         self.robot._world.step_seconds(0.2)
         self.robot.close_gripper()
         self.robot._world.step_seconds(0.2)
+
+        # Save some variables required for releasing
+        self.last_pre_pos = pos_pre
+        self.last_pre_orient = orient
+
+    def release_object(self):
+        self.robot.open_gripper()
+        self.robot.transition_cartesian(self.last_pre_pos, self.last_pre_orient)

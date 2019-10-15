@@ -45,10 +45,15 @@ class SkillNavigation:
             alphas = np.arange(0.0, 2.0*np.pi, 2.0*np.pi/10.0)
         else:
             alphas = np.array([nav_angle])
+        nav_min_dist = self.scene.objects[target_name].nav_min_dist
+        if nav_min_dist is None:
+            radii = np.arange(0.4, 1.5, 0.1)
+        else:
+            radii = nav_min_dist + np.arange(0.4, 1.5, 0.1)
 
         # Iterate through points on circles around the target
         # First vary the radius
-        for r in np.arange(0.4, 1.5, 0.1):
+        for r in radii:
             # Then vary the angle
             for alpha in alphas:
                 direction_vec = np.array([np.cos(alpha), np.sin(alpha), 0])
