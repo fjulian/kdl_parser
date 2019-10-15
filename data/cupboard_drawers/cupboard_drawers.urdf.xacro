@@ -1,12 +1,26 @@
 <?xml version="1.0" ?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="cupboard_drawers">
 
-<xacro:property name="wall_thickness" value="0.05"/>
-<xacro:property name="total_height" value="1.5"/>
-<xacro:property name="total_width" value="1.5"/>
-<xacro:property name="total_depth" value="1.0"/>
+<xacro:property name="wall_thickness" value="0.03"/>
+<xacro:property name="total_height" value="1.0"/>
+<xacro:property name="total_width" value="0.9"/>
+<xacro:property name="total_depth" value="0.6"/>
 <xacro:property name="num_drawers" value="3"/>
 <xacro:property name="drawer_spacing" value="0.005"/>
+
+<material name="white">
+  <color rgba="1 1 1 1"/>
+</material>
+<material name="dark_brown">
+  <color rgba="0.4 0.2 0.0 1"/>
+</material>
+<material name="light_brown">
+  <color rgba="0.6 0.29 0.0 1"/>
+</material>
+<material name="silver">
+  <color rgba="0.87 0.87 0.87 0.8"/>
+</material>
+
 
 <xacro:macro name="ori_geo" params="width depth height">
   <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -15,7 +29,7 @@
   </geometry>
 </xacro:macro>
 
-<xacro:macro name="wall" params="prefix width height thickness">
+<xacro:macro name="wall" params="prefix width height thickness color">
   <link name="${prefix}_wall">
     <contact>
       <lateral_friction value="1.0"/>
@@ -27,9 +41,7 @@
     </inertial>
     <visual>
       <xacro:ori_geo width="${width}" depth="${thickness}" height="${height}"/>
-      <material name="white">
-        <color rgba="1 1 1 1"/>
-      </material>
+      <material name="${color}"/>
     </visual>
     <collision>
       <xacro:ori_geo width="${width}" depth="${thickness}" height="${height}"/>
@@ -37,10 +49,10 @@
   </link>
 </xacro:macro>
 
-<xacro:macro name="corpus" params="prefix width depth height wall_thickness">
-  <xacro:wall prefix="${prefix}_back" width="${width-2*wall_thickness}" height="${height-2*wall_thickness}" thickness="${wall_thickness}"/>
+<xacro:macro name="corpus" params="prefix width depth height wall_thickness color">
+  <xacro:wall prefix="${prefix}_back" width="${width-2*wall_thickness}" height="${height-2*wall_thickness}" thickness="${wall_thickness}" color="${color}"/>
   
-  <xacro:wall prefix="${prefix}_bottom" width="${width}" height="${depth}" thickness="${wall_thickness}"/>
+  <xacro:wall prefix="${prefix}_bottom" width="${width}" height="${depth}" thickness="${wall_thickness}" color="${color}"/>
   <joint name="${prefix}_bottom_joint" type="fixed">
     <origin xyz="0 -${depth/2-wall_thickness/2} -${height/2-wall_thickness/2}" rpy="${pi/2} 0 0"/>
     <parent link="${prefix}_back_wall"/>
@@ -48,21 +60,21 @@
   </joint>
   
 
-  <xacro:wall prefix="${prefix}_left" width="${depth}" height="${height-2*wall_thickness}" thickness="${wall_thickness}"/>
+  <xacro:wall prefix="${prefix}_left" width="${depth}" height="${height-2*wall_thickness}" thickness="${wall_thickness}" color="${color}"/>
   <joint name="${prefix}_left_joint" type="fixed">
     <origin xyz="-${width/2-wall_thickness/2} -${depth/2-wall_thickness/2} 0" rpy="0 0 ${pi/2}"/>
     <parent link="${prefix}_back_wall"/>
     <child link="${prefix}_left_wall"/>
   </joint>
 
-  <xacro:wall prefix="${prefix}_right" width="${depth}" height="${height-2*wall_thickness}" thickness="${wall_thickness}"/>
+  <xacro:wall prefix="${prefix}_right" width="${depth}" height="${height-2*wall_thickness}" thickness="${wall_thickness}" color="${color}"/>
   <joint name="${prefix}_right_joint" type="fixed">
     <origin xyz="${width/2-wall_thickness/2} -${depth/2-wall_thickness/2} 0" rpy="0 0 ${pi/2}"/>
     <parent link="${prefix}_back_wall"/>
     <child link="${prefix}_right_wall"/>
   </joint>
 
-  <xacro:wall prefix="${prefix}_top" width="${width}" height="${depth}" thickness="${wall_thickness}"/>
+  <xacro:wall prefix="${prefix}_top" width="${width}" height="${depth}" thickness="${wall_thickness}" color="${color}"/>
   <joint name="${prefix}_top_joint" type="fixed">
     <origin xyz="0 -${depth/2-wall_thickness/2} ${height/2-wall_thickness/2}" rpy="${pi/2} 0 0"/>
     <parent link="${prefix}_back_wall"/>
@@ -76,7 +88,8 @@
               width="${total_width-2*(wall_thickness+drawer_spacing)}"
               depth="${drawer_height}"
               height="${total_depth-wall_thickness-drawer_spacing}"
-              wall_thickness="${wall_thickness*0.5}"/>
+              wall_thickness="${wall_thickness*0.5}"
+              color="light_brown"/>
   <joint name="drawer_joint${index}" type="prismatic">
     <origin xyz="0 -${(wall_thickness+drawer_spacing)/2} ${wall_thickness+drawer_spacing+0.5*0.5*wall_thickness + (index-1)*(drawer_height+drawer_spacing)}" rpy="-${pi/2} 0 0"/>
     <parent link="base_link"/>
@@ -95,17 +108,15 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder radius="0.03" length="0.3"/>
+        <cylinder radius="0.02" length="${total_width*0.5}"/>
       </geometry>
     </collision>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder radius="0.03" length="0.3"/>
+        <cylinder radius="0.02" length="${total_width*0.5}"/>
       </geometry>
-      <material name="white">
-        <color rgba="1 1 1 1"/>
-      </material>
+      <material name="silver"/>
     </visual>
   </link>
   <joint name="drawer${index}_handle_joint" type="fixed">
@@ -124,7 +135,7 @@
   </inertial>
 </link>
 
-<xacro:corpus prefix="frame" width="${total_width}" depth="${total_depth}" height="${total_height}" wall_thickness="${wall_thickness}"/>
+<xacro:corpus prefix="frame" width="${total_width}" depth="${total_depth}" height="${total_height}" wall_thickness="${wall_thickness}" color="dark_brown"/>
 <joint name="frame_joint" type="fixed">
   <origin xyz="0 ${total_depth/2-wall_thickness/2} ${total_height/2}" rpy="0 0 0"/>
   <parent link="base_link"/>

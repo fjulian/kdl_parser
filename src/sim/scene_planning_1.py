@@ -1,7 +1,8 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import os
-from tools.util import rotate_orient
+from tools.util import rotate_orient, ObjectInfo
+from sim.cupboard import Cupboard
 
 class ScenePlanning1:
     def __init__(self, world):
@@ -27,23 +28,17 @@ class ScenePlanning1:
                                         ]
                                         )
 
+        cupboard = Cupboard(world, pos_=[0.0, 2.0, 0.0], orient_=[0.0, 0.0, 0.0, 1.0])
+        self.objects["cupboard"] = cupboard.get_info()
+
         self.add_objects()
 
     def add_objects(self):
         for key, obj in self.objects.items():
-            self.objects[key].model = self._world.add_model(obj.urdf_path, obj.init_pos, obj.init_orient, scale=obj.scale)
-            print("Added object "+obj.urdf_path+". ID: "+str(obj.model.uid))
+            if self.objects[key].model is None:
+                self.objects[key].model = self._world.add_model(obj.urdf_path, obj.init_pos, obj.init_orient, scale=obj.scale)
+                print("Added object "+obj.urdf_path+". ID: "+str(obj.model.uid))
 
     def reset(self):
         raise NotImplementedError
 
-
-class ObjectInfo:
-    def __init__(self, urdf_path_, init_pos_, init_orient_, init_scale_=1.0, grasp_pos_=[], grasp_orient_=[]):
-        self.urdf_path = urdf_path_
-        self.init_pos = init_pos_
-        self.init_orient = init_orient_
-        self.scale = init_scale_
-        self.grasp_pos = grasp_pos_
-        self.grasp_orient = grasp_orient_
-        self.model = None

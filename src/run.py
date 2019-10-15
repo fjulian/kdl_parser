@@ -27,7 +27,7 @@ def main():
     # -----------------------------------
     
     robot.to_start()
-    world.step_seconds(1)
+    world.step_seconds(30)
 
     # temp1 = p.getLinkState(robot._model.uid, robot.arm_base_link_idx)
     # r_O_O_rob = np.array(temp1[4])
