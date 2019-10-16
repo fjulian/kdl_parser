@@ -34,10 +34,12 @@ class ScenePlanning1:
         self.add_objects()
 
     def add_objects(self):
+        print("---------------------------")
         for key, obj in self.objects.items():
             if self.objects[key].model is None:
                 self.objects[key].model = self._world.add_model(obj.urdf_path, obj.init_pos, obj.init_orient, scale=obj.scale)
-            print("Added object "+obj.urdf_path+". ID: "+str(obj.model.uid))
+            print("Added object "+key+". ID: "+str(obj.model.uid))
+        print("---------------------------")
 
     def reset(self):
         raise NotImplementedError

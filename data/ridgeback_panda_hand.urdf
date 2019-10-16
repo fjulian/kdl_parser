@@ -955,7 +955,7 @@
                 </friction>
                 </surface> -->
     </collision>
-    <visual name="visual">
+    <visual>
       <geometry>
         <mesh filename="/home/fjulian/phd/playground/ros_planning_ws/src/mopa/mopa_description/meshes/realsense_r200.dae"/>
       </geometry>
