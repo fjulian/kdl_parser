@@ -66,6 +66,10 @@ def main():
     sk_grasp.release_object()
     robot.to_start()
 
+    res = sk_nav.move_to_object("cube1")
+    sk_grasp.grasp_object("cube1")
+
+
     world.step_seconds(50)
 
     world.close()
