@@ -24,7 +24,7 @@ class RobotArm:
         self.arm_ee_link_idx = -100
 
         # Set up IK solver
-        self.urdf_path = os.path.join(os.getcwd(),"data/box_panda_hand.urdf")
+        self.urdf_path = os.path.join(os.getcwd(),"data/models/box_panda_hand.urdf")
         with open(self.urdf_path) as f:
             if f.mode == 'r':
                 urdf_string = f.read()

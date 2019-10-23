@@ -5,7 +5,7 @@ from scipy.spatial.transform import Rotation as R
 
 class Cupboard:
     def __init__(self, world, pos_, orient_):
-        self.urdf = "data/cupboard_drawers/cupboard_drawers.urdf"
+        self.urdf = "data/models/cupboard_drawers/cupboard_drawers.urdf"
         self.model = world.add_model(self.urdf, position=pos_, orientation=orient_)
         self.pos = pos_
         self.orient = orient_

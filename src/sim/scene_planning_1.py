@@ -10,7 +10,7 @@ class ScenePlanning1:
         self._world.add_plane()
 
         self.objects = dict()
-        self.objects["table"] = ObjectInfo(urdf_path_=os.path.join(os.getcwd(),"data/table/table.urdf"),
+        self.objects["table"] = ObjectInfo(urdf_path_=os.path.join(os.getcwd(),"data/models/table/table.urdf"),
                                         init_pos_=np.array([3.0, 0.0, 0.0]),
                                         init_orient_=np.array([0.0, 0.0, 0.0, 1.0])
                                         )
@@ -27,15 +27,15 @@ class ScenePlanning1:
                                             rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), 'y', -25.0)
                                         ]
                                         )
-        self.objects["container1"] = ObjectInfo(urdf_path_=os.path.join(os.getcwd(),"data/container/container_no_lid.urdf"),
+        self.objects["container1"] = ObjectInfo(urdf_path_=os.path.join(os.getcwd(),"data/models/container/container_no_lid.urdf"),
                                         init_pos_=np.array([3.5, -0.25, 0.625]),
                                         init_orient_=np.array([0.0, 0.0, 0.0, 1.0])
                                         )
-        self.objects["lid1"] = ObjectInfo(urdf_path_=os.path.join(os.getcwd(),"data/container/lid.urdf"),
+        self.objects["lid1"] = ObjectInfo(urdf_path_=os.path.join(os.getcwd(),"data/models/container/lid.urdf"),
                                         init_pos_=np.array([3.5, -0.25, 0.625]),
                                         init_orient_=np.array([0.0, 0.0, 0.0, 1.0])
                                         )
-        self.objects["container2"] = ObjectInfo(urdf_path_=os.path.join(os.getcwd(),"data/container/container_sliding_lid.urdf"),
+        self.objects["container2"] = ObjectInfo(urdf_path_=os.path.join(os.getcwd(),"data/models/container/container_sliding_lid.urdf"),
                                         init_pos_=np.array([3.5, 0.25, 0.625]),
                                         init_orient_=np.array([0.0, 0.0, 0.0, 1.0])
                                         )
