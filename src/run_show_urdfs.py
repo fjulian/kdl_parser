@@ -37,6 +37,8 @@ def main():
 
     container_sliding_mdl = world.add_model("data/container/container_sliding_lid.urdf", position=[0.0, 0.5, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
 
+    # =========================================================
+
     world.step_seconds(50)
 
     world.close()
