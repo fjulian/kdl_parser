@@ -2,3 +2,6 @@
 	path = src/tools/hrl-kdl
 	url = git@github.com:gt-ros-pkg/hrl-kdl.git
 	branch = indigo-devel
+[submodule "knowledge/pddl-examples"]
+	path = knowledge/pddl-examples
+	url = git@github.com:yarox/pddl-examples.git
