@@ -5,7 +5,8 @@ class PDDLsolver:
         pass
 
     def plan(self):
-        res = subprocess.check_output(['bin/ff', '-s', '2', '-o', 'knowledge/pddl-examples/rover/strips/domain.pddl', '-f', 'knowledge/pddl-examples/rover/strips/problem.pddl'])
+        res = subprocess.check_output(['bin/ff', '-s', '2', '-o', 'knowledge/pddl-examples/rover/strips_typing/domain.pddl', '-f', 'knowledge/pddl-examples/rover/strips_typing/problem.pddl'])
+        # res = subprocess.check_output(['bin/ff', '-s', '2', '-o', 'knowledge/pddl-examples/rover/strips/domain.pddl', '-f', 'knowledge/pddl-examples/rover/strips/problem.pddl'])
         res = self.cut_string_before(res, "ff: found legal plan as follows")
         res = self.cut_string_before(res, "0:")
         res = self.cut_string_at(res, "time spent")
@@ -17,7 +18,7 @@ class PDDLsolver:
                 res.remove('')
             except ValueError:
                 break
-        print(res)
+        # print(res)
         return res
 
     def cut_string_before(self, string, query):

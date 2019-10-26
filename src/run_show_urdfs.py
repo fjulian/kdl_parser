@@ -32,10 +32,10 @@ def main():
 
     # ======== Container ======================================
 
-    container_mdl = world.add_model("data/container/container_no_lid.urdf", position=[0.0, 0.0, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
-    lid_mdl = world.add_model("data/container/lid.urdf", position=[0.0, 0.0, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
+    container_mdl = world.add_model("data/models/container/container_no_lid.urdf", position=[0.0, 0.0, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
+    lid_mdl = world.add_model("data/models/container/lid.urdf", position=[0.0, 0.0, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
 
-    container_sliding_mdl = world.add_model("data/container/container_sliding_lid.urdf", position=[0.0, 0.5, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
+    container_sliding_mdl = world.add_model("data/models/container/container_sliding_lid.urdf", position=[0.0, 0.5, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
 
     # =========================================================
 
