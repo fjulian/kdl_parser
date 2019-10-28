@@ -1,9 +1,10 @@
-
+from datetime import datetime
 
 
 class PDDLFileInterface:
     def __init__(self, domain_file=None, problem_file=None):
         self._domain_file = domain_file
+        self._domain_dir = "knowledge/chimera/domain/"
         self._problem_file = problem_file
 
         self._requirements = ":strips :typing"
@@ -16,7 +17,57 @@ class PDDLFileInterface:
     def write_domain(self):
         self.extract_types()
 
+        pddl_str = ""
+        pddl_str += "(define (domain " + self._domain_name + ")\n"
+        pddl_str += "\t(:requirements " + self._requirements + ")\n\n"
+        types_str = ' '
+        types_str = types_str.join(self._types)
+        pddl_str += "\t(:types " + types_str + ")\n\n"
+        pddl_str += "\t(:predicates\n"
+        for pred in self._predicates:
+            pddl_str += "\t\t(" + pred
+            for item in self._predicates[pred]:
+                pddl_str += " ?" + item[0] + " - " + item[1]
+            pddl_str += ")\n"
+        pddl_str += "\t)\n\n"
+        for act in self._actions:
+            pddl_str += "\t(:action " + act + "\n"
+            pddl_str += "\t\t:parameters\n"
+            pddl_str += "\t\t\t("
+            for item in self._actions[act]["params"]:
+                pddl_str += "?" + item[0] + " - " + item[1] + " "
+            pddl_str = pddl_str[:-1]
+            pddl_str += ")\n\n"
+            pddl_str += "\t\t:precondition\n\t\t\t(and\n"
+            for item in self._actions[act]["preconds"]:
+                pddl_str += "\t\t\t\t("
+                if item[1]:
+                    pddl_str += "not ("
+                pddl_str += item[0]
+                for param in item[2]:
+                    pddl_str += " ?" + param
+                pddl_str += ")\n"
+            pddl_str += "\t\t\t)\n\n"
+            pddl_str += "\t\t:effect\n\t\t\t(and\n"
+            for item in self._actions[act]["effects"]:
+                pddl_str += "\t\t\t\t("
+                if item[1]:
+                    pddl_str += "not ("
+                pddl_str += item[0]
+                for param in item[2]:
+                    pddl_str += " ?" + param
+                if item[1]:
+                    pddl_str += ")"
+                pddl_str += ")\n"
+            pddl_str += "\t\t\t)\n\n"
+            pddl_str += "\t)\n\n"
+        pddl_str += ")"
         
+        time_now = datetime.now()
+        new_filename = self._domain_dir + time_now.strftime("%y%m%d-%H%M%S_domain.pddl")
+        with open(new_filename, 'w') as f:
+            f.write(pddl_str)
+        print("Wrote new domain file: "+new_filename.split('/')[-1])
 
     def extract_types(self):
         types = []
