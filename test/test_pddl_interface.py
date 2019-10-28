@@ -25,7 +25,7 @@ class TestInterface(unittest.TestCase):
 
     def test_pddl_read_write(self):
         self.fif.read_domain()
-        pass
+        self.fif.write_domain()
         
 
 if __name__ == '__main__':

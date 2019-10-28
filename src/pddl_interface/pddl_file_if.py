@@ -6,12 +6,29 @@ class PDDLFileInterface:
         self._domain_file = domain_file
         self._problem_file = problem_file
 
+        self._requirements = ":strips :typing"
+
         self._domain_name = ""
         self._predicates = {}
         self._actions = {}
+        self._types = []
 
     def write_domain(self):
-        pass
+        self.extract_types()
+
+        
+
+    def extract_types(self):
+        types = []
+        for pred in self._predicates:
+            for item in self._predicates[pred]:
+                if item[1] not in types:
+                    types.append(item[1])
+        for act in self._actions:
+            for item in self._actions[act]['params']:
+                if item[1] not in types:
+                    types.append(item[1])
+        self._types = types
 
     def read_domain(self):
         with open(self._domain_file, 'r') as f:
@@ -128,9 +145,6 @@ class PDDLFileInterface:
                 self._actions[action] = {"params": params, "preconds": preconds, "effects": effects}
         print("Finished parsing file")
 
-                        
-
-                        
 
 ### Assumed conventions:
 # All arguments of a predicate are on the same line as the predicate name. Each line defines one predicate.
