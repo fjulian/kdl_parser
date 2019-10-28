@@ -1,27 +1,53 @@
 from datetime import datetime
-
+import json
+from os import path
+import pickle
 
 class PDDLFileInterface:
-    def __init__(self, domain_file=None, problem_file=None):
-        self._domain_file = domain_file
-        self._domain_dir = "knowledge/chimera/domain/"
-        self._problem_file = problem_file
-
-        self._requirements = ":strips :typing"
+    def __init__(self, domain_dir, problem_dir=None, initial_domain_pddl=None):
+        self._domain_dir = domain_dir
+        if problem_dir is None:
+            self._problem_dir = domain_dir
+        else:
+            self._problem_dir = problem_dir
 
         self._domain_name = ""
         self._predicates = {}
         self._actions = {}
-        self._types = []
 
-    def write_domain(self):
-        self.extract_types()
+        self._domain_file = path.join(self._domain_dir, '_domain.pkl')
+        if initial_domain_pddl is not None:
+            self._domain_file_pddl = path.join(self._domain_dir, initial_domain_pddl)
+            self.read_domain_pddl()
+        else:
+            self.load_domain()
+
+        self._requirements = ":strips :typing"
+
+        
+
+    def load_domain(self):
+        with open(self._domain_file, 'rb') as f:
+            load_obj = pickle.load(f)
+        self._domain_name = load_obj[0]
+        self._predicates = load_obj[1]
+        self._actions = load_obj[2]
+        print("Loaded domain file")
+
+    def save_domain(self):
+        save_obj = (self._domain_name, self._predicates, self._actions)
+        with open(self._domain_file, 'wb') as f:
+            pickle.dump(save_obj, f)
+        print("Saved domain file")
+
+    def write_domain_pddl(self):
+        types = self.extract_types()
 
         pddl_str = ""
         pddl_str += "(define (domain " + self._domain_name + ")\n"
         pddl_str += "\t(:requirements " + self._requirements + ")\n\n"
         types_str = ' '
-        types_str = types_str.join(self._types)
+        types_str = types_str.join(types)
         pddl_str += "\t(:types " + types_str + ")\n\n"
         pddl_str += "\t(:predicates\n"
         for pred in self._predicates:
@@ -64,10 +90,11 @@ class PDDLFileInterface:
         pddl_str += ")"
         
         time_now = datetime.now()
-        new_filename = self._domain_dir + time_now.strftime("%y%m%d-%H%M%S_domain.pddl")
+        new_filename = path.join(self._domain_dir, time_now.strftime("%y%m%d-%H%M%S_domain.pddl"))
         with open(new_filename, 'w') as f:
             f.write(pddl_str)
-        print("Wrote new domain file: "+new_filename.split('/')[-1])
+        print("Wrote new PDDL domain file: "+new_filename.split('/')[-1])
+        self._domain_file_pddl = new_filename
 
     def extract_types(self):
         types = []
@@ -79,10 +106,10 @@ class PDDLFileInterface:
             for item in self._actions[act]['params']:
                 if item[1] not in types:
                     types.append(item[1])
-        self._types = types
+        return types
 
-    def read_domain(self):
-        with open(self._domain_file, 'r') as f:
+    def read_domain_pddl(self):
+        with open(self._domain_file_pddl, 'r') as f:
             dom = f.read()
         dom = dom.split('\n')
 
@@ -151,6 +178,8 @@ class PDDLFileInterface:
                         if sub_curr == '(and':
                             sub_curr = dom.pop(0).strip()
                         while len(sub_curr) > 0:
+                            if sub_curr == ')':
+                                break
                             sub_curr = sub_curr.replace('(','')
                             sub_curr = sub_curr.replace(')','')
                             splitted = sub_curr.split(' ')
@@ -175,6 +204,8 @@ class PDDLFileInterface:
                         if sub_curr == '(and':
                             sub_curr = dom.pop(0).strip()
                         while len(sub_curr) > 0:
+                            if sub_curr == ')':
+                                break
                             sub_curr = sub_curr.replace('(','')
                             sub_curr = sub_curr.replace(')','')
                             splitted = sub_curr.split(' ')
@@ -194,7 +225,7 @@ class PDDLFileInterface:
                             effects.append((effect_name, negated, effect_params))
                             sub_curr = dom.pop(0).strip()
                 self._actions[action] = {"params": params, "preconds": preconds, "effects": effects}
-        print("Finished parsing file")
+        print("Read PDDL domain file")
 
 
 ### Assumed conventions:
