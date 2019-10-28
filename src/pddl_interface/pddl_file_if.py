@@ -24,8 +24,6 @@ class PDDLFileInterface:
 
         self._requirements = ":strips :typing"
 
-        
-
     def load_domain(self):
         with open(self._domain_file, 'rb') as f:
             load_obj = pickle.load(f)
@@ -226,7 +224,6 @@ class PDDLFileInterface:
                             sub_curr = dom.pop(0).strip()
                 self._actions[action] = {"params": params, "preconds": preconds, "effects": effects}
         print("Read PDDL domain file")
-
 
 ### Assumed conventions:
 # All arguments of a predicate are on the same line as the predicate name. Each line defines one predicate.

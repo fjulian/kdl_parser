@@ -16,8 +16,13 @@ class TestInterface(unittest.TestCase):
         self.fif = PDDLFileInterface(self.fif_domain_dir, initial_domain_pddl=self.fif_init_domain_name)
 
     def test_output(self):
-        res = self.slv.plan()
-        self.assertTrue(True)
+        res = self.slv.plan('test/data/examples/strips_typing_valid/domain.pddl', 'test/data/examples/strips_typing_valid/problem.pddl')
+        self.assertEqual(res[0], '0: move rover1 waypoint6 waypoint7')
+        self.assertEqual(len(res), 66)
+        self.assertEqual(res[-1], '65: move rover1 waypoint9 waypoint1')
+
+        res = self.slv.plan('test/data/examples/strips_typing_invalid/domain.pddl', 'test/data/examples/strips_typing_invalid/problem.pddl')
+        self.assertFalse(res)
 
     def test_cut_methods(self):
         self.assertEqual(self.slv.cut_string_before("Hello world. What's up?", "What's"), "What's up?")
