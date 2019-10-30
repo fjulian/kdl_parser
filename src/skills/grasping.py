@@ -6,6 +6,7 @@ import py_trees.common
 import multiprocessing
 import time
 import atexit
+import threading
 
 
 class ActionGrasping(py_trees.behaviour.Behaviour):
@@ -20,13 +21,14 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
         self._robot = robot
         self.blackboard = py_trees.blackboard.Blackboard()
 
-    def setup(self):
-        self.logger.debug("%s.setup()->connections to an external process" % (self.__class__.__name__))
-        self.parent_connection, self.child_connection = multiprocessing.Pipe()
-        self.grasping = multiprocessing.Process(target=grasping_process, args=(self.child_connection, self._scene, self._robot))
-        atexit.register(self.grasping.terminate())
-        self.grasping.start()
-        self.setup_called = True
+    def setup(self, unused_timeout=15):
+        if not self.setup_called:
+            self.logger.debug("%s.setup()->connections to an external process" % (self.__class__.__name__))
+            self.parent_connection, self.child_connection = multiprocessing.Pipe()
+            self.grasping = multiprocessing.Process(target=grasping_process, args=(self.child_connection, self._scene, self._robot))
+            atexit.register(self.grasping.terminate)
+            self.grasping.start()
+            self.setup_called = True
         return True
 
     def initialise(self):
@@ -47,17 +49,22 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
         self.feedback_message = "Grasping in progress"
         if self.parent_connection.poll():
             res = self.parent_connection.recv().pop()
-            if res:
+            if res==0:
                 new_status = py_trees.common.Status.SUCCESS
                 self.feedback_message = "Grasping successful"
-            else:
+            elif res==1:
+                # Grasping in progress, but this is already set above
+                pass
+            elif res==2:
                 new_status = py_trees.common.Status.FAILURE
                 self.feedback_message = "Grasping failed"
+            else:
+                assert(False, "Unexpected response")
         self.logger.debug("%s.update()[%s->%s][%s]" % (self.__class__.__name__, self.status, new_status, self.feedback_message))
         return new_status
 
     def terminate(self, new_status):
-        self.grasping.terminate()
+        self.parent_connection.send([])
         self.logger.debug("%s.terminate()[%s->%s]" % (self.__class__.__name__, self.status, new_status))
 
 
@@ -65,17 +72,35 @@ def grasping_process(pipe_connection, scene, robot):
     sk_grasping = SkillGrasping(scene, robot)
 
     idle = True
+    proc = None
     try:
         while True:
             if pipe_connection.poll():
                 cmd = pipe_connection.recv()
-                sk_grasping.grasp_object(cmd[0], cmd[1])
-                pipe_connection.send([True])
+                if len(cmd)==3 and idle:
+                    # Start the process
+                    proc = multiprocessing.Process(target=sk_grasping.grasp_object, args=(cmd[0], cmd[1]))
+                    idle = False
+                    proc.start()
+                elif len(cmd)==0 and not idle:
+                    # Abort process
+                    proc.terminate()
+                    proc = None
+                    idle = True
+            elif not idle and proc.is_alive():
+                pipe_connection.send([1])
+            elif not idle and not proc.is_alive():
+                # The thread was launched at some point and seems to be finished now
+                proc.terminate()
+                proc = None
+                idle = True
+                pipe_connection.send([0])
             else:
                 time.sleep(0.5)
     except KeyboardInterrupt:
-        pass
-            
+        if proc is not None:
+            proc.terminate()
+
 
 class SkillGrasping:
     def __init__(self, scene_, robot_):
