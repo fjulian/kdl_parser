@@ -35,7 +35,7 @@ class PDDLsolver:
         if start_idx > -1:
             string = string[start_idx:]
         elif complain:
-            raise NameError("String not found")
+            raise NameError("Query not found")
         return string
 
     def cut_string_at(self, string, query):

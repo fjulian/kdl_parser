@@ -2,6 +2,80 @@ import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from tools.util import homogenous_trafo, invert_hom_trafo
+import py_trees.common
+import multiprocessing
+import time
+import atexit
+
+
+class ActionGrasping(py_trees.behaviour.Behaviour):
+    """
+        Based on the example https://py-trees.readthedocs.io/en/release-0.6.x/_modules/py_trees/demos/action.html#Action
+    """
+    def __init__(self, scene, robot, name="grasping_action"):
+        super(ActionGrasping, self).__init__(name)
+        self.logger.debug("%s.__init__()" % (self.__class__.__name__))
+        self.setup_called = False
+        self._scene = scene
+        self._robot = robot
+        self.blackboard = py_trees.blackboard.Blackboard()
+
+    def setup(self):
+        self.logger.debug("%s.setup()->connections to an external process" % (self.__class__.__name__))
+        self.parent_connection, self.child_connection = multiprocessing.Pipe()
+        self.grasping = multiprocessing.Process(target=grasping_process, args=(self.child_connection, self._scene, self._robot))
+        atexit.register(self.grasping.terminate())
+        self.grasping.start()
+        self.setup_called = True
+        return True
+
+    def initialise(self):
+        self.logger.debug("%s.initialise()->sending new goal" % (self.__class__.__name__))
+        if not self.setup_called:
+            raise RuntimeError("Setup function not called")
+        try:
+            target_name = self.blackboard.grasp_target_name
+            target_link_id = self.blackboard.grasp_target_link_id
+            target_grasp_id = self.blackboard.grasp_target_grasp_id
+        except AttributeError as e:
+            self.logger.error("%s.initialise()->couldn't find required vars on blackboard" % (self.__class__.__name__))
+            raise e
+        self.parent_connection.send([target_name, target_link_id, target_grasp_id])
+
+    def update(self):
+        new_status = py_trees.common.Status.RUNNING
+        self.feedback_message = "Grasping in progress"
+        if self.parent_connection.poll():
+            res = self.parent_connection.recv().pop()
+            if res:
+                new_status = py_trees.common.Status.SUCCESS
+                self.feedback_message = "Grasping successful"
+            else:
+                new_status = py_trees.common.Status.FAILURE
+                self.feedback_message = "Grasping failed"
+        self.logger.debug("%s.update()[%s->%s][%s]" % (self.__class__.__name__, self.status, new_status, self.feedback_message))
+        return new_status
+
+    def terminate(self, new_status):
+        self.grasping.terminate()
+        self.logger.debug("%s.terminate()[%s->%s]" % (self.__class__.__name__, self.status, new_status))
+
+
+def grasping_process(pipe_connection, scene, robot):
+    sk_grasping = SkillGrasping(scene, robot)
+
+    idle = True
+    try:
+        while True:
+            if pipe_connection.poll():
+                cmd = pipe_connection.recv()
+                sk_grasping.grasp_object(cmd[0], cmd[1])
+                pipe_connection.send([True])
+            else:
+                time.sleep(0.5)
+    except KeyboardInterrupt:
+        pass
+            
 
 class SkillGrasping:
     def __init__(self, scene_, robot_):
