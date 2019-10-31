@@ -29,6 +29,7 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
             atexit.register(self.grasping.terminate)
             self.grasping.start()
             self.setup_called = True
+            self.blackboard.set("grasp_success", False)
         return True
 
     def initialise(self):
@@ -52,6 +53,7 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
             if res==0:
                 new_status = py_trees.common.Status.SUCCESS
                 self.feedback_message = "Grasping successful"
+                self.blackboard.set("grasp_success", True)
             elif res==1:
                 # Grasping in progress, but this is already set above
                 pass
