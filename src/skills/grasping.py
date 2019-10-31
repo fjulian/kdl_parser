@@ -82,9 +82,10 @@ def grasping_process(pipe_connection, scene, robot):
                     proc = multiprocessing.Process(target=sk_grasping.grasp_object, args=(cmd[0], cmd[1]))
                     idle = False
                     proc.start()
-                elif len(cmd)==0 and not idle:
+                elif len(cmd)==0:
                     # Abort process
-                    proc.terminate()
+                    if proc:
+                        proc.terminate()
                     proc = None
                     idle = True
             elif not idle and proc.is_alive():
@@ -95,8 +96,7 @@ def grasping_process(pipe_connection, scene, robot):
                 proc = None
                 idle = True
                 pipe_connection.send([0])
-            else:
-                time.sleep(0.5)
+            time.sleep(0.5)
     except KeyboardInterrupt:
         if proc is not None:
             proc.terminate()

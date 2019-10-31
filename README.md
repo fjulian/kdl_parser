@@ -42,3 +42,9 @@ The file data/ridgeback_panda_hand.urdf can be generated using the command
 ```
 xacro mopa_description/robots/ridgeback_panda_hand.urdf.xacro
 ```
+
+## Documentation
+
+### Representation of planning problem in Python
+
+

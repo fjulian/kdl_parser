@@ -11,9 +11,11 @@ class World:
         self.gui = gui_
         self.sleep_flag = sleep_
         if self.gui:
-            self.physics_client = p.connect(p.GUI)
+            # self.physics_client = p.connect(p.GUI)
+            self.physics_client = p.connect(p.SHARED_MEMORY)
         else:
             self.physics_client = p.connect(p.DIRECT)
+        p.resetSimulation(self.physics_client)
 
         p.setGravity(0, 0, -9.81, self.physics_client)
 
