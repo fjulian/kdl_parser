@@ -1,9 +1,17 @@
 
 ## Todo
 
-- [x] Define scene for symbol learning (table, cup, box, cupboard with drawers, ...)
-- [x] Implement grasping skill
-- [ ] Write tests for robot arm control code.
+- High priority
+  - [ ] Define predicates
+  - [ ] Make releasing an object a separate action
+  - [ ] Write code that generates problem definition based on observations from the simulation
+  - [ ] Try closing the whole loop with a trivial example
+  - [ ] Add navigation to the whole system
+- Low priority
+  - [ ] Write tests for robot arm control code.
+- Done
+  - [x] Define scene for symbol learning (table, cup, box, cupboard with drawers, ...)
+  - [x] Implement grasping skill
 
 
 ## Setup Instructions
