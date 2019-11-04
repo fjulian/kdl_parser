@@ -25,12 +25,16 @@ class PDDLFileInterface:
         self._requirements = ":strips :typing"
 
     def load_domain(self):
-        with open(self._domain_file, 'rb') as f:
-            load_obj = pickle.load(f)
-        self._domain_name = load_obj[0]
-        self._predicates = load_obj[1]
-        self._actions = load_obj[2]
-        print("Loaded domain file")
+        print("Trying to load domain file...")
+        if path.exists(self._domain_file):
+            with open(self._domain_file, 'rb') as f:
+                load_obj = pickle.load(f)
+            self._domain_name = load_obj[0]
+            self._predicates = load_obj[1]
+            self._actions = load_obj[2]
+            print("Trying to load domain file... DONE")
+        else:
+            print("Trying to load domain file... NOT FOUND --> starting from scratch")
 
     def save_domain(self):
         save_obj = (self._domain_name, self._predicates, self._actions)

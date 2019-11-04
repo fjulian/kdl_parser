@@ -54,7 +54,11 @@ The file `src/pddl_interface/pddl_file_if.py` contains the code to parse PDDL fi
 **Predicates**
 
 ```python
-{"<predicate1>": [["<param1>", "<type1>"], ["<param2>", "<type2>"], ...], "<predicate2>": [...], ...}
+{
+    "<predicate1>": [["<param1>", "<type1>"], ["<param2>", "<type2>"], ...],
+    "<predicate2>": [...],
+    ...
+}
 ```
 
 **Actions**
