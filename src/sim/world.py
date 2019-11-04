@@ -4,6 +4,7 @@ import pybullet_data
 import numpy as np
 import time
 from math import ceil
+import atexit
 
 
 class World:
@@ -33,6 +34,8 @@ class World:
         self.velocity_setter = None
 
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
+
+        atexit.register(self.close)
 
     def sleep(self, seconds):
         if self.sleep_flag:
@@ -85,6 +88,7 @@ class World:
         self.plane_id = p.loadURDF("plane.urdf")
 
     def close(self):
+        print("Closing world")
         p.disconnect(self.physics_client)
 
 

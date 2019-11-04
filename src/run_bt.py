@@ -28,7 +28,6 @@ def main():
     # sk_grasp = SkillGrasping(scene, robot)
 
     # Set up behavior tree
-    py_trees.logging.level = py_trees.logging.Level.DEBUG
     es = ExecutionSystem(scene, robot)
 
     blackboard = py_trees.blackboard.Blackboard()
@@ -70,9 +69,7 @@ def main():
     except KeyboardInterrupt:
         es.tree.interrupt() 
 
-    world.step_seconds(50)
-
-    world.close()
+    # world.step_seconds(50)
 
 if __name__ == "__main__":
     main()
