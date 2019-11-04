@@ -225,6 +225,18 @@ class PDDLFileInterface:
                 self._actions[action] = {"params": params, "preconds": preconds, "effects": effects}
         print("Read PDDL domain file")
 
+    def add_action(self, action_name, action_definition, overwrite=False):
+        if not overwrite and action_name in self._actions:
+            raise ValueError("Action already exists and no overwrite was requested.")
+        assert(isinstance(action_name, str))
+        self._actions[action_name] = action_definition
+
+    def add_predicate(self, predicate_name, predicate_definition, overwrite=False):
+        if not overwrite and predicate_name in self._predicates:
+            raise ValueError("Predicate already exists and no overwrite was requested.")
+        assert(isinstance(predicate_name, str))
+        self._predicates[predicate_name] = predicate_definition
+
 ### Assumed conventions:
 # All arguments of a predicate are on the same line as the predicate name. Each line defines one predicate.
 # For actions, all parameters are in the same line, starting below the :parameters keyword.

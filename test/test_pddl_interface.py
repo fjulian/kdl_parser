@@ -52,7 +52,17 @@ class TestInterface(unittest.TestCase):
 
         remove(self.fif._domain_file_pddl)
         remove(self.fif._domain_file)
-        
+
+    def test_pddl_add_items(self):
+        self.fif.add_action("dummy_action", {"params": [], "preconds": [], "effects": [("pred1", False, [])]})
+        self.assertTrue("dummy_action" in self.fif._actions)
+        self.assertTrue(isinstance(self.fif._actions["dummy_action"], dict))
+        self.assertFalse(self.fif._actions["dummy_action"]["effects"][0][1])
+        with self.assertRaises(ValueError):
+            self.fif.add_action("dummy_action", {})
+        self.assertTrue(len(self.fif._actions["dummy_action"])>0)
+        self.fif.add_action("dummy_action", {}, overwrite=True)
+        self.assertFalse(len(self.fif._actions["dummy_action"])>0)
 
 if __name__ == '__main__':
     unittest.main()
