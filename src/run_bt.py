@@ -1,20 +1,35 @@
+
+# Simulation
 from sim.world import World
 from sim.robot_arm import RobotArm
-
-
 from sim.scene_planning_1 import ScenePlanning1
 
+# Skills
 from skills.navigate import SkillNavigation
 # from skills.grasping import SkillGrasping
 from execution.bt import ExecutionSystem
+from skills import pddl_descriptions
 
-import pybullet as p
-import numpy as np
-from scipy.spatial.transform import Rotation as R
-
+# Interface to BT
 import py_trees
 
+# Interface to planner and PDDL
+from pddl_interface import pddl_file_if, planner_interface
+
+# -------------------------------------------------------------
+
+
 def main():
+
+    # Set up planner interface and domain representation
+
+    pddl_if = pddl_file_if.PDDLFileInterface(domain_dir="knowledge/chimera/domain", domain_name="chimera")
+    temp = pddl_descriptions.get_grasping_description()
+    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
+    pddl_if.save_domain()
+
+    # -----------------------------------
+
     # Create world
     world = World(gui_=True, sleep_=True)
     scene = ScenePlanning1(world)
@@ -22,6 +37,8 @@ def main():
     # Spawn robot
     robot = RobotArm(world)
     robot.reset()
+
+    # -----------------------------------
 
     # Set up skills
     sk_nav = SkillNavigation(scene, robot._model.uid)

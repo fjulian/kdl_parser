@@ -182,3 +182,19 @@ class SkillGrasping:
     def release_object(self):
         self.robot.open_gripper()
         self.robot.transition_cartesian(self.last_pre_pos, self.last_pre_orient)
+
+def get_grasping_description():
+    action_name = "grasp"
+    action_params = [
+        ["obj", "object"],
+        ["rob", "chimera"]
+    ]
+    action_preconditions = [
+        ("in-reach", False, ["obj", "rob"]),
+        ("empty-hand", False, ["rob"])
+    ]
+    action_effects = [
+        ("empty-hand", True, ["rob"]),
+        ("in-hand", False, ["obj", "rob"])
+    ]
+    return (action_name, {"params": action_params, "preconds": action_preconditions, "effects": action_effects})
