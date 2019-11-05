@@ -112,12 +112,12 @@ class SkillGrasping:
         self.last_pre_pos = None
         self.last_pre_orient = None
 
-    def compute_grasp(self, target_name, link_id):
+    def compute_grasp(self, target_name, link_id=None, grasp_id=0):
         obj_info = self.scene.objects[target_name]
         target_id = obj_info.model.uid
 
         num_grasps = len(obj_info.grasp_pos)
-        grasp_id = 0
+        assert(grasp_id<num_grasps)
 
         # Get the object pose
         if link_id is None:
@@ -159,8 +159,8 @@ class SkillGrasping:
         return np.squeeze(r_R_R_grasp[:3,:]), C_rob_grasp.as_quat()
         # return np.squeeze(r_Rob_rob_ee[:3,:]), C_rob_grasp.as_quat()
 
-    def grasp_object(self, target_name, link_id=None):
-        pos, orient = self.compute_grasp(target_name, link_id)
+    def grasp_object(self, target_name, link_id=None, grasp_id=0):
+        pos, orient = self.compute_grasp(target_name, link_id, grasp_id)
 
         self.robot.open_gripper()
 
@@ -173,7 +173,7 @@ class SkillGrasping:
 
         self.robot._world.step_seconds(0.2)
         self.robot.close_gripper()
-        self.robot._world.step_seconds(0.2)
+        self.robot._world.step_seconds(0.4)
 
         # Save some variables required for releasing
         self.last_pre_pos = pos_pre

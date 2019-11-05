@@ -52,7 +52,7 @@ class RobotArm:
         self.std_vel = 0.3
         self.std_duration = 4
 
-        # The robot is loaded in this position initially
+        # The robot is loaded in this position initially (these were obtained by running forward kinematics on the desired command)
         self.current_cmd = np.array([0.0] * 7)
         self.current_pos = np.array([0.116133, 0.0, 0.931720])
         self.current_orient = np.array([-0.82533172, 0.56462609, -0.0041196189, 0.002819567719])
@@ -74,7 +74,7 @@ class RobotArm:
         for i in range(self.num_joints):
             info = p.getJointInfo(self._model.uid, i)
             joint_name = info[1]
-            # print(joint_name)  # Use this to print all joint names.
+            # print(joint_name, info[16])  # Use this to print all joint names.
             if "panda_joint" in joint_name and len(joint_name) == 12:
                 joint_num = int(joint_name.split("panda_joint")[1])
                 if joint_num < 8:
