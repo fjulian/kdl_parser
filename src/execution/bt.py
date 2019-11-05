@@ -1,6 +1,6 @@
 import py_trees
 from skills.grasping import ActionGrasping
-from execution.condition_check import ConditionChecker
+from execution.condition_check import ConditionChecker_Blackboard
 
 
 class ExecutionSystem:
@@ -16,12 +16,19 @@ class ExecutionSystem:
     def create_tree(self):
         root = py_trees.composites.Selector("Selector")
         grasping = ActionGrasping(self._scene, self._robot)
-        grasping_check = ConditionChecker("grasp_success")
+        grasping_check = ConditionChecker_Blackboard("grasp_success")
         root.add_children([grasping_check, grasping])
         
         self.tree = py_trees.trees.BehaviourTree(root)
         self.show_tree()
         self.tree.setup(timeout=15)
+
+    def create_tree_from_plan(self, plan):
+        next_lower_root = None
+        for plan_item in reversed(plan):
+            local_root = py_trees.composites.Selector()
+            effect_root = py_trees.composites.Sequence()
+
 
     def show_tree(self):
         print("="*20)

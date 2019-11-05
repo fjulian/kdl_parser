@@ -6,7 +6,7 @@ from sim.scene_planning_1 import ScenePlanning1
 
 # Skills
 from skills.navigate import SkillNavigation
-# from skills.grasping import SkillGrasping
+from skills.grasping import SkillGrasping
 from execution.bt import ExecutionSystem
 from skills import pddl_descriptions
 from predicates.predicates import Predicates
@@ -27,7 +27,20 @@ def main():
     temp = pddl_descriptions.get_grasping_description()
     pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
 
-    preds = Predicates()
+    # -----------------------------------
+
+    # Create world
+    world = World(gui_=True, sleep_=False)
+    scene = ScenePlanning1(world)
+
+    # Spawn robot
+    robot = RobotArm(world)
+    robot.reset()
+
+    # -----------------------------------
+    # Set up predicates
+
+    preds = Predicates(scene, robot)
     for descr in preds.descriptions:
         pddl_if.add_predicate(predicate_name=descr[0], predicate_definition=descr[1], overwrite=False)
 
@@ -38,19 +51,9 @@ def main():
 
     # -----------------------------------
 
-    # Create world
-    world = World(gui_=True, sleep_=True)
-    scene = ScenePlanning1(world)
-
-    # Spawn robot
-    robot = RobotArm(world)
-    robot.reset()
-
-    # -----------------------------------
-
     # Set up skills
     sk_nav = SkillNavigation(scene, robot._model.uid)
-    # sk_grasp = SkillGrasping(scene, robot)
+    sk_grasp = SkillGrasping(scene, robot)
 
     # Set up behavior tree
     es = ExecutionSystem(scene, robot)
@@ -72,7 +75,6 @@ def main():
 
     # Grasp the cube
     # sk_grasp.grasp_object("cube1")
-
 
     # Grasp the cupboard handle
     # sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
