@@ -23,7 +23,7 @@ from pddl_interface import pddl_file_if, planner_interface
 def main():
 
     # Set up planner interface and domain representation
-    pddl_if = pddl_file_if.PDDLFileInterface(domain_dir="knowledge/chimera/domain", domain_name="chimera")
+    pddl_if = pddl_file_if.PDDLFileInterface(domain_dir="knowledge/chimera/domain", domain_name="chimera-domain")
     temp = pddl_descriptions.get_grasping_description()
     pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
 
@@ -32,6 +32,9 @@ def main():
         pddl_if.add_predicate(predicate_name=descr[0], predicate_definition=descr[1], overwrite=False)
 
     pddl_if.save_domain()
+    pddl_if.write_domain_pddl()
+
+    plan = planner_interface.pddl_planner(pddl_if._domain_file_pddl, "knowledge/chimera/problem/goal_grasp_cube.pddl")
 
     # -----------------------------------
 

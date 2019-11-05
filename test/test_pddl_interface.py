@@ -4,32 +4,30 @@ import sys
 from os import path, remove
 sys.path.append( path.join(path.dirname( path.dirname( path.abspath(__file__) ) ), 'src') )
 
-from pddl_interface.planner_interface import PDDLsolver
+from pddl_interface.planner_interface import pddl_planner, cut_string_at, cut_string_before
 from pddl_interface.pddl_file_if import PDDLFileInterface
 
 class TestInterface(unittest.TestCase):
     def setUp(self):
-        self.slv = PDDLsolver()
-        
         self.fif_domain_dir = "test/data"
         self.fif_init_domain_name = 'test_domain.pddl'
         self.fif = PDDLFileInterface(self.fif_domain_dir, initial_domain_pddl=self.fif_init_domain_name)
 
     def test_output(self):
-        res = self.slv.plan('test/data/examples/strips_typing_valid/domain.pddl', 'test/data/examples/strips_typing_valid/problem.pddl')
+        res = pddl_planner('test/data/examples/strips_typing_valid/domain.pddl', 'test/data/examples/strips_typing_valid/problem.pddl')
         self.assertEqual(res[0], '0: move rover1 waypoint6 waypoint7')
         self.assertEqual(len(res), 66)
         self.assertEqual(res[-1], '65: move rover1 waypoint9 waypoint1')
 
-        res = self.slv.plan('test/data/examples/strips_typing_invalid/domain.pddl', 'test/data/examples/strips_typing_invalid/problem.pddl')
+        res = pddl_planner('test/data/examples/strips_typing_invalid/domain.pddl', 'test/data/examples/strips_typing_invalid/problem.pddl')
         self.assertFalse(res)
 
     def test_cut_methods(self):
-        self.assertEqual(self.slv.cut_string_before("Hello world. What's up?", "What's"), "What's up?")
-        self.assertEqual(self.slv.cut_string_before("Hello world.", "What's"), "Hello world.")
+        self.assertEqual(cut_string_before("Hello world. What's up?", "What's"), "What's up?")
+        self.assertEqual(cut_string_before("Hello world.", "What's"), "Hello world.")
 
-        self.assertEqual(self.slv.cut_string_at("Hello world. What's up?", "world"), "Hello ")
-        self.assertEqual(self.slv.cut_string_at("Hello world", "up"), "Hello world")
+        self.assertEqual(cut_string_at("Hello world. What's up?", "world"), "Hello ")
+        self.assertEqual(cut_string_at("Hello world", "up"), "Hello world")
 
     def test_pddl_read_write(self):
         self.assertEqual(len(self.fif._predicates), 10)
@@ -58,8 +56,9 @@ class TestInterface(unittest.TestCase):
         self.assertTrue("dummy_action" in self.fif._actions)
         self.assertTrue(isinstance(self.fif._actions["dummy_action"], dict))
         self.assertFalse(self.fif._actions["dummy_action"]["effects"][0][1])
-        with self.assertRaises(ValueError):
-            self.fif.add_action("dummy_action", {})
+
+        self.assertTrue(len(self.fif._actions["dummy_action"])>0)  
+        self.fif.add_action("dummy_action", {}, overwrite=False)
         self.assertTrue(len(self.fif._actions["dummy_action"])>0)
         self.fif.add_action("dummy_action", {}, overwrite=True)
         self.assertFalse(len(self.fif._actions["dummy_action"])>0)
