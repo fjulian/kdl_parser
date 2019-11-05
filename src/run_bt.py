@@ -9,6 +9,7 @@ from skills.navigate import SkillNavigation
 # from skills.grasping import SkillGrasping
 from execution.bt import ExecutionSystem
 from skills import pddl_descriptions
+from predicates.predicates import Predicates
 
 # Interface to BT
 import py_trees
@@ -22,10 +23,14 @@ from pddl_interface import pddl_file_if, planner_interface
 def main():
 
     # Set up planner interface and domain representation
-
     pddl_if = pddl_file_if.PDDLFileInterface(domain_dir="knowledge/chimera/domain", domain_name="chimera")
     temp = pddl_descriptions.get_grasping_description()
     pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
+
+    preds = Predicates()
+    for descr in preds.descriptions:
+        pddl_if.add_predicate(predicate_name=descr[0], predicate_definition=descr[1], overwrite=False)
+
     pddl_if.save_domain()
 
     # -----------------------------------
