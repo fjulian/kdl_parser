@@ -6,7 +6,7 @@ from sim.scene_planning_1 import ScenePlanning1
 
 # Skills
 from skills.navigate import SkillNavigation
-from skills.grasping import SkillGrasping
+# from skills.grasping import SkillGrasping
 from execution.bt import ExecutionSystem
 from skills import pddl_descriptions
 from predicates.predicates import Predicates
@@ -41,7 +41,7 @@ def main():
     # Set up predicates
 
     preds = Predicates(scene, robot)
-    for descr in preds.descriptions:
+    for descr in preds.descriptions.items():
         pddl_if.add_predicate(predicate_name=descr[0], predicate_definition=descr[1], overwrite=False)
 
     pddl_if.save_domain()
@@ -53,10 +53,10 @@ def main():
 
     # Set up skills
     sk_nav = SkillNavigation(scene, robot._model.uid)
-    sk_grasp = SkillGrasping(scene, robot)
+    # sk_grasp = SkillGrasping(scene, robot)
 
     # Set up behavior tree
-    es = ExecutionSystem(scene, robot)
+    es = ExecutionSystem(scene, robot, preds)
 
     blackboard = py_trees.blackboard.Blackboard()
     blackboard.grasp_target_name = "cube1"

@@ -10,11 +10,11 @@ class Predicates:
             "in-reach": self.in_reach
         }
 
-        self.descriptions = [
-            ("empty-hand", [["rob", "chimera"]]),
-            ("in-hand", [["obj", "object"], ["rob", "chimera"]]),
-            ("in-reach", [["obj", "object"], ["rob", "chimera"]])
-        ]
+        self.descriptions = {
+            "empty-hand": [["rob", "chimera"]],
+            "in-hand": [["obj", "object"], ["rob", "chimera"]],
+            "in-reach": [["obj", "object"], ["rob", "chimera"]]
+        }
 
         self.sk_grasping = SkillGrasping(scene, robot)
         self._scene = scene
