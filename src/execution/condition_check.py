@@ -48,10 +48,17 @@ class ConditionChecker_Predicate(py_trees.behaviour.Behaviour):
         self.logger.debug("%s.initialise()->initiating check" % (self.__class__.__name__))
         if not self.setup_called:
             raise RuntimeError("Setup function not called")
+
+        # Clear out any old responses from the pipe
+        # while self.parent_connection.poll():
+        #     _ = self.parent_connection.recv()
+
+        # Send command
+        # if not self.parent_connection.poll():
         self.parent_connection.send(["start"])
 
     def update(self):
-        print("child process status: "+str(self.check_process.is_alive()))
+        # print("child process status: "+str(self.check_process.is_alive()))
         if self.parent_connection.poll():
             res = self.parent_connection.recv()
             if self._invert:
@@ -71,10 +78,16 @@ class ConditionChecker_Predicate(py_trees.behaviour.Behaviour):
 def checker_process(pipe_connection, lock, fcn, fcn_args):
     while True:
         if pipe_connection.poll():
-            print("got check command")
+            print("got check command: "+fcn.__name__)
             _ = pipe_connection.recv()
             lock.acquire()
             res = fcn(*fcn_args)
             lock.release()
             pipe_connection.send(res)
+            print("Response sent: "+fcn.__name__)
         time.sleep(0.5)
+
+# Nächste Idee: for every action node, have a corresponding variable if corresponding predicates were actually checked since the last run.
+# The respective predicate will then set this variable to true while running the action will set it to false.
+# Potential remaining issue: The first time, the chooser will still return false. This might lead to the case that previous actions will be run
+# although this wouldn't be necessary.

@@ -65,8 +65,8 @@ class ExecutionSystem:
             # Build action run part of tree
             action_node = ActionGrasping(self._scene, self._robot, self._lock, target=("cube1", None, None))
 
-            local_run_root = py_trees.composites.Selector(name="Run root", children=[effects_node, action_node])
-            local_can_run_root = py_trees.composites.Selector(name="Can run root", children=[effects_node, preconds_node])
+            local_run_root = py_trees.composites.Chooser(name="Run root", children=[effects_node, action_node])
+            local_can_run_root = py_trees.composites.Chooser(name="Can run root", children=[effects_node, preconds_node])
 
             local_root = py_trees.composites.Sequence(name="Root", children=[local_can_run_root, local_run_root])
         root = local_root
