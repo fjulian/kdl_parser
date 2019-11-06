@@ -2,6 +2,7 @@ import py_trees
 from skills.grasping import ActionGrasping
 from skills.pddl_descriptions import get_action_description
 from execution.condition_check import ConditionChecker_Blackboard, ConditionChecker_Predicate
+from multiprocessing import Lock
 
 
 class ExecutionSystem:
@@ -10,6 +11,8 @@ class ExecutionSystem:
         self._robot = robot
         self._predicates = predicates
         self.tree = None
+
+        self._lock = Lock()
 
         py_trees.logging.level = py_trees.logging.Level.DEBUG
 
@@ -44,6 +47,7 @@ class ExecutionSystem:
             for precond in descr_action[1]["preconds"]:
                 precond_check = ConditionChecker_Predicate(self._predicates.call[precond[0]],
                                                             self.process_pred_args(precond[2], action_arg_dict),
+                                                            lock=self._lock,
                                                             invert=precond[1])
                 preconds.append(precond_check)
             preconds_node = py_trees.composites.Sequence(name="Precond root", children=preconds)
@@ -53,12 +57,13 @@ class ExecutionSystem:
             for effect in descr_action[1]["effects"]:
                 effect_check = ConditionChecker_Predicate(self._predicates.call[effect[0]],
                                                             self.process_pred_args(effect[2], action_arg_dict),
+                                                            lock=self._lock,
                                                             invert=effect[1])
                 effects.append(effect_check)
             effects_node = py_trees.composites.Sequence(name="Effect root", children=effects)
 
             # Build action run part of tree
-            action_node = ActionGrasping(self._scene, self._robot, target=("cube1", None, None))
+            action_node = ActionGrasping(self._scene, self._robot, self._lock, target=("cube1", None, None))
 
             local_run_root = py_trees.composites.Selector(name="Run root", children=[effects_node, action_node])
             local_can_run_root = py_trees.composites.Selector(name="Can run root", children=[effects_node, preconds_node])

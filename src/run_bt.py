@@ -93,8 +93,12 @@ def main():
 
     try:
         es.tree.tick_tock(sleep_ms=500, number_of_iterations=py_trees.trees.CONTINUOUS_TICK_TOCK)
+        # while True:
+        #     es.tree.tick()
+
     except KeyboardInterrupt:
-        es.tree.interrupt() 
+        es.tree.interrupt()
+        pass
 
     # world.step_seconds(50)
 

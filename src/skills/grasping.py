@@ -13,12 +13,13 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
     """
         Based on the example https://py-trees.readthedocs.io/en/release-0.6.x/_modules/py_trees/demos/action.html#Action
     """
-    def __init__(self, scene, robot, name="grasping_action", target=None, blackboard_comm=False):
+    def __init__(self, scene, robot, lock, name="grasping_action", target=None, blackboard_comm=False):
         super(ActionGrasping, self).__init__(name)
         self.logger.debug("%s.__init__()" % (self.__class__.__name__))
         self.setup_called = False
         self._scene = scene
         self._robot = robot
+        self._lock = lock
         self._target = target
         self._blackboard_comm = blackboard_comm
         if self._blackboard_comm:
@@ -28,7 +29,7 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
         if not self.setup_called:
             self.logger.debug("%s.setup()->connections to an external process" % (self.__class__.__name__))
             self.parent_connection, self.child_connection = multiprocessing.Pipe()
-            self.grasping = multiprocessing.Process(target=grasping_process, args=(self.child_connection, self._scene, self._robot))
+            self.grasping = multiprocessing.Process(target=grasping_process, args=(self.child_connection, self._scene, self._robot, self._lock))
             atexit.register(self.grasping.terminate)
             self.grasping.start()
             self.setup_called = True
@@ -67,7 +68,6 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
                 self.feedback_message = "Grasping successful"
                 if self._blackboard_comm:
                     self.blackboard.set("grasp_success", True)
-                
             elif res==1:
                 # Grasping in progress, but this is already set above
                 pass
@@ -84,7 +84,7 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
         self.logger.debug("%s.terminate()[%s->%s]" % (self.__class__.__name__, self.status, new_status))
 
 
-def grasping_process(pipe_connection, scene, robot):
+def grasping_process(pipe_connection, scene, robot, lock):
     sk_grasping = SkillGrasping(scene, robot)
 
     idle = True
@@ -95,7 +95,7 @@ def grasping_process(pipe_connection, scene, robot):
                 cmd = pipe_connection.recv()
                 if len(cmd)==3 and idle:
                     # Start the process
-                    proc = multiprocessing.Process(target=sk_grasping.grasp_object, args=(cmd[0], cmd[1]))
+                    proc = multiprocessing.Process(target=sk_grasping.grasp_object, args=(cmd[0], cmd[1], lock))
                     idle = False
                     proc.start()
                 elif len(cmd)==0:
@@ -173,7 +173,9 @@ class SkillGrasping:
         return np.squeeze(r_R_R_grasp[:3,:]), C_rob_grasp.as_quat()
         # return np.squeeze(r_Rob_rob_ee[:3,:]), C_rob_grasp.as_quat()
 
-    def grasp_object(self, target_name, link_id=None, grasp_id=0):
+    def grasp_object(self, target_name, link_id=None, grasp_id=0, lock=None):
+        if lock is not None:
+            lock.acquire()
         pos, orient = self.compute_grasp(target_name, link_id, grasp_id)
 
         self.robot.open_gripper()
@@ -192,6 +194,9 @@ class SkillGrasping:
         # Save some variables required for releasing
         self.last_pre_pos = pos_pre
         self.last_pre_orient = orient
+
+        if lock is not None:
+            lock.release()
 
     def release_object(self):
         self.robot.open_gripper()
