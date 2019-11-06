@@ -13,13 +13,16 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
     """
         Based on the example https://py-trees.readthedocs.io/en/release-0.6.x/_modules/py_trees/demos/action.html#Action
     """
-    def __init__(self, scene, robot, name="grasping_action"):
+    def __init__(self, scene, robot, name="grasping_action", target=None, blackboard_comm=False):
         super(ActionGrasping, self).__init__(name)
         self.logger.debug("%s.__init__()" % (self.__class__.__name__))
         self.setup_called = False
         self._scene = scene
         self._robot = robot
-        self.blackboard = py_trees.blackboard.Blackboard()
+        self._target = target
+        self._blackboard_comm = blackboard_comm
+        if self._blackboard_comm:
+            self.blackboard = py_trees.blackboard.Blackboard()
 
     def setup(self, unused_timeout=15):
         if not self.setup_called:
@@ -29,20 +32,29 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
             atexit.register(self.grasping.terminate)
             self.grasping.start()
             self.setup_called = True
-            self.blackboard.set("grasp_success", False)
+            if self._blackboard_comm:
+                self.blackboard.set("grasp_success", False)
         return True
 
     def initialise(self):
         self.logger.debug("%s.initialise()->sending new goal" % (self.__class__.__name__))
         if not self.setup_called:
             raise RuntimeError("Setup function not called")
-        try:
-            target_name = self.blackboard.grasp_target_name
-            target_link_id = self.blackboard.grasp_target_link_id
-            target_grasp_id = self.blackboard.grasp_target_grasp_id
-        except AttributeError as e:
-            self.logger.error("%s.initialise()->couldn't find required vars on blackboard" % (self.__class__.__name__))
-            raise e
+        if self._target is None:
+            if self._blackboard_comm:
+                try:
+                    target_name = self.blackboard.grasp_target_name
+                    target_link_id = self.blackboard.grasp_target_link_id
+                    target_grasp_id = self.blackboard.grasp_target_grasp_id
+                except AttributeError as e:
+                    self.logger.error("%s.initialise()->couldn't find required vars on blackboard" % (self.__class__.__name__))
+                    raise e
+            else:
+                raise ValueError("Blackboard comm disabled and no target given as argument.")
+        else:
+            target_name = self._target[0]
+            target_link_id = self._target[1]
+            target_grasp_id = self._target[2]
         self.parent_connection.send([target_name, target_link_id, target_grasp_id])
 
     def update(self):
@@ -53,7 +65,8 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
             if res==0:
                 new_status = py_trees.common.Status.SUCCESS
                 self.feedback_message = "Grasping successful"
-                self.blackboard.set("grasp_success", True)
+                if self._blackboard_comm:
+                    self.blackboard.set("grasp_success", True)
             elif res==1:
                 # Grasping in progress, but this is already set above
                 pass

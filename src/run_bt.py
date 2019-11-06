@@ -56,12 +56,12 @@ def main():
     # sk_grasp = SkillGrasping(scene, robot)
 
     # Set up behavior tree
-    es = ExecutionSystem(scene, robot, preds)
+    es = ExecutionSystem(scene, robot, preds, plan=plan)
 
-    blackboard = py_trees.blackboard.Blackboard()
-    blackboard.grasp_target_name = "cube1"
-    blackboard.grasp_target_link_id = None
-    blackboard.grasp_target_grasp_id = None
+    # blackboard = py_trees.blackboard.Blackboard()
+    # blackboard.grasp_target_name = "cube1"
+    # blackboard.grasp_target_link_id = None
+    # blackboard.grasp_target_grasp_id = None
 
     # -----------------------------------
     
