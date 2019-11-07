@@ -4,14 +4,14 @@ from os import path
 import pickle
 
 class PDDLFileInterface:
-    def __init__(self, domain_dir, problem_dir=None, initial_domain_pddl=None):
+    def __init__(self, domain_dir, problem_dir=None, initial_domain_pddl=None, domain_name=""):
         self._domain_dir = domain_dir
         if problem_dir is None:
             self._problem_dir = domain_dir
         else:
             self._problem_dir = problem_dir
 
-        self._domain_name = ""
+        self._domain_name = domain_name
         self._predicates = {}
         self._actions = {}
 
@@ -25,12 +25,16 @@ class PDDLFileInterface:
         self._requirements = ":strips :typing"
 
     def load_domain(self):
-        with open(self._domain_file, 'rb') as f:
-            load_obj = pickle.load(f)
-        self._domain_name = load_obj[0]
-        self._predicates = load_obj[1]
-        self._actions = load_obj[2]
-        print("Loaded domain file")
+        print("Trying to load domain file...")
+        if path.exists(self._domain_file):
+            with open(self._domain_file, 'rb') as f:
+                load_obj = pickle.load(f)
+            self._domain_name = load_obj[0]
+            self._predicates = load_obj[1]
+            self._actions = load_obj[2]
+            print("Trying to load domain file... DONE")
+        else:
+            print("Trying to load domain file... NOT FOUND --> starting from scratch")
 
     def save_domain(self):
         save_obj = (self._domain_name, self._predicates, self._actions)
@@ -224,6 +228,20 @@ class PDDLFileInterface:
                             sub_curr = dom.pop(0).strip()
                 self._actions[action] = {"params": params, "preconds": preconds, "effects": effects}
         print("Read PDDL domain file")
+
+    def add_action(self, action_name, action_definition, overwrite=False):
+        if not overwrite and action_name in self._actions:
+            print("Action "+action_name+" already exists and no overwrite was requested. Ignoring request.")
+        else:
+            assert(isinstance(action_name, str))
+            self._actions[action_name] = action_definition
+
+    def add_predicate(self, predicate_name, predicate_definition, overwrite=False):
+        if not overwrite and predicate_name in self._predicates:
+            print("Predicate "+predicate_name+" already exists and no overwrite was requested. Ignoring request.")
+        else:
+            assert(isinstance(predicate_name, str))
+            self._predicates[predicate_name] = predicate_definition
 
 ### Assumed conventions:
 # All arguments of a predicate are on the same line as the predicate name. Each line defines one predicate.

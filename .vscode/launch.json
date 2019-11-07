@@ -9,6 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
+            "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
         },
         {
@@ -16,6 +17,13 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/run.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: run_bt.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/run_bt.py",
             "console": "integratedTerminal"
         }
     ]
