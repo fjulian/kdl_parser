@@ -30,7 +30,7 @@ def main():
     # -----------------------------------
 
     # Create world
-    world = World(gui_=True, sleep_=False)
+    world = World(gui_=True, sleep_=True)
     scene = ScenePlanning1(world)
 
     # Spawn robot

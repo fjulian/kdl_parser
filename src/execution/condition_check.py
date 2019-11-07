@@ -78,13 +78,13 @@ class ConditionChecker_Predicate(py_trees.behaviour.Behaviour):
 def checker_process(pipe_connection, lock, fcn, fcn_args):
     while True:
         if pipe_connection.poll():
-            print("got check command: "+fcn.__name__)
+            # print("got check command: "+fcn.__name__)
             _ = pipe_connection.recv()
             lock.acquire()
             res = fcn(*fcn_args)
             lock.release()
             pipe_connection.send(res)
-            print("Response sent: "+fcn.__name__)
+            # print("Response sent: "+fcn.__name__)
         time.sleep(0.5)
 
 # Naechste Idee: for every action node, have a corresponding variable if corresponding predicates were actually checked since the last run.
