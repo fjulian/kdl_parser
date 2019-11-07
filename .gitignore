@@ -2,4 +2,5 @@ venv
 venv3
 *.pyc
 *.pkl
+*.bullet
 knowledge/chimera/domain

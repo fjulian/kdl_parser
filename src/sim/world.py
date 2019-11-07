@@ -8,7 +8,7 @@ import atexit
 
 
 class World:
-    def __init__(self, gui_=True, sleep_=True):
+    def __init__(self, gui_=True, sleep_=True, load_objects=True):
         self.gui = gui_
         self.sleep_flag = sleep_
         if self.gui:
@@ -16,7 +16,11 @@ class World:
             self.physics_client = p.connect(p.SHARED_MEMORY)
         else:
             self.physics_client = p.connect(p.DIRECT)
-        p.resetSimulation(self.physics_client)
+        
+        if load_objects:
+            p.resetSimulation(self.physics_client)
+        else:
+            p.restoreState(fileName=os.path.join(os.getcwd(), "data/sim/state.bullet"))
 
         p.setGravity(0, 0, -9.81, self.physics_client)
 

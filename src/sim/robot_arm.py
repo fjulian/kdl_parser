@@ -14,9 +14,9 @@ from pykdl_utils.kdl_kinematics import KDLKinematics
 
 
 class RobotArm:
-    def __init__(self, world):
+    def __init__(self, world, robot_model=None):
         self._world = world
-        self._model = None
+        self._model = robot_model
         self.num_joints = 0
         self.joint_idx_arm = [1, 2, 3, 4, 5, 6, 7]
         self.joint_idx_hand = [0, 0]
@@ -58,13 +58,14 @@ class RobotArm:
         self.velocity_turn = 0.0
 
     def reset(self):
-        self._model = self._world.add_model(
-            path=self.urdf_path,
-            position=[0.0, 0.0, 0.04],
-            orientation=[0.0, 0.0, 0.0, 1.0]
-        )
-        self.num_joints = p.getNumJoints(self._model.uid)
+        if self._model is None:
+            self._model = self._world.add_model(
+                path=self.urdf_path,
+                position=[0.0, 0.0, 0.04],
+                orientation=[0.0, 0.0, 0.0, 1.0]
+            )
 
+        self.num_joints = p.getNumJoints(self._model.uid)
         for i in range(self.num_joints):
             info = p.getJointInfo(self._model.uid, i)
             joint_name = info[1]

@@ -1,3 +1,5 @@
+import argparse
+import pickle
 
 # Simulation
 from sim.world import World
@@ -21,6 +23,20 @@ from pddl_interface import pddl_file_if, planner_interface
 
 
 def main():
+    # Command line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-r", "--reuse-objects", action="store_true", help="if given, the simulation does not reload objects. Objects must already be present.")
+    args = parser.parse_args()
+
+    # Load existing simulation data if desired
+    restore_existing_objects = args.reuse_objects
+    objects = None
+    robot_mdl = None
+    if restore_existing_objects:
+        with open("data/sim/objects.pkl", "rb") as pkl_file:
+            objects, robot_mdl = pickle.load(pkl_file)
+
+    # -----------------------------------
 
     # Set up planner interface and domain representation
     pddl_if = pddl_file_if.PDDLFileInterface(domain_dir="knowledge/chimera/domain", domain_name="chimera-domain")
@@ -30,11 +46,11 @@ def main():
     # -----------------------------------
 
     # Create world
-    world = World(gui_=True, sleep_=True)
-    scene = ScenePlanning1(world)
+    world = World(gui_=True, sleep_=True, load_objects=not restore_existing_objects)
+    scene = ScenePlanning1(world, restored_objects=objects)
 
     # Spawn robot
-    robot = RobotArm(world)
+    robot = RobotArm(world, robot_mdl)
     robot.reset()
 
     # -----------------------------------
@@ -66,7 +82,6 @@ def main():
     # -----------------------------------
     
     robot.to_start()
-    # world.step_seconds(30)
     world.step_seconds(1)
 
     # Run move skill
