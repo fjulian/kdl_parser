@@ -1,5 +1,8 @@
+from py_trees.composites import Selector
+from py_trees.common import Status
 
-class Chooser(Selector):
+
+class CustomChooser(Selector):
     """
     Choosers are Selectors with Commitment
     .. graphviz:: dot/chooser.dot
@@ -18,7 +21,7 @@ class Chooser(Selector):
     """
 
     def __init__(self, name="Chooser", children=None):
-        super(Chooser, self).__init__(name, children)
+        super(CustomChooser, self).__init__(name, children)
 
     def tick(self):
         """
@@ -44,12 +47,34 @@ class Chooser(Selector):
         if self.current_child is not None:
             # run our child, and invalidate anyone else who may have been ticked last run
             # (bit wasteful always checking for the latter)
+            previous = self.current_child
+            passed = False
+            found_running_or_success = False
             for child in self.children:
                 if child is self.current_child:
-                    for node in self.current_child.tick():
-                        yield node
-                elif child.status != Status.INVALID:
+                    passed = True
+                elif child.status != Status.INVALID and not passed:
                     child.stop(Status.INVALID)
+                if passed:
+                    for node in child.tick():
+                        yield node
+                        if node is child:
+                            if node.status == Status.RUNNING or node.status == Status.SUCCESS:
+                                self.current_child = child
+                                if previous != self.current_child:
+                                    passed2 = False
+                                    for child2 in self.children:
+                                        if passed2:
+                                            if child2.status != Status.INVALID:
+                                                child2.stop(Status.INVALID)
+                                        passed2 = True if child2 == self.current_child else passed2
+                                found_running_or_success = True
+                                break
+                    if found_running_or_success:
+                        break
+            if not found_running_or_success:
+                # Ran out of children
+                self.current_child = None
         else:
             for child in self.children:
                 for node in child.tick():

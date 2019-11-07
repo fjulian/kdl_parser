@@ -12,6 +12,8 @@ import py_trees
 import py_trees.console as console
 import time
 
+from execution.custom_chooser import CustomChooser
+
 ##############################################################################
 # Classes
 ##############################################################################
@@ -71,7 +73,9 @@ class FailAfterOneThenImmediate(py_trees.behaviour.Behaviour):
 
 
 def create_tree(scenario):
-    root = py_trees.composites.Chooser(name="Root")
+    # root = py_trees.composites.Chooser(name="Root")
+    root = CustomChooser(name="Custom chooser")
+
     # running = py_trees.behaviours.Success(name="Running")
     success = py_trees.behaviours.Success(name="Success")
     if scenario == "immediate-failure":
@@ -110,7 +114,7 @@ if __name__ == '__main__':
             print("\n--------- Tick {0} ---------\n".format(i))
             tree.tick_once()
             print("\n")
-            print(py_trees.display.ascii_tree(tree, show_status=True))
+            py_trees.display.print_ascii_tree(tree, show_status=True)
             time.sleep(1.0)
         except KeyboardInterrupt:
             break
