@@ -24,8 +24,6 @@ class World:
         self.f_s = 240.0
         self.T_s = 1.0 / float(self.f_s)
 
-        self.models = []
-        self.plane_id = 0
         self.collision_checker = None
         self.cross_uid = ()
 
@@ -44,12 +42,10 @@ class World:
     def add_model(self, path, position, orientation, scale=1.0):
         model = _Model(self.physics_client)
         model.load(path, position, orientation, scale)
-        self.models.append(model)
         return model
 
     def del_model(self, model):
         model.remove()
-        self.models.remove(model)
 
     def draw_cross(self, point):
         if len(self.cross_uid) > 0:
@@ -85,7 +81,7 @@ class World:
             self.sleep(self.T_s)
 
     def add_plane(self):
-        self.plane_id = p.loadURDF("plane.urdf")
+        return p.loadURDF("plane.urdf")
 
     def close(self):
         print("Closing world")
