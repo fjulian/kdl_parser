@@ -52,12 +52,6 @@ class RobotArm:
         self.std_vel = 0.3
         self.std_duration = 4
 
-        # The robot is loaded in this position initially (these were obtained by running forward kinematics on the desired command)
-        self.current_cmd = np.array([0.0] * 7)
-        self.current_pos = np.array([0.116133, 0.0, 0.931720])
-        self.current_orient = np.array([-0.82533172, 0.56462609, -0.0041196189, 0.002819567719])
-        self.current_pos_updated = True
-
         # Set up velocity setting for driving
         self._world.velocity_setter = self.velocity_setter
         self.velocity_trans = [0.0, 0.0, 0.0]
@@ -94,58 +88,42 @@ class RobotArm:
         p.setJointMotorControlArray(self._model.uid, self.joint_idx_arm, p.POSITION_CONTROL, targetPositions=desired)
 
     def transition_cmd_to(self, desired, duration=None):
-        desired_pos, desired_orient = self.fk(desired)
-        if duration is None:
-            if self.current_pos_updated:
-                duration = np.linalg.norm(self.current_pos - desired_pos) / self.std_vel
-            else:
-                print("WARNING: Current position not up-to-date. Using standard duration.")
-                duration = self.std_duration
+        desired_pos, _ = self.fk(desired)
 
-        try:
-            _ = desired - self.current_cmd
-        except TypeError as e:
-            if not (self.current_cmd is None or self.current_cmd.tolist() is None):
-                # print("Unexpected None!!")
-                print(desired)
-                print(desired is None)
-                raise e
-        if self.current_cmd.tolist() is None or self.current_cmd is None:
-            # TODO figure out why current_cmd is still sometimes None...
-            self.current_cmd = self.get_joints()
+        current_cmd = np.array(self.get_joints())
+        current_pos, _ = self.fk(current_cmd)
+
+        if duration is None:
+            duration = np.linalg.norm(current_pos - desired_pos) / self.std_vel
+
         if duration > self._world.T_s:
-            diff = (desired - self.current_cmd) / float(duration * self._world.f_s)
+            diff = (desired - current_cmd) / float(duration * self._world.f_s)
             for i in range(1, int(math.ceil(duration * self._world.f_s))):
-                cmd = self.current_cmd + i*diff
+                cmd = current_cmd + i*diff
                 self.set_joints(cmd.tolist())
                 self._world.step_one()
                 self._world.sleep(self._world.T_s)
         self.set_joints(desired.tolist())
-        self.current_cmd = desired
-        self.current_pos = desired_pos
-        self.current_orient = desired_orient
-        self.current_pos_updated = True
 
     def transition_cartesian(self, pos_des, orient_des, duration=None):
         orient_des_rot = R.from_quat(orient_des)
         pos_ee = pos_des - np.matmul(orient_des_rot.as_dcm(), np.array([0.0,0.0,0.103]))
 
+        current_cmd = np.array(self.get_joints())
+        current_pos, current_orient = self.fk(current_cmd)
+
         if duration is None:
-            if self.current_pos_updated:
-                duration = np.linalg.norm(self.current_pos - pos_ee) / self.std_vel
-            else:
-                print("WARNING: Current position not up-to-date. Using standard duration.")
-                duration = self.std_duration
+            duration = np.linalg.norm(current_pos - pos_ee) / self.std_vel
 
         # TODO check if duration is 0.
 
-        diff_pos = (pos_ee - self.current_pos) / float(duration * self._world.f_s)
-        diff_orient = (orient_des - self.current_orient) / float(duration * self._world.f_s)
+        diff_pos = (pos_ee - current_pos) / float(duration * self._world.f_s)
+        diff_orient = (orient_des - current_orient) / float(duration * self._world.f_s)
         fail_count = 0
         for i in range(1, int(math.ceil(duration * self._world.f_s))):
-            pos = self.current_pos + i*diff_pos
-            orient = self.current_orient + i*diff_orient
-            cmd = self.ik(pos, orient, self.current_cmd)
+            pos = current_pos + i*diff_pos
+            orient = current_orient + i*diff_orient
+            cmd = self.ik(pos, orient, current_cmd)
             if cmd.tolist() is None or cmd is None:
                 fail_count += 1
                 if fail_count > 10:
@@ -153,23 +131,20 @@ class RobotArm:
                 continue
             else:
                 fail_count = 0
-            self.current_cmd = cmd
+            current_cmd = cmd
             self.set_joints(cmd.tolist())
             self._world.step_one()
             self._world.sleep(self._world.T_s)
-        cmd = self.ik(pos_ee, orient_des, self.current_cmd)
-        self.current_cmd = cmd
+        cmd = self.ik(pos_ee, orient_des, current_cmd)
         self.set_joints(cmd.tolist())
-        self.current_pos = pos_ee
-        self.current_orient = orient_des
-        self.current_pos_updated = True
 
     def transition_function(self, fcn, t_fin):
+        current_cmd = np.array(self.get_joints())
         t = 0
         fail_count = 0
         while t < t_fin:
             pos, orient = fcn(t)
-            cmd = self.ik(pos, orient, self.current_cmd)
+            cmd = self.ik(pos, orient, current_cmd)
             if np.any(np.equal(cmd, None)) or cmd is None or cmd.tolist() is None:
                 # print("No IK solution found...")
                 fail_count += 1
@@ -178,17 +153,13 @@ class RobotArm:
                 continue
             else:
                 fail_count = 0
-            self.current_cmd = cmd
+            current_cmd = cmd
             self.set_joints(cmd.tolist())
             self._world.step_one()
             self._world.sleep(self._world.T_s)
             t += self._world.T_s
         pos, orient = fcn(t_fin)
-        cmd = self.ik(pos, orient, self.current_cmd)
-        self.current_cmd = cmd
-        self.current_pos = pos
-        self.current_pos_updated = True
-        self.current_orient = orient
+        cmd = self.ik(pos, orient, current_cmd)
         self.set_joints(cmd.tolist())
 
     def get_joints(self):
@@ -255,6 +226,3 @@ class RobotArm:
 
     def velocity_setter(self):
         p.resetBaseVelocity(self._model.uid, self.velocity_trans, [0.0, 0.0, self.velocity_turn])
-
-    
-

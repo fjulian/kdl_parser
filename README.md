@@ -3,7 +3,6 @@
 
 - High priority
   - [ ] Define predicates
-  - [ ] Instances of the robot arm class are distributed over multiple threads/processes. Therefore, variables are not carried over, which breaks the robot's behavior in some cases. Need to find a solution to have the robot class in a single thread only.
   - [ ] Restore simulation initial state if the simulation is already running, instead of reloading everything. This takes quite some time. Could be triggered via a command line argument or via querying which objects are present in the current simulation.
   - [ ] Make releasing an object a separate action
   - [ ] Write code that generates problem definition based on observations from the simulation
@@ -17,6 +16,7 @@
 - Done
   - [x] Define scene for symbol learning (table, cup, box, cupboard with drawers, ...)
   - [x] Implement grasping skill
+  - [x] Instances of the robot arm class are distributed over multiple threads/processes. Therefore, variables are not carried over, which breaks the robot's behavior in some cases. Need to find a solution to have the robot class in a single thread only OR make the class state-less.
 
 
 ## Setup Instructions
