@@ -2,6 +2,7 @@ import py_trees
 from skills.grasping import ActionGrasping
 from skills.pddl_descriptions import get_action_description
 from execution.condition_check import ConditionChecker_Blackboard, ConditionChecker_Predicate
+from execution.custom_chooser import CustomChooser
 from multiprocessing import Lock
 
 
@@ -23,7 +24,7 @@ class ExecutionSystem:
 
     def create_tree(self):
         root = py_trees.composites.Selector("Selector")
-        grasping = ActionGrasping(self._scene, self._robot)
+        grasping = ActionGrasping(self._scene, self._robot, self._lock)
         grasping_check = ConditionChecker_Blackboard("grasp_success")
         root.add_children([grasping_check, grasping])
         
@@ -63,10 +64,12 @@ class ExecutionSystem:
             effects_node = py_trees.composites.Sequence(name="Effect root", children=effects)
 
             # Build action run part of tree
-            action_node = ActionGrasping(self._scene, self._robot, self._lock, target=("cube1", None, None))
+            action_node = ActionGrasping(self._scene, self._robot, self._lock, target=("cube1", None, 0))
 
-            local_run_root = py_trees.composites.Chooser(name="Run root", children=[effects_node, action_node])
-            local_can_run_root = py_trees.composites.Chooser(name="Can run root", children=[effects_node, preconds_node])
+            # local_run_root = py_trees.composites.Chooser(name="Run root", children=[effects_node, action_node])
+            # local_can_run_root = py_trees.composites.Chooser(name="Can run root", children=[effects_node, preconds_node])
+            local_run_root = CustomChooser(name="Run root", children=[effects_node, action_node])
+            local_can_run_root = CustomChooser(name="Can run root", children=[effects_node, preconds_node])
 
             local_root = py_trees.composites.Sequence(name="Root", children=[local_can_run_root, local_run_root])
         root = local_root

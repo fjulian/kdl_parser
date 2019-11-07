@@ -7,6 +7,8 @@
   - [ ] Write code that generates problem definition based on observations from the simulation
   - [ ] Try closing the whole loop with a trivial example
   - [ ] Add navigation to the whole system
+  - [ ] Look again at check_grasp function. Seems like it would also say that an object is grasped if the gripper is just open.
+  - [ ] Use python logger instead of print statements.
 - Low priority
   - [ ] Write tests for robot arm control code.
 - Done

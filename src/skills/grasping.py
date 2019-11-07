@@ -95,7 +95,7 @@ def grasping_process(pipe_connection, scene, robot, lock):
                 cmd = pipe_connection.recv()
                 if len(cmd)==3 and idle:
                     # Start the process
-                    proc = multiprocessing.Process(target=sk_grasping.grasp_object, args=(cmd[0], cmd[1], lock))
+                    proc = multiprocessing.Process(target=sk_grasping.grasp_object, args=(cmd[0], cmd[1], cmd[2], lock))
                     idle = False
                     proc.start()
                 elif len(cmd)==0:
@@ -131,7 +131,7 @@ class SkillGrasping:
         target_id = obj_info.model.uid
 
         num_grasps = len(obj_info.grasp_pos)
-        assert(grasp_id<num_grasps)
+        assert(grasp_id<num_grasps, "Invalid grasp ID: "+str(grasp_id)+" (num_grasps: "+str(num_grasps)+")")
 
         # Get the object pose
         if link_id is None:
