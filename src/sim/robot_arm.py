@@ -97,6 +97,9 @@ class RobotArm:
         if duration is None:
             duration = np.linalg.norm(current_pos - desired_pos) / self.std_vel
 
+        if duration < 1e-3:
+            duration = 0.1
+
         if duration > self._world.T_s:
             diff = (desired - current_cmd) / float(duration * self._world.f_s)
             for i in range(1, int(math.ceil(duration * self._world.f_s))):
@@ -116,7 +119,8 @@ class RobotArm:
         if duration is None:
             duration = np.linalg.norm(current_pos - pos_ee) / self.std_vel
 
-        # TODO check if duration is 0.
+        if duration < 1e-3:
+            duration = 0.1
 
         diff_pos = (pos_ee - current_pos) / float(duration * self._world.f_s)
         diff_orient = (orient_des - current_orient) / float(duration * self._world.f_s)

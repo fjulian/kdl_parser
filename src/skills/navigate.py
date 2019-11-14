@@ -15,13 +15,6 @@ class SkillNavigation:
                 if contact_distance < 0.0:
                     # print("There is a collision")
                     return True
-            # res = p.getContactPoints(self.robot_uid, obj.model.uid)
-            # if len(res) > 0:
-            #     print("There is a collision!")
-            #     return True
-            # else:
-            #     pass
-            #     # TODO Make sure that shortest distance is also above some threshold
         return False
 
     def move(self, pos, orient):

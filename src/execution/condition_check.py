@@ -86,8 +86,3 @@ def checker_process(pipe_connection, lock, fcn, fcn_args):
             pipe_connection.send(res)
             # print("Response sent: "+fcn.__name__)
         time.sleep(0.5)
-
-# Naechste Idee: for every action node, have a corresponding variable if corresponding predicates were actually checked since the last run.
-# The respective predicate will then set this variable to true while running the action will set it to false.
-# Potential remaining issue: The first time, the chooser will still return false. This might lead to the case that previous actions will be run
-# although this wouldn't be necessary.

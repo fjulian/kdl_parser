@@ -15,7 +15,7 @@ class ExecutionSystem:
 
         self._lock = Lock()
 
-        py_trees.logging.level = py_trees.logging.Level.DEBUG
+        # py_trees.logging.level = py_trees.logging.Level.DEBUG
 
         if plan is None:
             self.create_tree()
@@ -66,8 +66,6 @@ class ExecutionSystem:
             # Build action run part of tree
             action_node = ActionGrasping(self._scene, self._robot, self._lock, target=("cube1", None, 0))
 
-            # local_run_root = py_trees.composites.Chooser(name="Run root", children=[effects_node, action_node])
-            # local_can_run_root = py_trees.composites.Chooser(name="Can run root", children=[effects_node, preconds_node])
             local_run_root = CustomChooser(name="Run root", children=[effects_node, action_node])
             local_can_run_root = CustomChooser(name="Can run root", children=[effects_node, preconds_node])
 

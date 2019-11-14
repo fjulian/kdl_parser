@@ -1,5 +1,6 @@
 import argparse
 import pickle
+import time
 
 # Simulation
 from sim.world import World
@@ -107,12 +108,18 @@ def main():
     # sk_grasp.grasp_object("cube1")
 
     try:
-        es.tree.tick_tock(sleep_ms=500, number_of_iterations=py_trees.trees.CONTINUOUS_TICK_TOCK)
-        # while True:
-        #     es.tree.tick()
+        # es.tree.tick_tock(sleep_ms=500, number_of_iterations=py_trees.trees.CONTINUOUS_TICK_TOCK)
+
+        index = 1
+        while True:
+            es.tree.tick()
+            print("------------- Tick {} ---------------".format(index))
+            py_trees.display.print_ascii_tree(es.tree.root, show_status=True)
+            index += 1
+            time.sleep(1.0)
 
     except KeyboardInterrupt:
-        es.tree.interrupt()
+        # es.tree.interrupt()
         pass
 
     # world.step_seconds(50)

@@ -366,7 +366,7 @@
     <limit effort="20" lower="0.0" upper="0.04" velocity="0.2"/>
     <mimic joint="panda_finger_joint1"/>
   </joint>
-  <joint name="camera_joint_panda_hand" type="fixed">
+  <!-- <joint name="camera_joint_panda_hand" type="fixed">
     <parent link="panda_hand"/>
     <child link="realsense_link"/>
     <origin rpy="3.14 -1.55 0.0" xyz="0.04 0.0 0.04"/>
@@ -390,8 +390,8 @@
       <plugin filename="libgazebo_ros_openni_kinect.so" name="camera_plugin">
         <baseline>0.2</baseline>
         <alwaysOn>true</alwaysOn>
-        <!-- Keep this zero, update_rate in the parent <sensor> tag
-                    will control the frame rate. -->
+        <!- Keep this zero, update_rate in the parent <sensor> tag
+                    will control the frame rate. ->
         <updateRate>0.0</updateRate>
         <cameraName>camera_ir</cameraName>
         <imageTopicName>/camera/color/image_raw</imageTopicName>
@@ -417,27 +417,13 @@
   </gazebo>
   <link name="realsense_link">
     <inertial>
-      <mass value="0.2"/>
+      <mass value="0.05"/>
       <inertia ixx="0.00014395" ixy="0" ixz="0" iyy="0.00000384" iyz="0" izz="0.00014136"/>
     </inertial>
     <collision>
       <geometry>
         <box size="0.008 0.13 0.02"/>
       </geometry>
-      <!-- <surface>
-                <contact>
-                <ode>
-                <max_vel>0.1</max_vel>
-                <min_depth>0.001</min_depth>
-                            </ode>
-                        </contact>
-                        <friction>
-                        <ode>
-                        <mu>0.4</mu>
-                        <mu2>0.4</mu2>
-                    </ode>
-                </friction>
-                </surface> -->
     </collision>
     <visual>
       <geometry>
@@ -445,6 +431,6 @@
       </geometry>
       <material name="blueish"/>
     </visual>
-  </link>
+  </link> -->
 </robot>
 
