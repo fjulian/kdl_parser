@@ -183,15 +183,22 @@ class RobotArm:
 
     def check_grasp(self):
         gripper_state = p.getJointStates(self._model.uid, self.joint_idx_hand)
-        threshold = 0.01
-        # print(gripper_state[0][0])
-        # print(gripper_state[1][0])
 
-        dist = gripper_state[0][0] + gripper_state[1][0]
-        if dist > threshold:
-            object_present = True
-        else:
+        # dist_threshold = 0.01
+        # dist = gripper_state[0][0] + gripper_state[1][0]
+        # if dist > dist_threshold:
+        #     object_present = True
+        # else:
+        #     object_present = False
+
+        force_threshold = 1.0
+        force1 = gripper_state[0][3]
+        force2 = gripper_state[1][3]
+        if abs(force1) < force_threshold and abs(force2) < force_threshold:
             object_present = False
+        else:
+            object_present = True
+
         return object_present
 
     def ik(self, pos, orient, seed_state=None):
