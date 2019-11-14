@@ -6,9 +6,7 @@
   - [ ] Make releasing an object a separate action
   - [ ] Write code that generates problem definition based on observations from the simulation
   - [ ] Add navigation to the whole system
-  - [ ] Look again at check_grasp function. Seems like it would also say that an object is grasped if the gripper is just open.
   - [ ] Use python logger instead of print statements.
-  - [ ] Change the robot arm transition. Doesn't necessarily need to be cartesian in all cases. Maybe this reduces the twitching.
   - [ ] Find a better grasping pose for the drawer handle.
   - [ ] Try other IK library
 - Low priority
@@ -20,6 +18,8 @@
   - [x] Instances of the robot arm class are distributed over multiple threads/processes. Therefore, variables are not carried over, which breaks the robot's behavior in some cases. Need to find a solution to have the robot class in a single thread only OR make the class state-less.
   - [x] Restore simulation initial state if the simulation is already running, instead of reloading everything. This takes quite some time. Could be triggered via a command line argument or via querying which objects are present in the current simulation.
   - [x] Add argparser
+  - [x] Look again at check_grasp function. Seems like it would also say that an object is grasped if the gripper is just open.
+  - [x] Change the robot arm transition. Doesn't necessarily need to be cartesian in all cases. Maybe this reduces the twitching.
 
 
 

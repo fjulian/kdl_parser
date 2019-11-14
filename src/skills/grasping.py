@@ -182,7 +182,8 @@ class SkillGrasping:
 
         # Go to pre-grasp pose
         pos_pre = pos - np.matmul(R.from_quat(orient).as_dcm(), np.array([0.0,0.0,0.15]))
-        self.robot.transition_cartesian(pos_pre, orient)
+        pos_pre_joints = self.robot.ik(pos_pre, orient)
+        self.robot.transition_cmd_to(pos_pre_joints)
 
         # Go to grasp pose
         self.robot.transition_cartesian(pos, orient)

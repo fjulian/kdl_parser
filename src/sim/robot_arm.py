@@ -183,6 +183,7 @@ class RobotArm:
 
     def check_grasp(self):
         gripper_state = p.getJointStates(self._model.uid, self.joint_idx_hand)
+        assert(len(gripper_state) == 2)
 
         # dist_threshold = 0.01
         # dist = gripper_state[0][0] + gripper_state[1][0]
@@ -202,11 +203,6 @@ class RobotArm:
         return object_present
 
     def ik(self, pos, orient, seed_state=None):
-        # if seed_state is None:
-        #     seed_state = [0.0] * self.ik_solver.number_of_joints
-        # elif seed_state.tolist() is None:
-        #     seed_state = [0.0] * self.ik_solver.number_of_joints
-
         # Ignore passed in seed state and just query the joints.
         if self._model is None:
             seed_state = [0.0] * self.ik_solver.number_of_joints
