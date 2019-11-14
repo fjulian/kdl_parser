@@ -3,16 +3,64 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 import py_trees
 
+import multiprocessing, atexit, time
+
 
 class ActionNavigate(py_trees.behaviour.Behaviour):
-    def __init__(self, scene, robot_uid, name="nav_action"):
+    def __init__(self, scene, robot_uid, target_name, name="nav_action"):
         super(ActionNavigate, self).__init__(name)
         self.logger.debug("%s.__init__()" % (self.__class__.__name__))
+        self._setup_called = False
+        self._scene = scene
+        self._robot_uid = robot_uid
+        self._target_name = target_name
+
+    def setup(self):
+        if not self._setup_called:
+            self.logger.debug("%s.setup()->connections to an external process" % (self.__class__.__name__))
+            self.parent_connection, self.child_connection = multiprocessing.Pipe()
+            self.nav = multiprocessing.Process(target=nav_process, args=(self.child_connection, self._scene, self._robot_uid))
+            atexit.register(self.nav.terminate)
+            self.nav.start()
+            self._setup_called = True
+        return True
+
+    def initialise(self):
+        self.logger.debug("%s.initialise()->sending new goal" % (self.__class__.__name__))
+        if not self._setup_called:
+            raise RuntimeError("Setup function not called")
+        self.parent_connection.send([self._target_name])
+
+    def update(self):
+        new_status = py_trees.common.Status.RUNNING
+        self.feedback_message = "Nav in progress"
+        if self.parent_connection.poll():
+            res = self.parent_connection.recv().pop()
+            if res==0:
+                new_status = py_trees.common.Status.SUCCESS
+                self.feedback_message = "Nav successful"
+            elif res==1:
+                # Nav in progress, but this is already set above
+                pass
+            elif res==2:
+                new_status = py_trees.common.Status.FAILURE
+                self.feedback_message = "Nav failed"
+            else:
+                assert(False, "Unexpected response")
+        self.logger.debug("%s.update()[%s->%s][%s]" % (self.__class__.__name__, self.status, new_status, self.feedback_message))
+        return new_status
 
 
 def nav_process(pipe_connection, scene, robot_uid):
-    pass
-
+    while True:
+        if pipe_connection.poll():
+            cmd = pipe_connection.recv()
+            if len(cmd) == 1:
+                move_to_object(cmd[0], scene, robot_uid)
+                pipe_connection.send([0])
+            else:
+                print("Unexpected command")
+        time.sleep(0.5)
 
 
 def _check_collisions(scene, robot_uid):
