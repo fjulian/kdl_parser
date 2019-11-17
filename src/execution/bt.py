@@ -34,8 +34,13 @@ class ExecutionSystem:
         self.tree.setup(timeout=15)
 
     def create_tree_from_plan(self, plan):
-        # next_lower_root = None
-        for plan_item in reversed(plan):
+        N = len(plan)
+
+        # Compute all actions' preconditions and effects
+        all_preconds = []
+        all_effects = []
+        for k in range(N):
+            plan_item = plan[k]
             plan_item_list = plan_item.split(' ')
             action_name = plan_item_list[1]
             descr_action = get_action_description(action_name)
@@ -52,7 +57,8 @@ class ExecutionSystem:
                                                             lock=self._lock,
                                                             invert=precond[1])
                 preconds.append(precond_check)
-            preconds_node = py_trees.composites.Sequence(name="Precond root", children=preconds)
+            preconds_node = py_trees.composites.Sequence(name="Preconds action {}".format(k+1), children=preconds)
+            all_preconds.append(preconds_node)
 
             # Establish effects
             effects = []
@@ -62,18 +68,48 @@ class ExecutionSystem:
                                                             lock=self._lock,
                                                             invert=effect[1])
                 effects.append(effect_check)
-            effects_node = py_trees.composites.Sequence(name="Effect root", children=effects)
+            effects_node = py_trees.composites.Sequence(name="Effects action {}".format(k+1), children=effects)
+            all_effects.append(effects_node)
 
-            # Build action run part of tree
+        # Compute all subgoals
+        all_goals = [None] * N
+        for k in reversed(range(N)):
+            # Establish goal
+            goals = []
+            # TODO set up goals
+
+        # Set up actual tree
+        next_lower_root = None
+        for k in range(N):
+            plan_item = plan[k]
+            plan_item_list = plan_item.split(' ')
+            action_name = plan_item_list[1]
+
+            # Need run part
+            effect_node = all_effects[k]
+            precond_node = py_trees.composites.Sequence(children=all_preconds[k+1:])
+            need_run_root = py_trees.composites.Sequence(name="Need run {}".format(k+1), children=[effect_node, precond_node])
+
+            # Do run part
             if action_name == "grasp":
                 action_node = ActionGrasping(self._scene, self._robot, self._lock, target=("cube1", None, 0))
             elif action_name == "nav":
                 action_node = ActionNavigate(self._scene, self._robot._model.uid, target_name="cube1")
+            do_run_root = py_trees.composites.Selector(name="Do run {}".format(k+1), children=[need_run_root, action_node])
 
-            local_run_root = CustomChooser(name="Run root", children=[effects_node, action_node])
-            local_can_run_root = CustomChooser(name="Can run root", children=[effects_node, preconds_node])
+            # Can run part
+            can_run_root = py_trees.composites.Sequence(name="Can run {}".format(k+1), children=[all_goals[k], all_preconds[k]])
 
-            local_root = py_trees.composites.Sequence(name="Root", children=[local_can_run_root, local_run_root])
+            # Precheck part
+            if next_lower_root is not None:
+                precheck_root = py_trees.composites.Selector(name="Precheck {}".format(k+1), children=[can_run_root, next_lower_root])
+            else:
+                precheck_root = can_run_root
+
+            # Local root
+            local_root = py_trees.composites.Sequence(name="Root {}".format(k+1), children=[precheck_root, do_run_root])
+            next_lower_root = local_root
+        
         root = local_root
         self.tree = py_trees.trees.BehaviourTree(root)
         self.show_tree()
