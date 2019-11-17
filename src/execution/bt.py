@@ -1,5 +1,6 @@
 import py_trees
 from skills.grasping import ActionGrasping
+from skills.navigate import ActionNavigate
 from skills.pddl_descriptions import get_action_description
 from execution.condition_check import ConditionChecker_Blackboard, ConditionChecker_Predicate
 from execution.custom_chooser import CustomChooser
@@ -64,7 +65,10 @@ class ExecutionSystem:
             effects_node = py_trees.composites.Sequence(name="Effect root", children=effects)
 
             # Build action run part of tree
-            action_node = ActionGrasping(self._scene, self._robot, self._lock, target=("cube1", None, 0))
+            if action_name == "grasp":
+                action_node = ActionGrasping(self._scene, self._robot, self._lock, target=("cube1", None, 0))
+            elif action_name == "nav":
+                action_node = ActionNavigate(self._scene, self._robot._model.uid, target_name="cube1")
 
             local_run_root = CustomChooser(name="Run root", children=[effects_node, action_node])
             local_can_run_root = CustomChooser(name="Can run root", children=[effects_node, preconds_node])

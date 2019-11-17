@@ -10,7 +10,6 @@
     )
     
     (:init
-        (in-reach cube1 robot1)
         (empty-hand robot1)
     )
     

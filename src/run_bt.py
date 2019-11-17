@@ -8,7 +8,7 @@ from sim.robot_arm import RobotArm
 from sim.scene_planning_1 import ScenePlanning1
 
 # Skills
-from skills.navigate import SkillNavigation
+# from skills.navigate import SkillNavigation
 # from skills.grasping import SkillGrasping
 from execution.bt import ExecutionSystem
 from skills import pddl_descriptions
@@ -41,7 +41,9 @@ def main():
 
     # Set up planner interface and domain representation
     pddl_if = pddl_file_if.PDDLFileInterface(domain_dir="knowledge/chimera/domain", domain_name="chimera-domain")
-    temp = pddl_descriptions.get_grasping_description()
+    temp = pddl_descriptions.get_action_description("grasp")
+    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
+    temp = pddl_descriptions.get_action_description("nav")
     pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
 
     # -----------------------------------
@@ -69,7 +71,7 @@ def main():
     # -----------------------------------
 
     # Set up skills
-    sk_nav = SkillNavigation(scene, robot._model.uid)
+    # sk_nav = SkillNavigation(scene, robot._model.uid)
     # sk_grasp = SkillGrasping(scene, robot)
 
     # Set up behavior tree

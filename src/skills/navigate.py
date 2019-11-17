@@ -114,3 +114,16 @@ def move_to_object(target_name, scene, robot_uid):
             if not _check_collisions(scene, robot_uid):
                 return True
     return False
+
+
+def get_nav_description():
+    action_name = "nav"
+    action_params = [
+        ["obj", "object"],
+        ["rob", "chimera"]
+    ]
+    action_preconditions = []
+    action_effects = [
+        ("in-reach", False, ["obj", "rob"])
+    ]
+    return (action_name, {"params": action_params, "preconds": action_preconditions, "effects": action_effects})
