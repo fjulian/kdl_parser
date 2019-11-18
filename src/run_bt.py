@@ -73,7 +73,7 @@ def main():
     pddl_if.write_domain_pddl()
     pddl_if.write_problem_pddl()
 
-    plan = planner_interface.pddl_planner(pddl_if._domain_file_pddl, "knowledge/chimera/problem/goal_grasp_cube.pddl")
+    plan = planner_interface.pddl_planner(pddl_if._domain_file_pddl, pddl_if._problem_file_pddl)
 
     # -----------------------------------
 

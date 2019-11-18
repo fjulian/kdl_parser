@@ -262,7 +262,9 @@ class PDDLFileInterface:
             pddl_str = pddl_str[:-1]
             pddl_str += ")\n"
         pddl_str += "\t\t)\n"
-        pddl_str += "\t)\n\n"
+        pddl_str += "\t)\n"
+
+        pddl_str += ")\n"
 
         new_filename = path.join(self._problem_dir, self._time_now_str + "_problem.pddl")
         with open(new_filename, 'w') as f:
