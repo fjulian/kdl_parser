@@ -8,7 +8,7 @@ class PlanningProblem:
         Only the goal will probably always be hard-coded.
     """
 
-    def __init__(self, scene, robot):
+    def __init__(self):
 
         self.objects = [
             ("cube1", "object"),

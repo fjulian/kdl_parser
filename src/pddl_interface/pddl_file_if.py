@@ -249,8 +249,8 @@ class PDDLFileInterface:
             pddl_str += "\t\t("
             for it in init:
                 pddl_str += it + " "
-            pddl_str[-1] = ")"
-            pddl_str += "\n"
+            pddl_str = pddl_str[:-1]
+            pddl_str += ")\n"
         pddl_str += "\t)\n\n"
 
         pddl_str += "\t(:goal\n"
@@ -259,8 +259,8 @@ class PDDLFileInterface:
             pddl_str += "\t\t\t("
             for it in g:
                 pddl_str += it + " "
-            pddl_str[-1] = ")"
-            pddl_str += "\n"
+            pddl_str = pddl_str[:-1]
+            pddl_str += ")\n"
         pddl_str += "\t\t)\n"
         pddl_str += "\t)\n\n"
 

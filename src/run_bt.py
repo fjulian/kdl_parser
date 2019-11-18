@@ -12,7 +12,8 @@ from sim.scene_planning_1 import ScenePlanning1
 # from skills.grasping import SkillGrasping
 from execution.bt import ExecutionSystem
 from skills import pddl_descriptions
-from predicates.predicates import Predicates
+from knowledge.predicates import Predicates
+from knowledge.problem import PlanningProblem
 
 # Interface to BT
 import py_trees
@@ -40,7 +41,7 @@ def main():
     # -----------------------------------
 
     # Set up planner interface and domain representation
-    pddl_if = pddl_file_if.PDDLFileInterface(domain_dir="knowledge/chimera/domain", domain_name="chimera-domain")
+    pddl_if = pddl_file_if.PDDLFileInterface(domain_dir="knowledge/chimera/domain", problem_dir="knowledge/chimera/problem", domain_name="chimera-domain")
     temp = pddl_descriptions.get_action_description("grasp")
     pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
     temp = pddl_descriptions.get_action_description("nav")
@@ -63,8 +64,14 @@ def main():
     for descr in preds.descriptions.items():
         pddl_if.add_predicate(predicate_name=descr[0], predicate_definition=descr[1], overwrite=False)
 
+    planning_problem = PlanningProblem()
+    pddl_if.add_objects(planning_problem.objects)
+    pddl_if.add_inital_predicates(planning_problem.initial_predicates)
+    pddl_if.add_goal(planning_problem.goals)
+
     pddl_if.save_domain()
     pddl_if.write_domain_pddl()
+    pddl_if.write_problem_pddl()
 
     plan = planner_interface.pddl_planner(pddl_if._domain_file_pddl, "knowledge/chimera/problem/goal_grasp_cube.pddl")
 

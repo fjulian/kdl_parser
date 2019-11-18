@@ -4,3 +4,4 @@ venv3
 *.pkl
 *.bullet
 knowledge/chimera/domain
+knowledge/chimera/problem
