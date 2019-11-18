@@ -88,7 +88,7 @@ def main():
     world.step_seconds(1)
 
     # Run move skill
-    res = sk_nav.move_to_object("cube1")
+    # res = sk_nav.move_to_object("cube1")
     # res = sk_nav.move_to_object("cupboard")
 
     # Grasp the cube

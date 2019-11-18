@@ -11,11 +11,19 @@ class PDDLFileInterface:
         else:
             self._problem_dir = problem_dir
 
+        # Domain definition
         self._domain_name = domain_name
         self._predicates = {}
         self._actions = {}
 
+        # Problem definition
+        self._objects = []
+        self._initial_predicates = []
+        self._goals = []
+
         self._domain_file = path.join(self._domain_dir, '_domain.pkl')
+        self._domain_file_pddl = None
+        self._problem_file_pddl = None
         if initial_domain_pddl is not None:
             self._domain_file_pddl = path.join(self._domain_dir, initial_domain_pddl)
             self.read_domain_pddl()
@@ -23,6 +31,11 @@ class PDDLFileInterface:
             self.load_domain()
 
         self._requirements = ":strips :typing"
+
+        time_now = datetime.now()
+        self._time_now_str = time_now.strftime("%y%m%d-%H%M%S")
+
+    # ----- Loading and saving pickle with domain and problem ---------------------------
 
     def load_domain(self):
         print("Trying to load domain file...")
@@ -41,6 +54,8 @@ class PDDLFileInterface:
         with open(self._domain_file, 'wb') as f:
             pickle.dump(save_obj, f)
         print("Saved domain file")
+
+    # ----- Loading and saving PDDL files --------------------------------------
 
     def write_domain_pddl(self):
         types = self.extract_types()
@@ -91,24 +106,11 @@ class PDDLFileInterface:
             pddl_str += "\t)\n\n"
         pddl_str += ")"
         
-        time_now = datetime.now()
-        new_filename = path.join(self._domain_dir, time_now.strftime("%y%m%d-%H%M%S_domain.pddl"))
+        new_filename = path.join(self._domain_dir, self._time_now_str + "_domain.pddl")
         with open(new_filename, 'w') as f:
             f.write(pddl_str)
         print("Wrote new PDDL domain file: "+new_filename.split('/')[-1])
         self._domain_file_pddl = new_filename
-
-    def extract_types(self):
-        types = []
-        for pred in self._predicates:
-            for item in self._predicates[pred]:
-                if item[1] not in types:
-                    types.append(item[1])
-        for act in self._actions:
-            for item in self._actions[act]['params']:
-                if item[1] not in types:
-                    types.append(item[1])
-        return types
 
     def read_domain_pddl(self):
         with open(self._domain_file_pddl, 'r') as f:
@@ -229,6 +231,48 @@ class PDDLFileInterface:
                 self._actions[action] = {"params": params, "preconds": preconds, "effects": effects}
         print("Read PDDL domain file")
 
+    def write_problem_pddl(self):
+        pddl_str = ""
+        pddl_str += "(define (problem chimera-auto-problem)\n"
+        
+        pddl_str += "\t(:domain\n"
+        pddl_str += "\t\t" + self._domain_name + "\n"
+        pddl_str += "\t)\n\n"
+
+        pddl_str += "\t(:objects\n"
+        for obj in self._objects:
+            pddl_str += "\t\t" + obj[0] + " - " + obj[1] + "\n"
+        pddl_str += "\t)\n\n"
+
+        pddl_str += "\t(:init\n"
+        for init in self._initial_predicates:
+            pddl_str += "\t\t("
+            for it in init:
+                pddl_str += it + " "
+            pddl_str[-1] = ")"
+            pddl_str += "\n"
+        pddl_str += "\t)\n\n"
+
+        pddl_str += "\t(:goal\n"
+        pddl_str += "\t\t(and\n"
+        for g in self._goals:
+            pddl_str += "\t\t\t("
+            for it in g:
+                pddl_str += it + " "
+            pddl_str[-1] = ")"
+            pddl_str += "\n"
+        pddl_str += "\t\t)\n"
+        pddl_str += "\t)\n\n"
+
+        new_filename = path.join(self._problem_dir, self._time_now_str + "_problem.pddl")
+        with open(new_filename, 'w') as f:
+            f.write(pddl_str)
+        print("Wrote new PDDL problem file: "+new_filename.split('/')[-1])
+        self._problem_file_pddl = new_filename
+
+
+    # ----- Adding to the domain description ------------------------------------
+
     def add_action(self, action_name, action_definition, overwrite=False):
         if not overwrite and action_name in self._actions:
             print("Action "+action_name+" already exists and no overwrite was requested. Ignoring request.")
@@ -242,6 +286,40 @@ class PDDLFileInterface:
         else:
             assert(isinstance(predicate_name, str))
             self._predicates[predicate_name] = predicate_definition
+    
+    # ----- Adding to the problem description ----------------------------------
+
+    def add_objects(self, object_list):
+        self._objects += object_list
+
+        # Remove duplicates
+        self._objects = list(dict.fromkeys(self._objects))
+
+    def add_inital_predicates(self, pred_list):
+        self._initial_predicates += pred_list
+
+        # Remove duplicates
+        self._initial_predicates = list(dict.fromkeys(self._initial_predicates))
+
+    def add_goal(self, goal_list):
+        self._goals += goal_list
+
+        # Remove duplicates
+        self._goals = list(dict.fromkeys(self._goals))
+
+    # ----- Helper functions ---------------------------------------------------
+
+    def extract_types(self):
+        types = []
+        for pred in self._predicates:
+            for item in self._predicates[pred]:
+                if item[1] not in types:
+                    types.append(item[1])
+        for act in self._actions:
+            for item in self._actions[act]['params']:
+                if item[1] not in types:
+                    types.append(item[1])
+        return types
 
 ### Assumed conventions:
 # All arguments of a predicate are on the same line as the predicate name. Each line defines one predicate.

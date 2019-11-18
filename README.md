@@ -101,3 +101,23 @@ The file `src/pddl_interface/pddl_file_if.py` contains the code to parse PDDL fi
 ```
 
 The variable `<negated>` is true if the predict mustn't hold (for preconditions) or doesn't hold (for effects, after applying them).
+
+**Objects**
+
+```python
+[
+    ("<object_label1>", "<type1>"),
+    ("<object_label2>", "<type2>"),
+    ("<object_label3>", "<type3>")
+]
+```
+
+**Initial Predicates and Goals**
+
+```python
+[
+    ("<predicate1>", "<param1>", "<param2>", ...),
+    ("<predicate2>", "<param1>", "<param2>", ...),
+    ("<predicate3>", "<param1>", "<param2>", ...)
+]
+```
