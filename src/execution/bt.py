@@ -49,7 +49,10 @@ class ExecutionSystem:
                                                             lock=self._lock,
                                                             invert=precond[1])
                 preconds.append(precond_check)
-            preconds_node = py_trees.composites.Sequence(name="Preconds action {}".format(k+1), children=preconds)
+            if len(preconds) > 0:
+                preconds_node = py_trees.composites.Sequence(name="Preconds action {}".format(k+1), children=preconds)
+            else:
+                preconds_node = py_trees.behaviours.Success(name="Preconds action {} [succ]".format(k+1))
             all_preconds.append(preconds_node)
 
             # Establish effects
@@ -60,7 +63,10 @@ class ExecutionSystem:
                                                             lock=self._lock,
                                                             invert=effect[1])
                 effects.append(effect_check)
-            effects_node = py_trees.composites.Sequence(name="Effects action {}".format(k+1), children=effects)
+            if len(effects) > 0:
+                effects_node = py_trees.composites.Sequence(name="Effects action {}".format(k+1), children=effects)
+            else:
+                effects_node = py_trees.behaviours.Success(name="Effects action {} [succ]".format(k+1))
             all_effects.append(effects_node)
 
         # Compute all subgoals
@@ -94,7 +100,7 @@ class ExecutionSystem:
             if len(goal_nodes) > 0:
                 goals_node = py_trees.composites.Sequence(name="Goals action {}".format(k+1), children=goal_nodes)
             else:
-                goals_node = py_trees.behaviours.Success(name="Goals action {}".format(k+1))
+                goals_node = py_trees.behaviours.Success(name="Goals action {} [succ]".format(k+1))
             
             all_goals[k] = goals_node
 
