@@ -82,7 +82,7 @@ def main():
     # sk_grasp = SkillGrasping(scene, robot)
 
     # Set up behavior tree
-    es = ExecutionSystem(scene, robot, preds, plan=plan)
+    es = ExecutionSystem(scene, robot, preds, plan=plan, goals=planning_problem.goals)
 
     # blackboard = py_trees.blackboard.Blackboard()
     # blackboard.grasp_target_name = "cube1"

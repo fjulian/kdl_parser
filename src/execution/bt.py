@@ -5,10 +5,11 @@ from skills.pddl_descriptions import get_action_description
 from execution.condition_check import ConditionChecker_Blackboard, ConditionChecker_Predicate
 from execution.custom_chooser import CustomChooser
 from multiprocessing import Lock
+import copy
 
 
 class ExecutionSystem:
-    def __init__(self, scene, robot, predicates, plan=None):
+    def __init__(self, scene, robot, predicates, plan, goals):
         self._scene = scene
         self._robot = robot
         self._predicates = predicates
@@ -18,36 +19,27 @@ class ExecutionSystem:
 
         # py_trees.logging.level = py_trees.logging.Level.DEBUG
 
-        if plan is None:
-            self.create_tree()
-        else:
-            self.create_tree_from_plan(plan)
+        self.create_tree_from_plan(plan, goals)
 
-    def create_tree(self):
-        root = py_trees.composites.Selector("Selector")
-        grasping = ActionGrasping(self._scene, self._robot, self._lock)
-        grasping_check = ConditionChecker_Blackboard("grasp_success")
-        root.add_children([grasping_check, grasping])
-        
-        self.tree = py_trees.trees.BehaviourTree(root)
-        self.show_tree()
-        self.tree.setup(timeout=15)
-
-    def create_tree_from_plan(self, plan):
+    def create_tree_from_plan(self, plan, goals):
         N = len(plan)
 
         # Compute all actions' preconditions and effects
         all_preconds = []
         all_effects = []
+        all_action_descriptions = []
+        all_action_arg_dicts = []
         for k in range(N):
             plan_item = plan[k]
             plan_item_list = plan_item.split(' ')
             action_name = plan_item_list[1]
             descr_action = get_action_description(action_name)
+            all_action_descriptions.append(descr_action)
             action_arg_dict = {}
             if len(plan_item_list) > 2:
                 for i in range(len(plan_item_list[2:])):
                     action_arg_dict[descr_action[1]["params"][i][0]] = plan_item_list[2+i]
+            all_action_arg_dicts.append(action_arg_dict)
             
             # Establish pre-conditions
             preconds = []
@@ -73,10 +65,38 @@ class ExecutionSystem:
 
         # Compute all subgoals
         all_goals = [None] * N
+        modified_goals = copy.deepcopy(goals)
         for k in reversed(range(N)):
-            # Establish goal
             goals = []
-            # TODO set up goals
+            
+            # Remove goals that are reached through effects of action k
+            for effect in all_action_descriptions[k][1]["effects"]:
+                # Replace the parameters with their values
+                effect_params = self.process_pred_args(effect[2], all_action_arg_dicts[k], substitute_robot=False)
+                modified_effect = (effect[0], effect[1], tuple(effect_params))
+
+                # Check if this effect is part of the goal
+                goals_to_remove = []
+                for goal in modified_goals:
+                    if goal == modified_effect:
+                        goals_to_remove.append(goal)
+                for goal in goals_to_remove:
+                    modified_goals.remove(goal)
+
+            # Set up predicate checkers
+            goal_nodes = []
+            for goal in modified_goals:
+                goal_check = ConditionChecker_Predicate(self._predicates.call[goal[0]],
+                                                        goal[2],
+                                                        lock=self._lock,
+                                                        invert=goal[1])
+                goal_nodes.append(goal_check)
+            if len(goal_nodes) > 0:
+                goals_node = py_trees.composites.Sequence(name="Goals action {}".format(k+1), children=goal_nodes)
+            else:
+                goals_node = py_trees.behaviours.Success(name="Goals action {}".format(k+1))
+            
+            all_goals[k] = goals_node
 
         # Set up actual tree
         next_lower_root = None
@@ -122,9 +142,10 @@ class ExecutionSystem:
         py_trees.display.print_ascii_tree(self.tree.root)
         print("="*20)
 
-    def process_pred_args(self, pred_args, arg_dict):
+    def process_pred_args(self, pred_args, arg_dict, substitute_robot=True):
+        pred_args_processed = list(copy.deepcopy(pred_args))
         for i in range(len(pred_args)):
-            pred_args[i] = arg_dict[pred_args[i]]
-            if pred_args[i] == "robot1":
-                pred_args[i] = self._robot
-        return tuple(pred_args)
+            pred_args_processed[i] = arg_dict[pred_args[i]]
+            if pred_args_processed[i] == "robot1" and substitute_robot:
+                pred_args_processed[i] = self._robot
+        return pred_args_processed
