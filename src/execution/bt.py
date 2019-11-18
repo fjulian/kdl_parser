@@ -113,9 +113,12 @@ class ExecutionSystem:
 
             # Need run part
             effect_node = all_effects[k]
-            precond_node = py_trees.composites.Sequence(children=all_preconds[k+1:])
-            need_run_root = py_trees.composites.Sequence(name="Need run {}".format(k+1), children=[effect_node, precond_node])
-
+            if len(all_preconds[k+1:]) > 0:
+                precond_node = py_trees.composites.Sequence(children=all_preconds[k+1:])
+                need_run_root = py_trees.composites.Sequence(name="Need run {}".format(k+1), children=[effect_node, precond_node])
+            else:
+                need_run_root = effects_node
+            
             # Do run part
             if action_name == "grasp":
                 action_node = ActionGrasping(self._scene, self._robot, self._lock, target=("cube1", None, 0))
