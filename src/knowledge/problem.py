@@ -20,5 +20,5 @@ class PlanningProblem:
         ]
 
         self.goals = [
-            ("in-hand", "cube1", "robot1")
+            ("in-hand", False, ("cube1", "robot1"))
         ]

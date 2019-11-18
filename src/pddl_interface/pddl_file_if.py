@@ -257,9 +257,15 @@ class PDDLFileInterface:
         pddl_str += "\t\t(and\n"
         for g in self._goals:
             pddl_str += "\t\t\t("
-            for it in g:
+            if g[1]:
+                # Negated
+                pddl_str += "not ("
+            pddl_str += g[0] + " "
+            for it in g[2]:
                 pddl_str += it + " "
             pddl_str = pddl_str[:-1]
+            if g[1]:
+                pddl_str += ")"
             pddl_str += ")\n"
         pddl_str += "\t\t)\n"
         pddl_str += "\t)\n"
