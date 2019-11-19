@@ -84,7 +84,7 @@ def main():
     # Set up behavior tree
     es = ExecutionSystem(scene, robot, preds, plan=plan, goals=planning_problem.goals)
     py_trees.display.render_dot_tree(es.tree.root)
-    # es.setup()
+    es.setup()
 
     # blackboard = py_trees.blackboard.Blackboard()
     # blackboard.grasp_target_name = "cube1"

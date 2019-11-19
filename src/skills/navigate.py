@@ -15,7 +15,7 @@ class ActionNavigate(py_trees.behaviour.Behaviour):
         self._robot_uid = robot_uid
         self._target_name = target_name
 
-    def setup(self):
+    def setup(self, unused_timeout=15):
         if not self._setup_called:
             self.logger.debug("%s.setup()->connections to an external process" % (self.__class__.__name__))
             self.parent_connection, self.child_connection = multiprocessing.Pipe()

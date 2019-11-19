@@ -25,8 +25,8 @@ class ExecutionSystem:
         N = len(plan)
 
         # Compute all actions' preconditions and effects
-        all_preconds = []
-        all_effects = []
+        all_preconds = [None] * N
+        all_effects = [None] * N
         all_action_descriptions = []
         all_action_arg_dicts = []
         for k in range(N):
@@ -44,30 +44,36 @@ class ExecutionSystem:
             # Establish pre-conditions
             preconds = []
             for precond in descr_action[1]["preconds"]:
-                precond_check = ConditionChecker_Predicate(self._predicates.call[precond[0]],
-                                                            self.process_pred_args(precond[2], action_arg_dict),
-                                                            lock=self._lock,
-                                                            invert=precond[1])
-                preconds.append(precond_check)
-            if len(preconds) > 0:
-                preconds_node = py_trees.composites.Sequence(name="Preconds action {}".format(k+1), children=preconds)
-            else:
-                preconds_node = py_trees.behaviours.Success(name="Preconds action {} [succ]".format(k+1))
-            all_preconds.append(preconds_node)
+                # precond_check = ConditionChecker_Predicate(self._predicates.call[precond[0]],
+                #                                             self.process_pred_args(precond[2], action_arg_dict),
+                #                                             lock=self._lock,
+                #                                             invert=precond[1])
+                precond_processed = (precond[0], precond[1], self.process_pred_args(precond[2], action_arg_dict))
+                preconds.append(precond_processed)
+            # if len(preconds) > 0:
+            #     preconds_node = py_trees.composites.Sequence(name="Preconds action {}".format(k+1), children=preconds)
+            # else:
+            #     preconds_node = py_trees.behaviours.Success(name="Preconds action {} [succ]".format(k+1))
+            # all_preconds.append(preconds_node)
+
+            all_preconds[k] = preconds
 
             # Establish effects
             effects = []
             for effect in descr_action[1]["effects"]:
-                effect_check = ConditionChecker_Predicate(self._predicates.call[effect[0]],
-                                                            self.process_pred_args(effect[2], action_arg_dict),
-                                                            lock=self._lock,
-                                                            invert=effect[1])
-                effects.append(effect_check)
-            if len(effects) > 0:
-                effects_node = py_trees.composites.Sequence(name="Effects action {}".format(k+1), children=effects)
-            else:
-                effects_node = py_trees.behaviours.Success(name="Effects action {} [succ]".format(k+1))
-            all_effects.append(effects_node)
+                # effect_check = ConditionChecker_Predicate(self._predicates.call[effect[0]],
+                #                                             self.process_pred_args(effect[2], action_arg_dict),
+                #                                             lock=self._lock,
+                #                                             invert=effect[1])
+                effect_processed = (effect[0], effect[1], self.process_pred_args(effect[2], action_arg_dict))
+                effects.append(effect_processed)
+            # if len(effects) > 0:
+            #     effects_node = py_trees.composites.Sequence(name="Effects action {}".format(k+1), children=effects)
+            # else:
+            #     effects_node = py_trees.behaviours.Success(name="Effects action {} [succ]".format(k+1))
+            # all_effects.append(effects_node)
+
+            all_effects[k] = effects
 
         # Compute all subgoals
         all_goals = [None] * N
@@ -112,36 +118,45 @@ class ExecutionSystem:
             action_name = plan_item_list[1]
 
             # Need run part
-            effect_node = all_effects[k]
+            effect_node = py_trees.composites.Sequence(children=self.convert_to_nodes(all_effects[k]))
             if len(all_preconds[k+1:]) > 0:
-                precond_node = py_trees.composites.Sequence(children=all_preconds[k+1:])
+                temp = []
+                for precond_temp in all_preconds[k+1:]:
+                    precond_node_temp = py_trees.composites.Sequence(children=self.convert_to_nodes(precond_temp))
+                    temp.append(precond_node_temp)
+                precond_node = py_trees.composites.Sequence(children=temp)
                 need_run_root = py_trees.composites.Sequence(name="Need run {}".format(k+1), children=[effect_node, precond_node])
             else:
-                need_run_root = effects_node
+                need_run_root = effect_node
             
             # Do run part
             if action_name == "grasp":
                 action_node = ActionGrasping(self._scene, self._robot, self._lock, target=("cube1", None, 0))
             elif action_name == "nav":
                 action_node = ActionNavigate(self._scene, self._robot._model.uid, target_name="cube1")
-            do_run_root = py_trees.composites.Selector(name="Do run {}".format(k+1), children=[need_run_root, action_node])
+            do_run_root = CustomChooser(name="Do run {}".format(k+1), children=[need_run_root, action_node])
 
             # Can run part
-            can_run_root = py_trees.composites.Sequence(name="Can run {}".format(k+1), children=[all_goals[k], all_preconds[k]])
+            precond_node_temp = py_trees.composites.Sequence(children=self.convert_to_nodes(all_preconds[k]))
+            can_run_root = py_trees.composites.Sequence(name="Can run {}".format(k+1), children=[all_goals[k], precond_node_temp])
 
             # Precheck part
             if next_lower_root is not None:
-                precheck_root = py_trees.composites.Selector(name="Precheck {}".format(k+1), children=[can_run_root, next_lower_root])
+                precheck_root = CustomChooser(name="Precheck {}".format(k+1), children=[can_run_root, next_lower_root])
             else:
                 precheck_root = can_run_root
 
             # Local root
             local_root = py_trees.composites.Sequence(name="Root {}".format(k+1), children=[precheck_root, do_run_root])
             next_lower_root = local_root
+
+        # TODO add check if whole goal is reached.
         
         root = local_root
         self.tree = py_trees.trees.BehaviourTree(root)
         self.show_tree()
+
+    def setup(self):
         self.tree.setup(timeout=15)
 
     def show_tree(self):
@@ -158,3 +173,13 @@ class ExecutionSystem:
             if pred_args_processed[i] == "robot1" and substitute_robot:
                 pred_args_processed[i] = self._robot
         return pred_args_processed
+
+    def convert_to_nodes(self, specs):
+        nodes = []
+        for spec in specs:
+            node = ConditionChecker_Predicate(self._predicates.call[spec[0]],
+                                                spec[2],
+                                                lock=self._lock,
+                                                invert=spec[1])
+            nodes.append(node)
+        return nodes
