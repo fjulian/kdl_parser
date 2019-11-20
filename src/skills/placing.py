@@ -6,7 +6,6 @@ import py_trees.common
 import multiprocessing
 import time
 import atexit
-import threading
 
 from tools.util import IKError
 

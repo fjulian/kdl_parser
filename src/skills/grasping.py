@@ -6,46 +6,30 @@ import py_trees.common
 import multiprocessing
 import time
 import atexit
-import threading
 
 
 class ActionGrasping(py_trees.behaviour.Behaviour):
     """
         Based on the example https://py-trees.readthedocs.io/en/release-0.6.x/_modules/py_trees/demos/action.html#Action
     """
-    def __init__(self, scene, robot, lock, target, name="grasping_action"):
+    def __init__(self, process_pipe, target, name="grasping_action"):
         super(ActionGrasping, self).__init__(name)
         self.logger.debug("%s.__init__()" % (self.__class__.__name__))
-        self.setup_called = False
-        self._scene = scene
-        self._robot = robot
-        self._lock = lock
         self._target = target
-
-    def setup(self, unused_timeout=15):
-        if not self.setup_called:
-            self.logger.debug("%s.setup()->connections to an external process" % (self.__class__.__name__))
-            self.parent_connection, self.child_connection = multiprocessing.Pipe()
-            self.grasping = multiprocessing.Process(target=grasping_process, args=(self.child_connection, self._scene, self._robot, self._lock))
-            atexit.register(self.grasping.terminate)
-            self.grasping.start()
-            self.setup_called = True
-        return True
+        self._process_pipe = process_pipe
 
     def initialise(self):
         self.logger.debug("%s.initialise()->sending new goal" % (self.__class__.__name__))
-        if not self.setup_called:
-            raise RuntimeError("Setup function not called")
         target_name = self._target[0]
         target_link_id = self._target[1]
         target_grasp_id = self._target[2]
-        self.parent_connection.send([target_name, target_link_id, target_grasp_id])
+        self._process_pipe.send([target_name, target_link_id, target_grasp_id])
 
     def update(self):
         new_status = py_trees.common.Status.RUNNING
         self.feedback_message = "Grasping in progress"
-        if self.parent_connection.poll():
-            res = self.parent_connection.recv().pop()
+        if self._process_pipe.poll():
+            res = self._process_pipe.recv().pop()
             if res==0:
                 new_status = py_trees.common.Status.SUCCESS
                 self.feedback_message = "Grasping successful"
@@ -61,8 +45,20 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
         return new_status
 
     def terminate(self, new_status):
-        self.parent_connection.send([])
+        self._process_pipe.send([])
         self.logger.debug("%s.terminate()[%s->%s]" % (self.__class__.__name__, self.status, new_status))
+
+class ProcessGrasping:
+    def __init__(self, scene, robot, robot_lock):
+        self.setup_called = False
+        self.parent_connection, self.child_connection = multiprocessing.Pipe()
+        self.grasping = multiprocessing.Process(target=grasping_process, args=(self.child_connection, scene, robot, robot_lock))
+        atexit.register(self.grasping.terminate)
+        self.grasping.start()
+        print("Grasping process initiated")
+    
+    def get_pipe(self):
+        return self.parent_connection
 
 
 def grasping_process(pipe_connection, scene, robot, lock):

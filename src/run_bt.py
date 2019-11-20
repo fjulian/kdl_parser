@@ -2,6 +2,8 @@ import argparse
 import pickle
 import time
 
+from multiprocessing import Lock
+
 # Simulation
 from sim.world import World
 from sim.robot_arm import RobotArm
@@ -9,7 +11,7 @@ from sim.scene_planning_1 import ScenePlanning1
 
 # Skills
 # from skills.navigate import SkillNavigation
-# from skills.grasping import SkillGrasping
+from skills.grasping import ProcessGrasping
 from execution.bt import ExecutionSystem
 from skills import pddl_descriptions
 from knowledge.predicates import Predicates
@@ -54,6 +56,7 @@ def main():
     scene = ScenePlanning1(world, restored_objects=objects)
 
     # Spawn robot
+    robot_lock = Lock()
     robot = RobotArm(world, robot_mdl)
     robot.reset()
 
@@ -78,11 +81,13 @@ def main():
     # -----------------------------------
 
     # Set up skills
+    sk_grasp = ProcessGrasping(scene, robot, robot_lock)
     # sk_nav = SkillNavigation(scene, robot._model.uid)
-    # sk_grasp = SkillGrasping(scene, robot)
+    pipes = {"grasp": sk_grasp.get_pipe()}
+
 
     # Set up behavior tree
-    es = ExecutionSystem(scene, robot, preds, plan=plan, goals=planning_problem.goals)
+    es = ExecutionSystem(scene, robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes)
     py_trees.display.render_dot_tree(es.tree.root)
     es.setup()
 
