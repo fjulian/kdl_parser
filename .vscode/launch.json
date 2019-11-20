@@ -24,8 +24,8 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/run_bt.py",
-            "console": "integratedTerminal",
-            "args": ["--reuse-objects"]
+            "console": "integratedTerminal"
+            // "args": ["--reuse-objects"]
         }
     ]
 }

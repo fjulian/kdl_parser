@@ -75,9 +75,23 @@ class ExecutionSystem:
 
             all_effects[k] = effects
 
+        # Goals
+        modified_goals = copy.deepcopy(goals)
+
+        goal_nodes = []
+        for goal in modified_goals:
+            goal_check = ConditionChecker_Predicate(self._predicates.call[goal[0]],
+                                                    self.process_pred_args(goal[2], {}, ignore_keyerror=True),
+                                                    lock=self._lock,
+                                                    invert=goal[1])
+            goal_nodes.append(goal_check)
+        if len(goal_nodes) > 0:
+            final_goal_node = py_trees.composites.Sequence(name="Final goal reached?", children=goal_nodes)
+        else:
+            final_goal_node = py_trees.behaviours.Success(name="Final goal reached? [succ]")
+
         # Compute all subgoals
         all_goals = [None] * N
-        modified_goals = copy.deepcopy(goals)
         for k in reversed(range(N)):
             goals = []
             
@@ -99,7 +113,7 @@ class ExecutionSystem:
             goal_nodes = []
             for goal in modified_goals:
                 goal_check = ConditionChecker_Predicate(self._predicates.call[goal[0]],
-                                                        goal[2],
+                                                        self.process_pred_args(goal[2], {}, ignore_keyerror=True),
                                                         lock=self._lock,
                                                         invert=goal[1])
                 goal_nodes.append(goal_check)
@@ -149,10 +163,8 @@ class ExecutionSystem:
             # Local root
             local_root = py_trees.composites.Sequence(name="Root {}".format(k+1), children=[precheck_root, do_run_root])
             next_lower_root = local_root
-
-        # TODO add check if whole goal is reached.
         
-        root = local_root
+        root = CustomChooser(name="Plan runner", children=[final_goal_node, local_root])
         self.tree = py_trees.trees.BehaviourTree(root)
         self.show_tree()
 
@@ -166,10 +178,14 @@ class ExecutionSystem:
         py_trees.display.print_ascii_tree(self.tree.root)
         print("="*20)
 
-    def process_pred_args(self, pred_args, arg_dict, substitute_robot=True):
+    def process_pred_args(self, pred_args, arg_dict, substitute_robot=True, ignore_keyerror=False):
         pred_args_processed = list(copy.deepcopy(pred_args))
         for i in range(len(pred_args)):
-            pred_args_processed[i] = arg_dict[pred_args[i]]
+            try:
+                pred_args_processed[i] = arg_dict[pred_args[i]]
+            except KeyError as e:
+                if not ignore_keyerror:
+                    raise e
             if pred_args_processed[i] == "robot1" and substitute_robot:
                 pred_args_processed[i] = self._robot
         return pred_args_processed
