@@ -50,7 +50,6 @@ class ActionGrasping(py_trees.behaviour.Behaviour):
 
 class ProcessGrasping:
     def __init__(self, scene, robot, robot_lock):
-        self.setup_called = False
         self.parent_connection, self.child_connection = multiprocessing.Pipe()
         self.grasping = multiprocessing.Process(target=grasping_process, args=(self.child_connection, scene, robot, robot_lock))
         atexit.register(self.grasping.terminate)

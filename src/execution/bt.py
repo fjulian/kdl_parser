@@ -9,8 +9,7 @@ import copy
 
 
 class ExecutionSystem:
-    def __init__(self, scene, robot, predicates, plan, goals, pipes):
-        self._scene = scene
+    def __init__(self, robot, predicates, plan, goals, pipes):
         self._robot = robot
         self._predicates = predicates
         self.tree = None
@@ -149,7 +148,7 @@ class ExecutionSystem:
             if action_name == "grasp":
                 action_node = ActionGrasping(process_pipe=self._pipes["grasp"], target=(plan_item_list[2], None, 0))
             elif action_name == "nav":
-                action_node = ActionNavigate(self._scene, self._robot._model.uid, target_name=plan_item_list[2])
+                action_node = ActionNavigate(process_pipe=self._pipes["nav"], target_name=plan_item_list[2])
             do_run_root = CustomChooser(name="Do run {}".format(k+1), children=[need_run_root, action_node])
 
             # Can run part

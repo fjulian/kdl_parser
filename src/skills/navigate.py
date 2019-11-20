@@ -7,35 +7,21 @@ import multiprocessing, atexit, time
 
 
 class ActionNavigate(py_trees.behaviour.Behaviour):
-    def __init__(self, scene, robot_uid, target_name, name="nav_action"):
+    def __init__(self, process_pipe, target_name, name="nav_action"):
         super(ActionNavigate, self).__init__(name)
         self.logger.debug("%s.__init__()" % (self.__class__.__name__))
-        self._setup_called = False
-        self._scene = scene
-        self._robot_uid = robot_uid
         self._target_name = target_name
-
-    def setup(self, unused_timeout=15):
-        if not self._setup_called:
-            self.logger.debug("%s.setup()->connections to an external process" % (self.__class__.__name__))
-            self.parent_connection, self.child_connection = multiprocessing.Pipe()
-            self.nav = multiprocessing.Process(target=nav_process, args=(self.child_connection, self._scene, self._robot_uid))
-            atexit.register(self.nav.terminate)
-            self.nav.start()
-            self._setup_called = True
-        return True
+        self._process_pipe = process_pipe
 
     def initialise(self):
         self.logger.debug("%s.initialise()->sending new goal" % (self.__class__.__name__))
-        if not self._setup_called:
-            raise RuntimeError("Setup function not called")
-        self.parent_connection.send([self._target_name])
+        self._process_pipe.send([self._target_name])
 
     def update(self):
         new_status = py_trees.common.Status.RUNNING
         self.feedback_message = "Nav in progress"
-        if self.parent_connection.poll():
-            res = self.parent_connection.recv().pop()
+        if self._process_pipe.poll():
+            res = self._process_pipe.recv().pop()
             if res==0:
                 new_status = py_trees.common.Status.SUCCESS
                 self.feedback_message = "Nav successful"
@@ -49,6 +35,18 @@ class ActionNavigate(py_trees.behaviour.Behaviour):
                 assert(False, "Unexpected response")
         self.logger.debug("%s.update()[%s->%s][%s]" % (self.__class__.__name__, self.status, new_status, self.feedback_message))
         return new_status
+
+
+class ProcessNavigate:
+    def __init__(self, scene, robot_uid):
+        self.parent_connection, self.child_connection = multiprocessing.Pipe()
+        self.nav = multiprocessing.Process(target=nav_process, args=(self.child_connection, scene, robot_uid))
+        atexit.register(self.nav.terminate)
+        self.nav.start()
+        print("Navigation process initiated")
+    
+    def get_pipe(self):
+        return self.parent_connection
 
 
 def nav_process(pipe_connection, scene, robot_uid):

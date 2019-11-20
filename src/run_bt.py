@@ -10,7 +10,7 @@ from sim.robot_arm import RobotArm
 from sim.scene_planning_1 import ScenePlanning1
 
 # Skills
-# from skills.navigate import SkillNavigation
+from skills.navigate import ProcessNavigate
 from skills.grasping import ProcessGrasping
 from execution.bt import ExecutionSystem
 from skills import pddl_descriptions
@@ -82,12 +82,12 @@ def main():
 
     # Set up skills
     sk_grasp = ProcessGrasping(scene, robot, robot_lock)
-    # sk_nav = SkillNavigation(scene, robot._model.uid)
-    pipes = {"grasp": sk_grasp.get_pipe()}
+    sk_nav = ProcessNavigate(scene, robot._model.uid)
+    pipes = {"grasp": sk_grasp.get_pipe(), "nav": sk_nav.get_pipe()}
 
 
     # Set up behavior tree
-    es = ExecutionSystem(scene, robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes)
+    es = ExecutionSystem(robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes)
     py_trees.display.render_dot_tree(es.tree.root)
     es.setup()
 
