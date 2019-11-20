@@ -145,9 +145,9 @@ class ExecutionSystem:
             
             # Do run part
             if action_name == "grasp":
-                action_node = ActionGrasping(self._scene, self._robot, self._lock, target=("cube1", None, 0))
+                action_node = ActionGrasping(self._scene, self._robot, self._lock, target=(plan_item_list[2], None, 0))
             elif action_name == "nav":
-                action_node = ActionNavigate(self._scene, self._robot._model.uid, target_name="cube1")
+                action_node = ActionNavigate(self._scene, self._robot._model.uid, target_name=plan_item_list[2])
             do_run_root = CustomChooser(name="Do run {}".format(k+1), children=[need_run_root, action_node])
 
             # Can run part

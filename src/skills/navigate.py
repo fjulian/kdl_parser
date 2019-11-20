@@ -56,8 +56,11 @@ def nav_process(pipe_connection, scene, robot_uid):
         if pipe_connection.poll():
             cmd = pipe_connection.recv()
             if len(cmd) == 1:
-                move_to_object(cmd[0], scene, robot_uid)
-                pipe_connection.send([0])
+                res = move_to_object(cmd[0], scene, robot_uid)
+                if res:
+                    pipe_connection.send([0])
+                else:
+                    pipe_connection.send([2])
             else:
                 print("Unexpected command")
         time.sleep(0.5)
@@ -83,17 +86,22 @@ def move_to_object(target_name, scene, robot_uid):
     temp = p.getBasePositionAndOrientation(target_id)
     target_pos = np.array(temp[0])
 
+    # Get valid nav angles
+    nav_angle = scene.objects[target_name].nav_angle
+    nav_min_dist = scene.objects[target_name].nav_min_dist
+    
+    # Move there
+    return move_to_pos(target_pos, scene, robot_uid, nav_angle, nav_min_dist)
+
+def move_to_pos(target_pos, scene, robot_uid, nav_angle=None, nav_min_dist=None):
     # Get robot position
     temp = p.getBasePositionAndOrientation(robot_uid)
     robot_pos = np.array(temp[0])
 
-    # Get valid nav angles
-    nav_angle = scene.objects[target_name].nav_angle
     if nav_angle is None:
         alphas = np.arange(0.0, 2.0*np.pi, 2.0*np.pi/10.0)
     else:
         alphas = np.array([nav_angle])
-    nav_min_dist = scene.objects[target_name].nav_min_dist
     if nav_min_dist is None:
         radii = np.arange(0.4, 2.0, 0.1)
     else:

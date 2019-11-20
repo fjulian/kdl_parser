@@ -129,7 +129,6 @@ class SkillGrasping:
 
         # Get robot arm base pose
         temp1 = p.getLinkState(self.robot._model.uid, self.robot.arm_base_link_idx)
-        # temp2 = p.getLinkState(self.robot._model.uid, self.robot.arm_ee_link_idx)
         r_O_O_rob = np.array(temp1[4]).reshape((-1,1))
         C_O_rob = R.from_quat(np.array(temp1[5]))
 

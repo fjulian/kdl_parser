@@ -5,7 +5,6 @@
   - [ ] Define predicates
   - [ ] Make releasing an object a separate action
   - [ ] Write code that generates problem definition based on observations from the simulation
-  - [ ] Add navigation to the whole system
   - [ ] Use python logger instead of print statements.
   - [ ] Find a better grasping pose for the drawer handle.
   - [ ] Try other IK library
@@ -20,7 +19,7 @@
   - [x] Add argparser
   - [x] Look again at check_grasp function. Seems like it would also say that an object is grasped if the gripper is just open.
   - [x] Change the robot arm transition. Doesn't necessarily need to be cartesian in all cases. Maybe this reduces the twitching.
-
+  - [x] Add navigation to the whole system
 
 
 ## Setup Instructions
