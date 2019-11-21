@@ -21,7 +21,7 @@ class ConditionChecker_Blackboard(py_trees.behaviour.Behaviour):
         return new_status
 
 class ConditionChecker_Predicate(py_trees.behaviour.Behaviour):
-    def __init__(self, predicate_fcn, predicate_args, lock, invert=False):
+    def __init__(self, predicate_fcn, predicate_args, invert=False):
         invert_str = ""
         if invert:
             invert_str = "_inverted"
@@ -30,13 +30,11 @@ class ConditionChecker_Predicate(py_trees.behaviour.Behaviour):
         self._predicate_fcn = predicate_fcn
         self._invert = invert
         self._predicate_args = predicate_args
-        self._lock = lock
     
     def setup(self, unused_timeout=15):
         if not self.setup_called:
             self.parent_connection, self.child_connection = multiprocessing.Pipe()
             self.check_process = multiprocessing.Process(target=checker_process, args=(self.child_connection,
-                                                                                        self._lock,
                                                                                         self._predicate_fcn,
                                                                                         self._predicate_args))
             atexit.register(self.check_process.terminate)
@@ -75,14 +73,12 @@ class ConditionChecker_Predicate(py_trees.behaviour.Behaviour):
         self.logger.debug("%s.update()[%s->%s][%s]" % (self.__class__.__name__, self.status, new_status, self.feedback_message))
         return new_status
 
-def checker_process(pipe_connection, lock, fcn, fcn_args):
+def checker_process(pipe_connection, fcn, fcn_args):
     while True:
         if pipe_connection.poll():
             # print("got check command: "+fcn.__name__)
             _ = pipe_connection.recv()
-            lock.acquire()
             res = fcn(*fcn_args)
-            lock.release()
             pipe_connection.send(res)
             # print("Response sent: "+fcn.__name__)
         time.sleep(0.5)

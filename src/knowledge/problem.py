@@ -12,7 +12,8 @@ class PlanningProblem:
 
         self.objects = [
             ("cube1", "object"),
-            ("robot1", "chimera")
+            ("robot1", "chimera"),
+            ("pos1", "position")
         ]
 
         self.initial_predicates = [

@@ -10,94 +10,76 @@ import atexit
 from tools.util import IKError
 
 
-# class ActionPlacing(py_trees.behaviour.Behaviour):
-#     """
-#         Based on the example https://py-trees.readthedocs.io/en/release-0.6.x/_modules/py_trees/demos/action.html#Action
-#     """
-#     def __init__(self, scene, robot, lock, target, name="grasping_action"):
-#         super(ActionPlacing, self).__init__(name)
-#         self.logger.debug("%s.__init__()" % (self.__class__.__name__))
-#         self.setup_called = False
-#         self._scene = scene
-#         self._robot = robot
-#         self._lock = lock
-#         self._target = target
+class ActionPlacing(py_trees.behaviour.Behaviour):
+    """
+        Based on the example https://py-trees.readthedocs.io/en/release-0.6.x/_modules/py_trees/demos/action.html#Action
+    """
+    def __init__(self, process_pipe, target_pos, name="placing_action"):
+        super(ActionPlacing, self).__init__(name)
+        self.logger.debug("%s.__init__()" % (self.__class__.__name__))
+        self._target_pos = target_pos
+        self._process_pipe = process_pipe
 
-#     def setup(self, unused_timeout=15):
-#         if not self.setup_called:
-#             self.logger.debug("%s.setup()->connections to an external process" % (self.__class__.__name__))
-#             self.parent_connection, self.child_connection = multiprocessing.Pipe()
-#             self.grasping = multiprocessing.Process(target=grasping_process, args=(self.child_connection, self._scene, self._robot, self._lock))
-#             atexit.register(self.grasping.terminate)
-#             self.grasping.start()
-#             self.setup_called = True
-#         return True
+    def initialise(self):
+        self.logger.debug("%s.initialise()->sending new goal" % (self.__class__.__name__))
+        self._process_pipe.send([self._target_pos])
 
-#     def initialise(self):
-#         self.logger.debug("%s.initialise()->sending new goal" % (self.__class__.__name__))
-#         if not self.setup_called:
-#             raise RuntimeError("Setup function not called")
-#         target_name = self._target[0]
-#         target_link_id = self._target[1]
-#         target_grasp_id = self._target[2]
-#         self.parent_connection.send([target_name, target_link_id, target_grasp_id])
+    def update(self):
+        new_status = py_trees.common.Status.RUNNING
+        self.feedback_message = "Grasping in progress"
+        if self._process_pipe.poll():
+            res = self._process_pipe.recv().pop()
+            if res==0:
+                new_status = py_trees.common.Status.SUCCESS
+                self.feedback_message = "Grasping successful"
+            elif res==1:
+                # Grasping in progress, but this is already set above
+                pass
+            elif res==2:
+                new_status = py_trees.common.Status.FAILURE
+                self.feedback_message = "Grasping failed"
+            else:
+                assert(False, "Unexpected response")
+        self.logger.debug("%s.update()[%s->%s][%s]" % (self.__class__.__name__, self.status, new_status, self.feedback_message))
+        return new_status
 
-#     def update(self):
-#         new_status = py_trees.common.Status.RUNNING
-#         self.feedback_message = "Grasping in progress"
-#         if self.parent_connection.poll():
-#             res = self.parent_connection.recv().pop()
-#             if res==0:
-#                 new_status = py_trees.common.Status.SUCCESS
-#                 self.feedback_message = "Grasping successful"
-#             elif res==1:
-#                 # Grasping in progress, but this is already set above
-#                 pass
-#             elif res==2:
-#                 new_status = py_trees.common.Status.FAILURE
-#                 self.feedback_message = "Grasping failed"
-#             else:
-#                 assert(False, "Unexpected response")
-#         self.logger.debug("%s.update()[%s->%s][%s]" % (self.__class__.__name__, self.status, new_status, self.feedback_message))
-#         return new_status
-
-#     def terminate(self, new_status):
-#         self.parent_connection.send([])
-#         self.logger.debug("%s.terminate()[%s->%s]" % (self.__class__.__name__, self.status, new_status))
+    def terminate(self, new_status):
+        self._process_pipe.send([])
+        self.logger.debug("%s.terminate()[%s->%s]" % (self.__class__.__name__, self.status, new_status))
 
 
-# def grasping_process(pipe_connection, scene, robot, lock):
-#     sk_grasping = SkillGrasping(scene, robot)
+class ProcessPlacing:
+    def __init__(self, scene, robot, robot_lock):
+        self.parent_connection, self.child_connection = multiprocessing.Pipe()
+        self.placing = multiprocessing.Process(target=placing_process, args=(self.child_connection, scene, robot, robot_lock))
+        atexit.register(self.placing.terminate)
+        self.placing.start()
+        print("Placing process initiated")
+    
+    def get_pipe(self):
+        return self.parent_connection
 
-#     idle = True
-#     proc = None
-#     try:
-#         while True:
-#             if pipe_connection.poll():
-#                 cmd = pipe_connection.recv()
-#                 if len(cmd)==3 and idle:
-#                     # Start the process
-#                     proc = multiprocessing.Process(target=sk_grasping.grasp_object, args=(cmd[0], cmd[1], cmd[2], lock))
-#                     idle = False
-#                     proc.start()
-#                 elif len(cmd)==0:
-#                     # Abort process
-#                     if proc:
-#                         proc.terminate()
-#                     proc = None
-#                     idle = True
-#             elif not idle and proc.is_alive():
-#                 pipe_connection.send([1])
-#             elif not idle and not proc.is_alive():
-#                 # The thread was launched at some point and seems to be finished now
-#                 proc.terminate()
-#                 proc = None
-#                 idle = True
-#                 pipe_connection.send([0])
-#             time.sleep(0.5)
-#     except KeyboardInterrupt:
-#         if proc is not None:
-#             proc.terminate()
+
+def placing_process(pipe_connection, scene, robot, lock):
+    sk_placing = SkillPlacing(scene, robot)
+
+    while True:
+        if pipe_connection.poll():
+            cmd = pipe_connection.recv()
+            if len(cmd)==1:
+                # Start the process
+                res = sk_placing.place_object(cmd[0], lock)
+                if res:
+                    pipe_connection.send([0])
+                else:
+                    pipe_connection.send([2])
+
+                # Clear commands that came in while running this
+                while pipe_connection.poll():
+                    cmd = pipe_connection.recv()
+                    if len(cmd) > 0:
+                        print("WARNING! Received multiple place commands simultaneously.")
+        time.sleep(0.5)
 
 
 class SkillPlacing:
@@ -168,18 +150,20 @@ class SkillPlacing:
         return True
 
 
-# def get_placing_description():
-#     action_name = "place"
-#     action_params = [
-#         ["obj", "object"],
-#         ["rob", "chimera"]
-#     ]
-#     action_preconditions = [
-#         ("in-reach", False, ["obj", "rob"]),
-#         ("empty-hand", False, ["rob"])
-#     ]
-#     action_effects = [
-#         ("empty-hand", True, ["rob"]),
-#         ("in-hand", False, ["obj", "rob"])
-#     ]
-#     return (action_name, {"params": action_params, "preconds": action_preconditions, "effects": action_effects})
+def get_placing_description():
+    action_name = "place"
+    action_params = [
+        ["obj", "object"],
+        ["pos", "position"],
+        ["rob", "chimera"]
+    ]
+    action_preconditions = [
+        ("in-reach-pos", False, ["pos", "rob"]),
+        ("empty-hand", True, ["rob"]),
+        ("in-hand", False, ["obj", "rob"])
+    ]
+    action_effects = [
+        ("empty-hand", False, ["rob"]),
+        ("in-hand", True, ["obj", "rob"])
+    ]
+    return (action_name, {"params": action_params, "preconds": action_preconditions, "effects": action_effects})

@@ -1,10 +1,10 @@
 import py_trees
 from skills.grasping import ActionGrasping
 from skills.navigate import ActionNavigate
+from skills.placing import ActionPlacing
 from skills.pddl_descriptions import get_action_description
-from execution.condition_check import ConditionChecker_Blackboard, ConditionChecker_Predicate
+from execution.condition_check import ConditionChecker_Predicate
 from execution.custom_chooser import CustomChooser
-from multiprocessing import Lock
 import copy
 
 
@@ -13,8 +13,6 @@ class ExecutionSystem:
         self._robot = robot
         self._predicates = predicates
         self.tree = None
-
-        self._lock = Lock()
 
         self._pipes = pipes
 
@@ -45,35 +43,15 @@ class ExecutionSystem:
             # Establish pre-conditions
             preconds = []
             for precond in descr_action[1]["preconds"]:
-                # precond_check = ConditionChecker_Predicate(self._predicates.call[precond[0]],
-                #                                             self.process_pred_args(precond[2], action_arg_dict),
-                #                                             lock=self._lock,
-                #                                             invert=precond[1])
                 precond_processed = (precond[0], precond[1], self.process_pred_args(precond[2], action_arg_dict))
                 preconds.append(precond_processed)
-            # if len(preconds) > 0:
-            #     preconds_node = py_trees.composites.Sequence(name="Preconds action {}".format(k+1), children=preconds)
-            # else:
-            #     preconds_node = py_trees.behaviours.Success(name="Preconds action {} [succ]".format(k+1))
-            # all_preconds.append(preconds_node)
-
             all_preconds[k] = preconds
 
             # Establish effects
             effects = []
             for effect in descr_action[1]["effects"]:
-                # effect_check = ConditionChecker_Predicate(self._predicates.call[effect[0]],
-                #                                             self.process_pred_args(effect[2], action_arg_dict),
-                #                                             lock=self._lock,
-                #                                             invert=effect[1])
                 effect_processed = (effect[0], effect[1], self.process_pred_args(effect[2], action_arg_dict))
                 effects.append(effect_processed)
-            # if len(effects) > 0:
-            #     effects_node = py_trees.composites.Sequence(name="Effects action {}".format(k+1), children=effects)
-            # else:
-            #     effects_node = py_trees.behaviours.Success(name="Effects action {} [succ]".format(k+1))
-            # all_effects.append(effects_node)
-
             all_effects[k] = effects
 
         # Goals
@@ -83,7 +61,6 @@ class ExecutionSystem:
         for goal in modified_goals:
             goal_check = ConditionChecker_Predicate(self._predicates.call[goal[0]],
                                                     self.process_pred_args(goal[2], {}, ignore_keyerror=True),
-                                                    lock=self._lock,
                                                     invert=goal[1])
             goal_nodes.append(goal_check)
         if len(goal_nodes) > 0:
@@ -115,7 +92,6 @@ class ExecutionSystem:
             for goal in modified_goals:
                 goal_check = ConditionChecker_Predicate(self._predicates.call[goal[0]],
                                                         self.process_pred_args(goal[2], {}, ignore_keyerror=True),
-                                                        lock=self._lock,
                                                         invert=goal[1])
                 goal_nodes.append(goal_check)
             if len(goal_nodes) > 0:
@@ -196,7 +172,6 @@ class ExecutionSystem:
         for spec in specs:
             node = ConditionChecker_Predicate(self._predicates.call[spec[0]],
                                                 spec[2],
-                                                lock=self._lock,
                                                 invert=spec[1])
             nodes.append(node)
         return nodes
