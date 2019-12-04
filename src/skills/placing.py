@@ -12,7 +12,7 @@ from tools.util import IKError
 
 class ActionPlacing(py_trees.behaviour.Behaviour):
     """
-        Based on the example https://py-trees.readthedocs.io/en/release-0.6.x/_modules/py_trees/demos/action.html#Action
+    Based on the example https://py-trees.readthedocs.io/en/release-0.6.x/_modules/py_trees/demos/action.html#Action
     """
     def __init__(self, process_pipe, target_pos, name="placing_action"):
         super(ActionPlacing, self).__init__(name)
@@ -121,16 +121,14 @@ class SkillPlacing:
         pos = np.squeeze(r_R_R_obj[:3,:])
         orient = C_rob_ee
 
-        # Move to pre-place-pose
-        pos_pre = pos - np.matmul(orient.as_dcm(), np.array([0.0,0.0,0.15]))
-        pos_pre_joints = self.robot.ik(pos_pre, orient.as_quat())
-        if pos_pre_joints.tolist() is None:
-            if lock is not None:
-                lock.release()
-            return False
-        self.robot.transition_cmd_to(pos_pre_joints)
-
         try:
+            # Move to pre-place-pose
+            pos_pre = pos - np.matmul(orient.as_dcm(), np.array([0.0,0.0,0.15]))
+            pos_pre_joints = self.robot.ik(pos_pre, orient.as_quat())
+            if pos_pre_joints.tolist() is None:
+                raise IKError
+            self.robot.transition_cmd_to(pos_pre_joints)
+        
             # Go to place pose
             self.robot.transition_cartesian(pos, orient.as_quat())
 

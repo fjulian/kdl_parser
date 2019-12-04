@@ -39,7 +39,7 @@ def cube_example(sk_grasp, robot, scene, sk_place):
     sk_grasp.grasp_object("cube1")
 
     # Place cube somewhere else
-    sk_place.place_object(scene.objects["cube1"].init_pos + np.array([0.0, 0.15, 0.0]))
+    sk_place.place_object(scene.objects["cube1"].init_pos + np.array([0.0, 0.2, 0.0]))
 
 
 def main():
