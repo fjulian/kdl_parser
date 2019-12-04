@@ -225,6 +225,7 @@ class RobotArm:
         self.transition_cmd_to(self.start_cmd)
 
     def update_velocity(self, vel_trans, vel_rot):
+        # vel_trans and vel_rot are expected to be in robot body frame.
         self.velocity_trans = vel_trans
         self.velocity_turn = vel_rot
 
@@ -233,4 +234,13 @@ class RobotArm:
         self.velocity_turn = 0.0
 
     def velocity_setter(self):
-        p.resetBaseVelocity(self._model.uid, self.velocity_trans, [0.0, 0.0, self.velocity_turn])
+        # Determine current robot pose
+        _, orient = p.getBasePositionAndOrientation(self._model.uid)
+        orient = R.from_quat(orient)
+        # euler = orient.as_euler('xyz', degrees=True)
+
+        # Convert velocity commands to world frame
+        vel_trans_world = orient.apply(self.velocity_trans)
+        # vel_rot doesn't need to be converted, since body and world z axis coincide.
+
+        p.resetBaseVelocity(self._model.uid, vel_trans_world.tolist(), [0.0, 0.0, self.velocity_turn])

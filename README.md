@@ -20,6 +20,7 @@
   - [x] Add navigation to the whole system
   - [x] Find a better grasping pose for the drawer handle.
   - [x] Make releasing an object a separate action
+  - [x] Allow robot base velocity command to be given in robot base frame
 
 
 ## Setup Instructions

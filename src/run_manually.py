@@ -45,6 +45,10 @@ def cube_example(sk_grasp, robot, scene, sk_place):
     # Place cube somewhere else
     sk_place.place_object(scene.objects["cube1"].init_pos + np.array([0.0, 0.2, 0.0]))
 
+def drive_example(robot, world):
+    robot.update_velocity([0.4, 0.0, 0.0], 0.15)
+    world.step_seconds(5)
+    robot.stop_driving()
 
 def main():
     # Command line arguments
@@ -78,9 +82,11 @@ def main():
 
     # ---------- Run examples -----------
 
-    drawer_example(sk_grasp, robot, scene, world)
+    # drawer_example(sk_grasp, robot, scene, world)
 
     # cube_example(sk_grasp, robot, scene, sk_place)
+
+    drive_example(robot, world)
 
     # -----------------------------------
 
