@@ -3,6 +3,7 @@ from sim.robot_arm import RobotArm
 
 from sim.scene_tossing import SceneTossing
 from sim.scene_planning_1 import ScenePlanning1
+from sim.scene_move_skill import SceneMoveSkill
 
 from skills.navigate import move_to_object
 from skills.grasping import SkillGrasping
@@ -20,7 +21,10 @@ def drawer_example(sk_grasp, robot, scene, world):
     move_to_object("cupboard", scene, robot._model.uid)
 
     # Grasp the cupboard handle
-    sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
+    res = sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
+    if not res:
+        print("Grasping the handle failed.")
+        return
 
     # Drive back
     robot.update_velocity([0.0, -0.1, 0.0], 0.0)
@@ -58,7 +62,8 @@ def main():
 
     # Create world
     world = World(gui_=True, sleep_=True, load_objects=not restore_existing_objects)
-    scene = ScenePlanning1(world, restored_objects=objects)
+    # scene = ScenePlanning1(world, restored_objects=objects)
+    scene = SceneMoveSkill(world, restored_objects=objects)
 
     # Spawn robot
     robot = RobotArm(world, robot_mdl)
@@ -73,9 +78,9 @@ def main():
 
     # ---------- Run examples -----------
 
-    # drawer_example(sk_grasp, robot, scene, world)
+    drawer_example(sk_grasp, robot, scene, world)
 
-    cube_example(sk_grasp, robot, scene, sk_place)
+    # cube_example(sk_grasp, robot, scene, sk_place)
 
     # -----------------------------------
 

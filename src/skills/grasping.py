@@ -158,6 +158,10 @@ class SkillGrasping:
         # Go to pre-grasp pose
         pos_pre = pos - np.matmul(R.from_quat(orient).as_dcm(), np.array([0.0,0.0,0.15]))
         pos_pre_joints = self.robot.ik(pos_pre, orient)
+        if pos_pre_joints.tolist() is None:
+            if lock is not None:
+                lock.release()
+            return False
         self.robot.transition_cmd_to(pos_pre_joints)
 
         # Go to grasp pose
@@ -173,6 +177,7 @@ class SkillGrasping:
 
         if lock is not None:
             lock.release()
+        return True
 
     def release_object(self):
         self.robot.open_gripper()
