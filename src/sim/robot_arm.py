@@ -178,7 +178,7 @@ class RobotArm:
 
     def close_gripper(self):
         pos = [0.0, 0.0]
-        forces = [1.5, 1.5]
+        forces = [2.0, 2.0]
         p.setJointMotorControlArray(self._model.uid, self.joint_idx_hand, p.POSITION_CONTROL, targetPositions=pos, forces=forces)
 
     def check_grasp(self):

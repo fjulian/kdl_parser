@@ -3,10 +3,8 @@
 
 - High priority
   - [ ] Define predicates
-  - [ ] Make releasing an object a separate action
   - [ ] Write code that generates problem definition based on observations from the simulation
   - [ ] Use python logger instead of print statements.
-  - [ ] Find a better grasping pose for the drawer handle.
   - [ ] Try other IK library
 - Low priority
   - [ ] Write tests for robot arm control code.
@@ -20,6 +18,8 @@
   - [x] Look again at check_grasp function. Seems like it would also say that an object is grasped if the gripper is just open.
   - [x] Change the robot arm transition. Doesn't necessarily need to be cartesian in all cases. Maybe this reduces the twitching.
   - [x] Add navigation to the whole system
+  - [x] Find a better grasping pose for the drawer handle.
+  - [x] Make releasing an object a separate action
 
 
 ## Setup Instructions

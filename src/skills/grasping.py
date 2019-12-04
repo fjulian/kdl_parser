@@ -163,6 +163,7 @@ class SkillGrasping:
                 lock.release()
             return False
         self.robot.transition_cmd_to(pos_pre_joints)
+        self.robot._world.step_seconds(0.5)
 
         # Go to grasp pose
         self.robot.transition_cartesian(pos, orient)

@@ -30,7 +30,7 @@ class Cupboard:
             p.setJointMotorControl2(self.model.uid, i, controlMode=p.VELOCITY_CONTROL, force=0.0)
         
     def get_info(self):
-        grasp_orient = R.from_euler('xzy', [180, 90, -45], degrees=True)
+        grasp_orient = R.from_euler('xzy', [180, 90, 45], degrees=True)
         return ObjectInfo(urdf_path_=self.urdf,
                             init_pos_=np.array(self.pos),
                             init_orient_=np.array(self.orient),

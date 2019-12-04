@@ -108,13 +108,15 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder radius="0.01" length="${total_width*0.4}"/>
+        <!-- <cylinder radius="0.01" length="${total_width*0.4}"/> -->
+        <box size="0.015 0.015 ${total_width*0.4}"/>
       </geometry>
     </collision>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <cylinder radius="0.01" length="${total_width*0.4}"/>
+        <!-- <cylinder radius="0.01" length="${total_width*0.4}"/> -->
+        <box size="0.015 0.015 ${total_width*0.4}"/>
       </geometry>
       <material name="silver"/>
     </visual>
