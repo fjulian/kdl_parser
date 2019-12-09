@@ -19,7 +19,8 @@ class RobotArm:
         self._model = robot_model
         self.num_joints = 0
         self.joint_idx_arm = [1, 2, 3, 4, 5, 6, 7]
-        self.joint_idx_hand = [0, 0]
+        self.joint_idx_fingers = [0, 0]
+        self.joint_idx_hand = 0
         self.arm_base_link_idx = -100
         self.arm_ee_link_idx = -100
 
@@ -79,9 +80,12 @@ class RobotArm:
                     self.arm_base_link_idx = info[16]
             elif "panda_hand_joint" in joint_name:
                 self.arm_ee_link_idx = info[16]
+                self.joint_idx_hand = i
             elif "panda_finger_joint" in joint_name:
                 joint_num = int(joint_name.split("panda_finger_joint")[1])
-                self.joint_idx_hand[joint_num-1] = i
+                self.joint_idx_fingers[joint_num-1] = i
+                
+        p.enableJointForceTorqueSensor(self._model.uid, self.joint_idx_hand, enableSensor=1)
 
     def set_joints(self, desired):
         if desired is None:
@@ -174,15 +178,15 @@ class RobotArm:
 
     def open_gripper(self):
         pos = [0.038, 0.038]
-        p.setJointMotorControlArray(self._model.uid, self.joint_idx_hand, p.POSITION_CONTROL, targetPositions=pos)
+        p.setJointMotorControlArray(self._model.uid, self.joint_idx_fingers, p.POSITION_CONTROL, targetPositions=pos)
 
     def close_gripper(self):
         pos = [0.0, 0.0]
         forces = [2.0, 2.0]
-        p.setJointMotorControlArray(self._model.uid, self.joint_idx_hand, p.POSITION_CONTROL, targetPositions=pos, forces=forces)
+        p.setJointMotorControlArray(self._model.uid, self.joint_idx_fingers, p.POSITION_CONTROL, targetPositions=pos, forces=forces)
 
     def check_grasp(self):
-        gripper_state = p.getJointStates(self._model.uid, self.joint_idx_hand)
+        gripper_state = p.getJointStates(self._model.uid, self.joint_idx_fingers)
         assert(len(gripper_state) == 2)
 
         # dist_threshold = 0.01
@@ -244,3 +248,8 @@ class RobotArm:
         # vel_rot doesn't need to be converted, since body and world z axis coincide.
 
         p.resetBaseVelocity(self._model.uid, vel_trans_world.tolist(), [0.0, 0.0, self.velocity_turn])
+
+    def get_wrist_force(self):
+        _, _, forces, _ = p.getJointState(self._model.uid, self.joint_idx_hand)
+
+        return forces

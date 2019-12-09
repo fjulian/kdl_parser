@@ -366,71 +366,20 @@
     <limit effort="20" lower="0.0" upper="0.04" velocity="0.2"/>
     <mimic joint="panda_finger_joint1"/>
   </joint>
-  <!-- <joint name="camera_joint_panda_hand" type="fixed">
-    <parent link="panda_hand"/>
-    <child link="realsense_link"/>
-    <origin rpy="3.14 -1.55 0.0" xyz="0.04 0.0 0.04"/>
-  </joint>
-  <gazebo reference="realsense_link">
-    <sensor name="camera" type="depth">
-      <pose>0.001 -0.045 0.003 0 0 0</pose>
-      <update_rate>60</update_rate>
-      <camera>
-        <horizontal_fov>0.976899239</horizontal_fov>
-        <image>
-          <width>480</width>
-          <height>360</height>
-          <format>R8G8B8</format>
-        </image>
-        <clip>
-          <near>0.5</near>
-          <far>10</far>
-        </clip>
-      </camera>
-      <plugin filename="libgazebo_ros_openni_kinect.so" name="camera_plugin">
-        <baseline>0.2</baseline>
-        <alwaysOn>true</alwaysOn>
-        <!- Keep this zero, update_rate in the parent <sensor> tag
-                    will control the frame rate. ->
-        <updateRate>0.0</updateRate>
-        <cameraName>camera_ir</cameraName>
-        <imageTopicName>/camera/color/image_raw</imageTopicName>
-        <cameraInfoTopicName>/camera/color/camera_info</cameraInfoTopicName>
-        <depthImageTopicName>/camera/depth/image_raw</depthImageTopicName>
-        <depthImageCameraInfoTopicName>/camera/depth/camera_info</depthImageCameraInfoTopicName>
-        <pointCloudTopicName>/camera/depth/points</pointCloudTopicName>
-        <frameName>realsense_link</frameName>
-        <pointCloudCutoff>0.5</pointCloudCutoff>
-        <pointCloudCutoffMax>3.5</pointCloudCutoffMax>
-        <distortionK1>0</distortionK1>
-        <distortionK2>0</distortionK2>
-        <distortionK3>0</distortionK3>
-        <distortionT1>0</distortionT1>
-        <distortionT2>0</distortionT2>
-        <CxPrime>0</CxPrime>
-        <Cx>0</Cx>
-        <Cy>0</Cy>
-        <focalLength>0</focalLength>
-        <hackBaseline>0</hackBaseline>
-      </plugin>
-    </sensor>
-  </gazebo>
-  <link name="realsense_link">
-    <inertial>
-      <mass value="0.05"/>
-      <inertia ixx="0.00014395" ixy="0" ixz="0" iyy="0.00000384" iyz="0" izz="0.00014136"/>
-    </inertial>
-    <collision>
-      <geometry>
-        <box size="0.008 0.13 0.02"/>
-      </geometry>
-    </collision>
-    <visual>
-      <geometry>
-        <mesh filename="/home/fjulian/phd/playground/ros_planning_ws/src/mopa/mopa_description/meshes/realsense_r200.dae"/>
-      </geometry>
-      <material name="blueish"/>
-    </visual>
-  </link> -->
-</robot>
+  
 
+  <!-- Add EE frame -->
+  <link name="panda_default_EE">
+    <inertial>
+      <mass value="0.01"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="3.0e-07" ixy="0.0" ixz="0.0" iyy="3.0e-07" iyz="0.0" izz="3.0e-07"/>
+    </inertial>
+  </link>
+  <joint name="joint_link8_default_ee" type="fixed">
+        <parent link="panda_link8"/>
+        <child link="panda_default_EE"/>
+        <origin rpy="0.000 0.000 -0.785" xyz="0.000 0.000 0.103"/>
+  </joint>
+
+</robot>

@@ -39,7 +39,7 @@ class ActionPlacing(py_trees.behaviour.Behaviour):
                 new_status = py_trees.common.Status.FAILURE
                 self.feedback_message = "Grasping failed"
             else:
-                assert(False, "Unexpected response")
+                raise ValueError("Unexpected response")
         self.logger.debug("%s.update()[%s->%s][%s]" % (self.__class__.__name__, self.status, new_status, self.feedback_message))
         return new_status
 
