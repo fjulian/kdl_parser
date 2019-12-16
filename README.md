@@ -60,7 +60,15 @@ The file data/ridgeback_panda_hand.urdf can be generated using the command
 xacro mopa_description/robots/ridgeback_panda_hand.urdf.xacro
 ```
 
+### Physics simulator
 
+There are two options: using the physics client GUI that comes with pybullet or launching the server separately and connecting to it via shared memory.
+
+For the first option, no additional setup needs to be done after installing pybullet in the virtual environment.
+
+For the second option, you need to clone and build bullet3 [according to the instructions](https://github.com/bulletphysics/bullet3). It boils down to simply executing the shell script `./build_cmake_pybullet_double.sh` which comes with the repo. Afterwards, the binary is located in the directory `bullet3/build_cmake/examples/ExampleBrowser`. When launching it for the first time, the correct mode "Physics Server" needs to be selected in the left pane. At subsequent launches, this mode will be automatically selected (it gets saved to the file `0_Bullet3Demo.txt`, located in the same folder as the binary).
+
+Depending on which option is selected, the initialization of the simulator interface needs to be adapted in the file `src/sim/world.py`.
 
 ## Documentation
 
