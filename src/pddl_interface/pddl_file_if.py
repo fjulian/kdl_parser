@@ -5,6 +5,9 @@ import pickle
 
 class PDDLFileInterface:
     def __init__(self, domain_dir, problem_dir=None, initial_domain_pddl=None, domain_name=""):
+
+        # TODO check if domain and problem dirs exist. If not, create them.
+
         self._domain_dir = domain_dir
         if problem_dir is None:
             self._problem_dir = domain_dir
