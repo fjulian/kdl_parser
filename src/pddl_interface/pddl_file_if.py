@@ -3,8 +3,11 @@ import json
 from os import path
 import pickle
 
+
 class PDDLFileInterface:
-    def __init__(self, domain_dir, problem_dir=None, initial_domain_pddl=None, domain_name=""):
+    def __init__(
+        self, domain_dir, problem_dir=None, initial_domain_pddl=None, domain_name=""
+    ):
 
         # TODO check if domain and problem dirs exist. If not, create them.
 
@@ -24,7 +27,7 @@ class PDDLFileInterface:
         self._initial_predicates = []
         self._goals = []
 
-        self._domain_file = path.join(self._domain_dir, '_domain.pkl')
+        self._domain_file = path.join(self._domain_dir, "_domain.pkl")
         self._domain_file_pddl = None
         self._problem_file_pddl = None
         if initial_domain_pddl is not None:
@@ -43,7 +46,7 @@ class PDDLFileInterface:
     def load_domain(self):
         print("Trying to load domain file...")
         if path.exists(self._domain_file):
-            with open(self._domain_file, 'rb') as f:
+            with open(self._domain_file, "rb") as f:
                 load_obj = pickle.load(f)
             self._domain_name = load_obj[0]
             self._predicates = load_obj[1]
@@ -54,7 +57,7 @@ class PDDLFileInterface:
 
     def save_domain(self):
         save_obj = (self._domain_name, self._predicates, self._actions)
-        with open(self._domain_file, 'wb') as f:
+        with open(self._domain_file, "wb") as f:
             pickle.dump(save_obj, f)
         print("Saved domain file")
 
@@ -66,7 +69,7 @@ class PDDLFileInterface:
         pddl_str = ""
         pddl_str += "(define (domain " + self._domain_name + ")\n"
         pddl_str += "\t(:requirements " + self._requirements + ")\n\n"
-        types_str = ' '
+        types_str = " "
         types_str = types_str.join(types)
         pddl_str += "\t(:types " + types_str + ")\n\n"
         pddl_str += "\t(:predicates\n"
@@ -92,6 +95,8 @@ class PDDLFileInterface:
                 pddl_str += item[0]
                 for param in item[2]:
                     pddl_str += " ?" + param
+                if item[1]:
+                    pddl_str += ")"
                 pddl_str += ")\n"
             pddl_str += "\t\t\t)\n\n"
             pddl_str += "\t\t:effect\n\t\t\t(and\n"
@@ -108,17 +113,17 @@ class PDDLFileInterface:
             pddl_str += "\t\t\t)\n\n"
             pddl_str += "\t)\n\n"
         pddl_str += ")"
-        
+
         new_filename = path.join(self._domain_dir, self._time_now_str + "_domain.pddl")
-        with open(new_filename, 'w') as f:
+        with open(new_filename, "w") as f:
             f.write(pddl_str)
-        print("Wrote new PDDL domain file: "+new_filename.split('/')[-1])
+        print("Wrote new PDDL domain file: " + new_filename.split("/")[-1])
         self._domain_file_pddl = new_filename
 
     def read_domain_pddl(self):
-        with open(self._domain_file_pddl, 'r') as f:
+        with open(self._domain_file_pddl, "r") as f:
             dom = f.read()
-        dom = dom.split('\n')
+        dom = dom.split("\n")
 
         predicates = {}
 
@@ -127,117 +132,121 @@ class PDDLFileInterface:
             curr = dom.pop(0)
             curr = curr.strip()
             if curr.find("(define") > -1:
-                splitted = curr.split(' ')
+                splitted = curr.split(" ")
                 self._domain_name = splitted[-1][:-1]
             elif curr.find("(:predicates") > -1:
                 while True:
                     sub_curr = dom.pop(0)
                     sub_curr = sub_curr.strip()
-                    if sub_curr == ')':
+                    if sub_curr == ")":
                         break
-                    splitted = sub_curr.split(' ')
+                    splitted = sub_curr.split(" ")
                     predicate = splitted.pop(0)[1:]
                     params = []
                     params_typed_idx = 0
                     while len(splitted) > 0:
                         param = splitted.pop(0)
-                        param = param.replace(')','')
-                        if param == '-':
+                        param = param.replace(")", "")
+                        if param == "-":
                             this_type = splitted.pop(0)
-                            this_type = this_type.replace(')','')
+                            this_type = this_type.replace(")", "")
                             for i in range(len(params[params_typed_idx:])):
-                                params[params_typed_idx+i][1] = this_type
+                                params[params_typed_idx + i][1] = this_type
                             params_typed_idx = len(params)
                         else:
-                            param = param.replace('?','')
+                            param = param.replace("?", "")
                             params.append([param, None])
                     predicates[predicate] = params
                 self._predicates = predicates
             elif curr.find("(:action") > -1:
-                action = curr.split(' ')[1]
+                action = curr.split(" ")[1]
                 while True:
                     sub_curr = dom.pop(0)
                     sub_curr = sub_curr.strip()
-                    if sub_curr == ')':
+                    if sub_curr == ")":
                         break
-                    elif sub_curr.find(':parameters') > -1:
+                    elif sub_curr.find(":parameters") > -1:
                         sub_curr = dom.pop(0)
                         sub_curr = sub_curr.strip()
-                        splitted = sub_curr.split(' ')
+                        splitted = sub_curr.split(" ")
                         params = []
                         params_typed_idx = 0
                         while len(splitted) > 0:
                             param = splitted.pop(0)
-                            param = param.replace('(','')
-                            param = param.replace(')','')
-                            if param == '-':
+                            param = param.replace("(", "")
+                            param = param.replace(")", "")
+                            if param == "-":
                                 this_type = splitted.pop(0)
-                                this_type = this_type.replace(')','')
+                                this_type = this_type.replace(")", "")
                                 for i in range(len(params[params_typed_idx:])):
-                                    params[params_typed_idx+i][1] = this_type
+                                    params[params_typed_idx + i][1] = this_type
                                 params_typed_idx = len(params)
                             else:
-                                param = param.replace('?','')
+                                param = param.replace("?", "")
                                 params.append([param, None])
                     elif sub_curr.find(":precondition") > -1:
                         sub_curr = dom.pop(0).strip()
                         preconds = []
-                        if sub_curr == '(and':
+                        if sub_curr == "(and":
                             sub_curr = dom.pop(0).strip()
                         while len(sub_curr) > 0:
-                            if sub_curr == ')':
+                            if sub_curr == ")":
                                 break
-                            sub_curr = sub_curr.replace('(','')
-                            sub_curr = sub_curr.replace(')','')
-                            splitted = sub_curr.split(' ')
+                            sub_curr = sub_curr.replace("(", "")
+                            sub_curr = sub_curr.replace(")", "")
+                            splitted = sub_curr.split(" ")
                             first_token = splitted.pop(0)
-                            if first_token == 'not':
+                            if first_token == "not":
                                 negated = True
                                 precond_name = splitted.pop(0)
                             else:
                                 negated = False
                                 precond_name = first_token
-                            assert(precond_name in list(self._predicates.keys()))
+                            assert precond_name in list(self._predicates.keys())
                             precond_params = []
                             while len(splitted) > 0:
                                 param = splitted.pop(0)
-                                param = param.replace('?','')
+                                param = param.replace("?", "")
                                 precond_params.append(param)
                             preconds.append((precond_name, negated, precond_params))
                             sub_curr = dom.pop(0).strip()
                     elif sub_curr.find(":effect") > -1:
                         sub_curr = dom.pop(0).strip()
                         effects = []
-                        if sub_curr == '(and':
+                        if sub_curr == "(and":
                             sub_curr = dom.pop(0).strip()
                         while len(sub_curr) > 0:
-                            if sub_curr == ')':
+                            if sub_curr == ")":
                                 break
-                            sub_curr = sub_curr.replace('(','')
-                            sub_curr = sub_curr.replace(')','')
-                            splitted = sub_curr.split(' ')
+                            sub_curr = sub_curr.replace("(", "")
+                            sub_curr = sub_curr.replace(")", "")
+                            splitted = sub_curr.split(" ")
                             first_token = splitted.pop(0)
-                            if first_token == 'not':
+                            if first_token == "not":
                                 negated = True
                                 effect_name = splitted.pop(0)
                             else:
                                 negated = False
                                 effect_name = first_token
-                            assert(effect_name in list(self._predicates.keys()))
+                            assert effect_name in list(self._predicates.keys())
                             effect_params = []
                             while len(splitted) > 0:
                                 param = splitted.pop(0)
-                                param = param.replace('?','')
+                                param = param.replace("?", "")
                                 effect_params.append(param)
                             effects.append((effect_name, negated, effect_params))
                             sub_curr = dom.pop(0).strip()
-                self._actions[action] = {"params": params, "preconds": preconds, "effects": effects}
+                self._actions[action] = {
+                    "params": params,
+                    "preconds": preconds,
+                    "effects": effects,
+                }
         print("Read PDDL domain file")
 
     def write_problem_pddl(self):
         pddl_str = ""
         pddl_str += "(define (problem chimera-auto-problem)\n"
-        
+
         pddl_str += "\t(:domain\n"
         pddl_str += "\t\t" + self._domain_name + "\n"
         pddl_str += "\t)\n\n"
@@ -275,29 +284,38 @@ class PDDLFileInterface:
 
         pddl_str += ")\n"
 
-        new_filename = path.join(self._problem_dir, self._time_now_str + "_problem.pddl")
-        with open(new_filename, 'w') as f:
+        new_filename = path.join(
+            self._problem_dir, self._time_now_str + "_problem.pddl"
+        )
+        with open(new_filename, "w") as f:
             f.write(pddl_str)
-        print("Wrote new PDDL problem file: "+new_filename.split('/')[-1])
+        print("Wrote new PDDL problem file: " + new_filename.split("/")[-1])
         self._problem_file_pddl = new_filename
-
 
     # ----- Adding to the domain description ------------------------------------
 
     def add_action(self, action_name, action_definition, overwrite=False):
         if not overwrite and action_name in self._actions:
-            print("Action "+action_name+" already exists and no overwrite was requested. Ignoring request.")
+            print(
+                "Action "
+                + action_name
+                + " already exists and no overwrite was requested. Ignoring request."
+            )
         else:
-            assert(isinstance(action_name, str))
+            assert isinstance(action_name, str)
             self._actions[action_name] = action_definition
 
     def add_predicate(self, predicate_name, predicate_definition, overwrite=False):
         if not overwrite and predicate_name in self._predicates:
-            print("Predicate "+predicate_name+" already exists and no overwrite was requested. Ignoring request.")
+            print(
+                "Predicate "
+                + predicate_name
+                + " already exists and no overwrite was requested. Ignoring request."
+            )
         else:
-            assert(isinstance(predicate_name, str))
+            assert isinstance(predicate_name, str)
             self._predicates[predicate_name] = predicate_definition
-    
+
     # ----- Adding to the problem description ----------------------------------
 
     def add_objects(self, object_list):
@@ -327,10 +345,11 @@ class PDDLFileInterface:
                 if item[1] not in types:
                     types.append(item[1])
         for act in self._actions:
-            for item in self._actions[act]['params']:
+            for item in self._actions[act]["params"]:
                 if item[1] not in types:
                     types.append(item[1])
         return types
+
 
 ### Assumed conventions:
 # All arguments of a predicate are on the same line as the predicate name. Each line defines one predicate.

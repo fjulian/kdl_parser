@@ -5,10 +5,11 @@ from skills.placing import ActionPlacing
 from skills.pddl_descriptions import get_action_description
 from execution.condition_check import ConditionChecker_Predicate
 from execution.custom_chooser import CustomChooser
+from execution.es import ExecutionSystem
 import copy
 
 
-class ExecutionSystem:
+class AutoBehaviourTree(ExecutionSystem):
     def __init__(self, robot, predicates, plan, goals, pipes):
         self._robot = robot
         self._predicates = predicates

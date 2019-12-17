@@ -16,6 +16,14 @@ class ActionPlacing(py_trees.behaviour.Behaviour):
     """
 
     def __init__(self, process_pipe, target_pos, name="placing_action"):
+        """
+        Initializes the place action
+        
+        Args:
+            process_pipe (Pipe): Communication with the action skill
+            target_pos (string): Label of the target position
+            name (str, optional): Action name. Defaults to "placing_action".
+        """
         super(ActionPlacing, self).__init__(name)
         self.logger.debug("%s.__init__()" % (self.__class__.__name__))
         self._target_pos = target_pos

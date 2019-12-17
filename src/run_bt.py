@@ -13,7 +13,7 @@ from sim.scene_planning_1 import ScenePlanning1
 from skills.navigate import ProcessNavigate
 from skills.grasping import ProcessGrasping
 from skills.placing import ProcessPlacing
-from execution.bt import ExecutionSystem
+from execution.es_behavior_tree import AutoBehaviourTree
 from skills import pddl_descriptions
 from knowledge.predicates import Predicates
 from knowledge.problem import PlanningProblem
@@ -106,10 +106,10 @@ def main():
     pipes = {"grasp": sk_grasp.get_pipe(), "nav": sk_nav.get_pipe(), "place": sk_place}
 
     # Set up behavior tree
-    es = ExecutionSystem(
+    es = AutoBehaviourTree(
         robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes
     )
-    py_trees.display.render_dot_tree(es.tree.root)
+    # py_trees.display.render_dot_tree(es.tree.root)
     es.setup()
 
     # -----------------------------------
