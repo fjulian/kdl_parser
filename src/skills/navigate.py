@@ -15,6 +15,12 @@ class ActionNavigate(py_trees.behaviour.Behaviour):
 
     def initialise(self):
         self.logger.debug("%s.initialise()->sending new goal" % (self.__class__.__name__))
+        
+        # Empty existing messages from pipe
+        while self._process_pipe.poll():
+            _ = self._process_pipe.recv()
+
+        # Send command
         self._process_pipe.send([self._target_name])
 
     def update(self):
