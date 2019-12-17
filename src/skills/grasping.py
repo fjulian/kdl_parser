@@ -163,7 +163,9 @@ class SkillGrasping:
         r_O_O_grasp = r_O_O_obj + np.matmul(
             C_O_obj.as_dcm(), r_Obj_obj_grasp.reshape((-1, 1))
         )
-        r_R_R_grasp = np.matmul(T_rob_O, np.append(r_O_O_grasp, 1.0).reshape((-1, 1)))
+        r_R_R_grasp = np.matmul(
+            T_rob_O, np.reshape(np.append(r_O_O_grasp, 1.0), (-1, 1))
+        )
 
         # self.robot._world.draw_cross(np.squeeze(r_O_O_grasp))
 

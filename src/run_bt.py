@@ -12,6 +12,7 @@ from sim.scene_planning_1 import ScenePlanning1
 # Skills
 from skills.navigate import ProcessNavigate
 from skills.grasping import ProcessGrasping
+from skills.placing import ProcessPlacing
 from execution.bt import ExecutionSystem
 from skills import pddl_descriptions
 from knowledge.predicates import Predicates
@@ -101,7 +102,8 @@ def main():
     # Set up skills
     sk_grasp = ProcessGrasping(scene, robot, robot_lock)
     sk_nav = ProcessNavigate(scene, robot._model.uid)
-    pipes = {"grasp": sk_grasp.get_pipe(), "nav": sk_nav.get_pipe()}
+    sk_place = ProcessPlacing(scene, robot, robot_lock)
+    pipes = {"grasp": sk_grasp.get_pipe(), "nav": sk_nav.get_pipe(), "place": sk_place}
 
     # Set up behavior tree
     es = ExecutionSystem(

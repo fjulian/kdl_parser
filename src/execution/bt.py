@@ -162,7 +162,9 @@ class ExecutionSystem:
                     process_pipe=self._pipes["nav"], target_name=plan_item_list[2]
                 )
             elif action_name == "place":
-                action_node = ActionPlacing()
+                action_node = ActionPlacing(
+                    process_pipe=self._pipes["place"], target_pos=plan_item_list[3]
+                )
             do_run_root = CustomChooser(
                 name="Do run {}".format(k + 1), children=[need_run_root, action_node]
             )

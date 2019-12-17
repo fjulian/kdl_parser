@@ -131,7 +131,7 @@ class SkillPlacing:
 
         # Pos in robot frame
         r_O_O_obj = target_pos
-        r_R_R_obj = np.matmul(T_rob_O, np.append(r_O_O_obj, 1.0).reshape((-1, 1)))
+        r_R_R_obj = np.matmul(T_rob_O, np.reshape(np.append(r_O_O_obj, 1.0), (-1, 1)))
 
         # Orientation in robot frame
         C_rob_ee = R.from_quat(self.robot.start_orient)

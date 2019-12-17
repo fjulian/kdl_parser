@@ -16,6 +16,7 @@ import pickle
 
 import argparse
 
+
 def drawer_example(sk_grasp, robot, scene, world):
     # Run move skill
     move_to_object("cupboard", scene, robot._model.uid)
@@ -39,6 +40,7 @@ def drawer_example(sk_grasp, robot, scene, world):
     sk_grasp.release_object()
     robot.to_start()
 
+
 def cube_example(sk_grasp, robot, scene, sk_place):
     # Run move skill
     move_to_object("cube1", scene, robot._model.uid)
@@ -57,35 +59,46 @@ def cube_example(sk_grasp, robot, scene, sk_place):
 
     from math import pi as m_pi
 
-    robot.transition_cmd_to(np.array([0, -m_pi/4.0, 0, -3.0*m_pi/4.0, 0, m_pi/4.0, m_pi/4.0]))
+    robot.transition_cmd_to(
+        np.array([0, -m_pi / 4.0, 0, -3.0 * m_pi / 4.0, 0, m_pi / 4.0, m_pi / 4.0])
+    )
     print("after tilting back:")
     robot._world.step_seconds(1.0)
     print(robot.get_wrist_force())
 
-    robot.transition_cmd_to(np.array([0, -m_pi/4.0, 0, -3.0*m_pi/4.0, 0, m_pi, m_pi/4.0]))
+    robot.transition_cmd_to(
+        np.array([0, -m_pi / 4.0, 0, -3.0 * m_pi / 4.0, 0, m_pi, m_pi / 4.0])
+    )
     print("after tilting forward:")
     robot._world.step_seconds(1.0)
     print(robot.get_wrist_force())
 
-    robot.transition_cmd_to(np.array([0, -m_pi/4.0, 0, -3.0*m_pi/4.0, m_pi/2.0, m_pi, m_pi/4.0]))
+    robot.transition_cmd_to(
+        np.array([0, -m_pi / 4.0, 0, -3.0 * m_pi / 4.0, m_pi / 2.0, m_pi, m_pi / 4.0])
+    )
     print("after rolling:")
     robot._world.step_seconds(1.0)
     print(robot.get_wrist_force())
 
-    return
-
     # Place cube somewhere else
     sk_place.place_object(scene.objects["cube1"].init_pos + np.array([0.0, 0.2, 0.0]))
+
 
 def drive_example(robot, world):
     robot.update_velocity([0.4, 0.0, 0.0], 0.15)
     world.step_seconds(5)
     robot.stop_driving()
 
+
 def main():
     # Command line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("-r", "--reuse-objects", action="store_true", help="if given, the simulation does not reload objects. Objects must already be present.")
+    parser.add_argument(
+        "-r",
+        "--reuse-objects",
+        action="store_true",
+        help="if given, the simulation does not reload objects. Objects must already be present.",
+    )
     args = parser.parse_args()
 
     # Load existing simulation data if desired
@@ -108,7 +121,7 @@ def main():
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot)
     sk_place = SkillPlacing(scene, robot)
-    
+
     robot.to_start()
     world.step_seconds(0.5)
 
@@ -123,6 +136,7 @@ def main():
     # -----------------------------------
 
     world.step_seconds(50)
+
 
 if __name__ == "__main__":
     main()
