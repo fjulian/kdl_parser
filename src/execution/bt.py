@@ -18,9 +18,22 @@ class ExecutionSystem:
 
         # py_trees.logging.level = py_trees.logging.Level.DEBUG
 
-        self.create_tree_from_plan(plan, goals)
+        self._create_tree_from_plan(plan, goals)
 
-    def create_tree_from_plan(self, plan, goals):
+        self.ticking = True
+
+    def setup(self):
+        self.tree.setup(timeout=15)
+
+    def step(self):
+        self.tree.tick()
+
+    def print_status(self):
+        py_trees.display.print_ascii_tree(self.tree.root, show_status=True)
+
+    # ---- Private member functions ----
+
+    def _create_tree_from_plan(self, plan, goals):
         N = len(plan)
 
         # Compute all actions' preconditions and effects
@@ -48,7 +61,7 @@ class ExecutionSystem:
                 precond_processed = (
                     precond[0],
                     precond[1],
-                    self.process_pred_args(precond[2], action_arg_dict),
+                    self._process_pred_args(precond[2], action_arg_dict),
                 )
                 preconds.append(precond_processed)
             all_preconds[k] = preconds
@@ -59,7 +72,7 @@ class ExecutionSystem:
                 effect_processed = (
                     effect[0],
                     effect[1],
-                    self.process_pred_args(effect[2], action_arg_dict),
+                    self._process_pred_args(effect[2], action_arg_dict),
                 )
                 effects.append(effect_processed)
             all_effects[k] = effects
@@ -71,7 +84,7 @@ class ExecutionSystem:
         for goal in modified_goals:
             goal_check = ConditionChecker_Predicate(
                 self._predicates.call[goal[0]],
-                self.process_pred_args(goal[2], {}, ignore_keyerror=True),
+                self._process_pred_args(goal[2], {}, ignore_keyerror=True),
                 invert=goal[1],
             )
             goal_nodes.append(goal_check)
@@ -92,7 +105,7 @@ class ExecutionSystem:
             # Remove goals that are reached through effects of action k
             for effect in all_action_descriptions[k][1]["effects"]:
                 # Replace the parameters with their values
-                effect_params = self.process_pred_args(
+                effect_params = self._process_pred_args(
                     effect[2], all_action_arg_dicts[k], substitute_robot=False
                 )
                 modified_effect = (effect[0], effect[1], tuple(effect_params))
@@ -110,7 +123,7 @@ class ExecutionSystem:
             for goal in modified_goals:
                 goal_check = ConditionChecker_Predicate(
                     self._predicates.call[goal[0]],
-                    self.process_pred_args(goal[2], {}, ignore_keyerror=True),
+                    self._process_pred_args(goal[2], {}, ignore_keyerror=True),
                     invert=goal[1],
                 )
                 goal_nodes.append(goal_check)
@@ -134,13 +147,13 @@ class ExecutionSystem:
 
             # Need run part
             effect_node = py_trees.composites.Sequence(
-                children=self.convert_to_nodes(all_effects[k])
+                children=self._convert_to_nodes(all_effects[k])
             )
             if len(all_preconds[k + 1 :]) > 0:
                 temp = []
                 for precond_temp in all_preconds[k + 1 :]:
                     precond_node_temp = py_trees.composites.Sequence(
-                        children=self.convert_to_nodes(precond_temp)
+                        children=self._convert_to_nodes(precond_temp)
                     )
                     temp.append(precond_node_temp)
                 precond_node = py_trees.composites.Sequence(children=temp)
@@ -171,7 +184,7 @@ class ExecutionSystem:
 
             # Can run part
             precond_node_temp = py_trees.composites.Sequence(
-                children=self.convert_to_nodes(all_preconds[k])
+                children=self._convert_to_nodes(all_preconds[k])
             )
             can_run_root = py_trees.composites.Sequence(
                 name="Can run {}".format(k + 1),
@@ -195,19 +208,16 @@ class ExecutionSystem:
 
         root = CustomChooser(name="Plan runner", children=[final_goal_node, local_root])
         self.tree = py_trees.trees.BehaviourTree(root)
-        self.show_tree()
+        self._show_tree()
 
-    def setup(self):
-        self.tree.setup(timeout=15)
-
-    def show_tree(self):
+    def _show_tree(self):
         print("=" * 20)
         print("Behavior tree:")
         print("-" * 20)
         py_trees.display.print_ascii_tree(self.tree.root)
         print("=" * 20)
 
-    def process_pred_args(
+    def _process_pred_args(
         self, pred_args, arg_dict, substitute_robot=True, ignore_keyerror=False
     ):
         pred_args_processed = list(copy.deepcopy(pred_args))
@@ -221,7 +231,7 @@ class ExecutionSystem:
                 pred_args_processed[i] = self._robot
         return pred_args_processed
 
-    def convert_to_nodes(self, specs):
+    def _convert_to_nodes(self, specs):
         nodes = []
         for spec in specs:
             node = ConditionChecker_Predicate(

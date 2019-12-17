@@ -112,11 +112,6 @@ def main():
     py_trees.display.render_dot_tree(es.tree.root)
     es.setup()
 
-    # blackboard = py_trees.blackboard.Blackboard()
-    # blackboard.grasp_target_name = "cube1"
-    # blackboard.grasp_target_link_id = None
-    # blackboard.grasp_target_grasp_id = None
-
     # -----------------------------------
 
     robot.to_start()
@@ -127,11 +122,12 @@ def main():
 
         index = 1
         while True:
-            es.tree.tick()
-            print("------------- Tick {} ---------------".format(index))
-            py_trees.display.print_ascii_tree(es.tree.root, show_status=True)
+            es.step()
+            print("------------- Iteration {} ---------------".format(index))
+            es.print_status()
             index += 1
-            time.sleep(1.0)
+            if es.ticking:
+                time.sleep(0.5)
 
     except KeyboardInterrupt:
         # es.tree.interrupt()
