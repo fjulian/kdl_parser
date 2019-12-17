@@ -14,6 +14,7 @@ from skills.navigate import ProcessNavigate
 from skills.grasping import ProcessGrasping
 from skills.placing import ProcessPlacing
 from execution.es_behavior_tree import AutoBehaviourTree
+from execution.es_simple_state_machine import SimpleStateMachine
 from skills import pddl_descriptions
 from knowledge.predicates import Predicates
 from knowledge.problem import PlanningProblem
@@ -76,6 +77,7 @@ def main():
     # Set up predicates
 
     preds = Predicates(scene, robot, robot_lock)
+
     for descr in preds.descriptions.items():
         pddl_if.add_predicate(
             predicate_name=descr[0], predicate_definition=descr[1], overwrite=False
@@ -106,10 +108,14 @@ def main():
     pipes = {"grasp": sk_grasp.get_pipe(), "nav": sk_nav.get_pipe(), "place": sk_place}
 
     # Set up behavior tree
-    es = AutoBehaviourTree(
-        robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes
-    )
-    # py_trees.display.render_dot_tree(es.tree.root)
+    use_bt = False
+    if use_bt:
+        es = AutoBehaviourTree(
+            robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes
+        )
+        # py_trees.display.render_dot_tree(es.tree.root)
+    else:
+        es = SimpleStateMachine()
     es.setup()
 
     # -----------------------------------

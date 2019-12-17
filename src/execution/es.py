@@ -8,7 +8,6 @@ class ExecutionSystem:
 
     __metaclass__ = ABCMeta
 
-    @abstractmethod
     def setup(self):
         pass
 
