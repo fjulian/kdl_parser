@@ -1,5 +1,3 @@
-
-
 class PlanningProblem:
     """
         For now this class just hardcodes the planning problem. Later, the object list should be populated
@@ -13,13 +11,13 @@ class PlanningProblem:
         self.objects = [
             ("cube1", "object"),
             ("robot1", "chimera"),
-            ("pos1", "position")
+            ("pos1", "position"),
         ]
 
-        self.initial_predicates = [
-            ("empty-hand", "robot1")
-        ]
+        self.initial_predicates = [("empty-hand", "robot1")]
 
-        self.goals = [
-            ("in-hand", False, ("cube1", "robot1"))
-        ]
+        # self.goals = [
+        #     ("in-hand", False, ("cube1", "robot1"))
+        # ]
+
+        self.goals = [("inside", False, ("cube1", "table"))]

@@ -85,8 +85,8 @@ def cube_example(sk_grasp, robot, scene, sk_place):
 
 
 def drive_example(robot, world):
-    robot.update_velocity([0.4, 0.0, 0.0], 0.15)
-    world.step_seconds(5)
+    robot.update_velocity([0.4, 0.0, 0.0], 0.17)
+    world.step_seconds(10)
     robot.stop_driving()
 
 
