@@ -1,9 +1,9 @@
 from execution.es import ExecutionSystem
 
 
-class SimpleStateMachine(ExecutionSystem):
+class SequentialExecution(ExecutionSystem):
     def __init__(self):
-        self.ticking = False
+        pass
 
     def step(self):
         pass
