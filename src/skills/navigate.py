@@ -40,7 +40,7 @@ class ActionNavigate(py_trees.behaviour.Behaviour):
                 new_status = py_trees.common.Status.FAILURE
                 self.feedback_message = "Nav failed"
             else:
-                assert (False, "Unexpected response")
+                raise (ValueError, "Unexpected response")
         self.logger.debug(
             "%s.update()[%s->%s][%s]"
             % (self.__class__.__name__, self.status, new_status, self.feedback_message)
@@ -63,7 +63,7 @@ class ProcessNavigate:
 
 
 def nav_process(pipe_connection, scene, robot_uid):
-    sk_nav = SkillNavigate(robot_uid, scene)
+    sk_nav = SkillNavigate(scene, robot_uid)
     while True:
         if pipe_connection.poll():
             cmd = pipe_connection.recv()
@@ -79,7 +79,7 @@ def nav_process(pipe_connection, scene, robot_uid):
 
 
 class SkillNavigate:
-    def __init__(self, robot_uid, scene):
+    def __init__(self, scene, robot_uid):
         self.robot_uid_ = robot_uid
         self.scene_ = scene
 
