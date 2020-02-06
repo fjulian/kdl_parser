@@ -16,8 +16,6 @@ class PlanningProblem:
 
         self.initial_predicates = [("empty-hand", "robot1")]
 
-        # self.goals = [
-        #     ("in-hand", False, ("cube1", "robot1"))
-        # ]
+        self.goals = [("in-hand", False, ("cube1", "robot1"))]
 
-        self.goals = [("inside", False, ("cube1", "table"))]
+        # self.goals = [("inside", False, ("cube1", "table"))]

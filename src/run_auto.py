@@ -10,11 +10,11 @@ from sim.robot_arm import RobotArm
 from sim.scene_planning_1 import ScenePlanning1
 
 # Skills
-from skills.navigate import ProcessNavigate
-from skills.grasping import ProcessGrasping
-from skills.placing import ProcessPlacing
+from skills.navigate import ProcessNavigate, SkillNavigate
+from skills.grasping import ProcessGrasping, SkillGrasping
+from skills.placing import ProcessPlacing, SkillPlacing
 from execution.es_behavior_tree import AutoBehaviourTree
-from execution.es_simple_state_machine import SimpleStateMachine
+from execution.es_sequential_execution import SequentialExecution
 from skills import pddl_descriptions
 from knowledge.predicates import Predicates
 from knowledge.problem import PlanningProblem
@@ -98,24 +98,39 @@ def main():
 
     if plan is False:
         raise RuntimeError("Planning failed.")
+    else:
+        print("Found plan:")
+        print(plan)
+        raw_input("Press enter to run...")
 
     # -----------------------------------
 
-    # Set up skills
-    sk_grasp = ProcessGrasping(scene, robot, robot_lock)
-    sk_nav = ProcessNavigate(scene, robot._model.uid)
-    sk_place = ProcessPlacing(scene, robot, robot_lock)
-    pipes = {"grasp": sk_grasp.get_pipe(), "nav": sk_nav.get_pipe(), "place": sk_place}
-
-    # Set up behavior tree
+    # Set up execution system
     use_bt = False
     if use_bt:
+        # Set up skills
+        sk_grasp = ProcessGrasping(scene, robot, robot_lock)
+        sk_nav = ProcessNavigate(scene, robot._model.uid)
+        sk_place = ProcessPlacing(scene, robot, robot_lock)
+        pipes = {
+            "grasp": sk_grasp.get_pipe(),
+            "nav": sk_nav.get_pipe(),
+            "place": sk_place,
+        }
+
+        # Set up behavior tree
         es = AutoBehaviourTree(
             robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes
         )
         # py_trees.display.render_dot_tree(es.tree.root)
     else:
-        es = SimpleStateMachine()
+        # Set up skills
+        sk_grasp = SkillGrasping(scene, robot)
+        sk_place = SkillPlacing(scene, robot)
+        sk_nav = SkillNavigate(scene, robot._model.uid)
+        skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
+
+        es = SequentialExecution(skill_set, plan)
     es.setup()
 
     # -----------------------------------
@@ -128,12 +143,14 @@ def main():
 
         index = 1
         while True:
-            es.step()
+            plan_finished = es.step()
             print("------------- Iteration {} ---------------".format(index))
             es.print_status()
             index += 1
             if es.ticking:
                 time.sleep(0.5)
+            if plan_finished:
+                break
 
     except KeyboardInterrupt:
         # es.tree.interrupt()
