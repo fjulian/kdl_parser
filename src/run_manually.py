@@ -9,6 +9,8 @@ from skills.navigate import SkillNavigate
 from skills.grasping import SkillGrasping
 from skills.placing import SkillPlacing
 
+from knowledge.predicates import Predicates
+
 import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -90,6 +92,12 @@ def drive_example(robot, world):
     robot.stop_driving()
 
 
+def predicate_example(scene, robot):
+    preds = Predicates(scene, robot)
+    print("Cube on table: " + str(preds.on("table", "cube1")))
+    print("Cube on box 1: " + str(preds.on("container1", "cube1")))
+
+
 def main():
     # Command line arguments
     parser = argparse.ArgumentParser()
@@ -130,13 +138,15 @@ def main():
 
     # drawer_example(sk_grasp, sk_nav, robot, scene, world)
 
-    cube_example(sk_grasp, sk_nav, robot, scene, sk_place)
+    # cube_example(sk_grasp, sk_nav, robot, scene, sk_place)
 
     # drive_example(robot, world)
 
+    predicate_example(scene, robot)
+
     # -----------------------------------
 
-    world.step_seconds(50)
+    # world.step_seconds(50)
 
 
 if __name__ == "__main__":
