@@ -73,6 +73,9 @@ def main():
     robot = RobotArm(world, robot_mdl)
     robot.reset()
 
+    robot.to_start()
+    world.step_seconds(0.5)
+
     # -----------------------------------
     # Set up predicates
 
@@ -137,9 +140,6 @@ def main():
     es.setup()
 
     # -----------------------------------
-
-    robot.to_start()
-    world.step_seconds(0.5)
 
     try:
         index = 1
