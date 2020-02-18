@@ -25,7 +25,7 @@ import py_trees
 # Interface to planner and PDDL
 from pddl_interface import pddl_file_if, planner_interface
 
-# -------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 
 def main():
@@ -84,6 +84,9 @@ def main():
         )
 
     planning_problem = PlanningProblem()
+    planning_problem.populate_objects(scene)
+    planning_problem.check_predicates(preds, robot)
+
     pddl_if.add_objects(planning_problem.objects)
     pddl_if.add_inital_predicates(planning_problem.initial_predicates)
     pddl_if.add_goal(planning_problem.goals)
@@ -139,21 +142,18 @@ def main():
     world.step_seconds(0.5)
 
     try:
-        # es.tree.tick_tock(sleep_ms=500, number_of_iterations=py_trees.trees.CONTINUOUS_TICK_TOCK)
-
         index = 1
         while True:
-            plan_finished = es.step()
             print("------------- Iteration {} ---------------".format(index))
             es.print_status()
+            plan_finished = es.step()
             index += 1
             if es.ticking:
                 time.sleep(0.5)
             if plan_finished:
+                print("Plan finished. Exiting.")
                 break
-
     except KeyboardInterrupt:
-        # es.tree.interrupt()
         pass
 
 

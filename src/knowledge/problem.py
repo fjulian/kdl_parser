@@ -9,13 +9,21 @@ class PlanningProblem:
     def __init__(self):
 
         self.objects = [
-            ("cube1", "object"),
             ("robot1", "chimera"),
             ("pos1", "position"),
         ]
 
-        self.initial_predicates = [("empty-hand", "robot1")]
+        self.initial_predicates = []
 
         self.goals = [("in-hand", False, ("cube1", "robot1"))]
+        # self.goals = [("inside", False, ("container1", "cube1"))]
 
-        # self.goals = [("inside", False, ("cube1", "table"))]
+    def populate_objects(self, scene):
+        for obj in scene.objects:
+            self.objects.append((obj, "object"))
+
+    def check_predicates(self, predicates, robot):
+        # If predicates need to be initialized when the system is launched, this can be done here.
+
+        if predicates.empty_hand(robot):
+            self.initial_predicates.append(("empty-hand", "robot1"))
