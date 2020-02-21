@@ -7,20 +7,22 @@ def pddl_planner(domain_file, problem_file):
             ["bin/ff", "-s", "2", "-o", domain_file, "-f", problem_file]
         )
         # res = subprocess.check_output(['bin/ff', '-s', '2', '-o', 'knowledge/pddl-examples/rover/strips/domain.pddl', '-f', 'knowledge/pddl-examples/rover/strips/problem.pddl'])
-    except subprocess.CalledProcessError:
-        print("Planning failed")
-        return False
-    try:
-        res = cut_string_before(res, "ff: found legal plan as follows", complain=True)
-    except NameError:
+    except subprocess.CalledProcessError as e:
         # Check if empty plan solves it
-        empty_idx = res.find("The empty plan solves it")
+        empty_idx = e.output.find("The empty plan solves it")
         if empty_idx > -1:
             print("Empty plan solves the goal.")
             return []
         else:
-            print("Planning failed")
+            print("Planning failed: ")
+            print(e.output)
             return False
+    try:
+        res = cut_string_before(res, "ff: found legal plan as follows", complain=True)
+    except NameError:
+        print("Planning failed: ")
+        print(res)
+        return False
     res = cut_string_before(res, "0:")
     res = cut_string_at(res, "time spent")
     res = res.split("\n")

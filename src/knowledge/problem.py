@@ -15,9 +15,9 @@ class PlanningProblem:
 
         self.initial_predicates = []
 
-        # self.goals = [("in-hand", False, ("cube1", "robot1"))]
-        self.goals = [("on", False, ("cube1", "table"))]
-        # self.goals = [("inside", False, ("container1", "cube1"))]
+        # self.goals = [("in-hand", True, ("cube1", "robot1"))]
+        self.goals = [("on", True, ("cupboard", "cube1"))]
+        # self.goals = [("inside", True, ("container1", "cube1"))]
 
     def populate_objects(self, scene):
         for obj in scene.objects:
@@ -28,3 +28,9 @@ class PlanningProblem:
 
         if predicates.empty_hand(robot):
             self.initial_predicates.append(("empty-hand", "robot1"))
+
+        # Check any predicates in relation with the goal
+        for goal in self.goals:
+            if predicates.call[goal[0]](*goal[2]):
+                pred_tuple = (goal[0],) + goal[2]
+                self.initial_predicates.append(pred_tuple)
