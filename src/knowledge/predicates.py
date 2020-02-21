@@ -11,6 +11,7 @@ class Predicates:
             "in-reach": self.in_reach,
             "in-reach-pos": self.in_reach_pos,
             "inside": self.inside,
+            "on": self.on,
         }
 
         self.descriptions = {
@@ -19,6 +20,7 @@ class Predicates:
             "in-reach": [["obj", "object"], ["rob", "chimera"]],
             "in-reach-pos": [["pos", "position"], ["rob", "chimera"]],
             "inside": [["container", "object"], ["contained", "object"]],
+            "on": [["supporting", "object"], ["supported", "object"]],
         }
 
         self.sk_grasping = SkillGrasping(scene, robot)

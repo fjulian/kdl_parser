@@ -15,7 +15,8 @@ class PlanningProblem:
 
         self.initial_predicates = []
 
-        self.goals = [("in-hand", False, ("cube1", "robot1"))]
+        # self.goals = [("in-hand", False, ("cube1", "robot1"))]
+        self.goals = [("on", False, ("cube1", "table"))]
         # self.goals = [("inside", False, ("container1", "cube1"))]
 
     def populate_objects(self, scene):
