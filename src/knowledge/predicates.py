@@ -4,13 +4,14 @@ import numpy as np
 
 
 class Predicates:
-    def __init__(self, scene, robot, robot_lock):
+    def __init__(self, scene, robot, robot_lock=None):
         self.call = {
             "empty-hand": self.empty_hand,
             "in-hand": self.in_hand,
             "in-reach": self.in_reach,
             "in-reach-pos": self.in_reach_pos,
             "inside": self.inside,
+            "on": self.on,
         }
 
         self.descriptions = {
@@ -18,7 +19,8 @@ class Predicates:
             "in-hand": [["obj", "object"], ["rob", "chimera"]],
             "in-reach": [["obj", "object"], ["rob", "chimera"]],
             "in-reach-pos": [["pos", "position"], ["rob", "chimera"]],
-            "inside": [["obj", "object"], ["obj", "object"]],
+            "inside": [["container", "object"], ["contained", "object"]],
+            "on": [["supporting", "object"], ["supported", "object"]],
         }
 
         self.sk_grasping = SkillGrasping(scene, robot)
@@ -27,9 +29,11 @@ class Predicates:
         self._robot_lock = robot_lock
 
     def empty_hand(self, robot):
-        self._robot_lock.acquire()
+        if self._robot_lock:
+            self._robot_lock.acquire()
         grasped_sth = robot.check_grasp()
-        self._robot_lock.release()
+        if self._robot_lock:
+            self._robot_lock.release()
         return not grasped_sth
 
     def in_hand(self, target_object, robot):
@@ -61,10 +65,12 @@ class Predicates:
         Returns:
             bool: Whether the object can be grasped from the robot's current position.
         """
-        self._robot_lock.acquire()
+        if self._robot_lock:
+            self._robot_lock.acquire()
         pos, orient = self.sk_grasping.compute_grasp(target_object, None, 0)
         cmd = robot.ik(pos, orient)
-        self._robot_lock.release()
+        if self._robot_lock:
+            self._robot_lock.release()
         if cmd.tolist() is None or cmd is None:
             return False
         else:
@@ -81,9 +87,11 @@ class Predicates:
         Returns:
             [type]: [description]
         """
-        self._robot_lock.acquire()
+        if self._robot_lock:
+            self._robot_lock.acquire()
         cmd = robot.ik(target_pos, robot.start_orient)
-        self._robot_lock.release()
+        if self._robot_lock:
+            self._robot_lock.release()
         if cmd.tolist() is None or cmd is None:
             return False
         else:
@@ -112,3 +120,35 @@ class Predicates:
         return np.all(np.greater_equal(pos_contained, lower_border)) and np.all(
             np.less_equal(pos_contained, upper_border)
         )
+
+    def on(self, supporting_object, supported_object):
+        """
+        [summary]
+        
+        Args:
+            supporting_object ([type]): [description]
+            supported_object ([type]): [description]
+        """
+        supporting_uid = self._scene.objects[supporting_object].model.uid
+        supported_uid = self._scene.objects[supported_object].model.uid
+        aabb_supporting = p.getAABB(supporting_uid)
+
+        pos_supported, _ = p.getBasePositionAndOrientation(supported_uid)
+        pos_supported = np.array(pos_supported)
+        aabb_supported = p.getAABB(supported_uid)
+
+        lower_supporting = np.array(aabb_supporting[0])
+        upper_supporting = np.array(aabb_supporting[1])
+        lower_supported = np.array(aabb_supported[0])
+
+        # Check if supported object is above supporting one (z-coordinate)
+        above_tol = 0.05  # TODO move this to parameter file
+        above = lower_supported[2] > upper_supporting[2] - above_tol
+
+        # Check if supported object is within footprint of supporting one (xy-plane).
+        # Currently this is based on the position of the supported object. Need to see whether this makes sense.
+        within = np.all(
+            np.greater_equal(pos_supported[:2], lower_supporting[:2])
+        ) and np.all(np.less_equal(pos_supported[:2], upper_supporting[:2]))
+
+        return above and within

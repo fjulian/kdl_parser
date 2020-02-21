@@ -5,9 +5,11 @@ from sim.scene_tossing import SceneTossing
 from sim.scene_planning_1 import ScenePlanning1
 from sim.scene_move_skill import SceneMoveSkill
 
-from skills.navigate import move_to_object
+from skills.navigate import SkillNavigate
 from skills.grasping import SkillGrasping
 from skills.placing import SkillPlacing
+
+from knowledge.predicates import Predicates
 
 import pybullet as p
 import numpy as np
@@ -17,9 +19,9 @@ import pickle
 import argparse
 
 
-def drawer_example(sk_grasp, robot, scene, world):
+def drawer_example(sk_grasp, sk_nav, robot, scene, world):
     # Run move skill
-    move_to_object("cupboard", scene, robot._model.uid)
+    sk_nav.move_to_object("cupboard")
 
     # robot.get_wrist_force()
 
@@ -41,9 +43,9 @@ def drawer_example(sk_grasp, robot, scene, world):
     robot.to_start()
 
 
-def cube_example(sk_grasp, robot, scene, sk_place):
+def cube_example(sk_grasp, sk_nav, robot, scene, sk_place):
     # Run move skill
-    move_to_object("cube1", scene, robot._model.uid)
+    sk_nav.move_to_object("cube1")
 
     print("empty hand:")
     robot._world.step_seconds(1.0)
@@ -90,6 +92,12 @@ def drive_example(robot, world):
     robot.stop_driving()
 
 
+def predicate_example(scene, robot):
+    preds = Predicates(scene, robot)
+    print("Cube on table: " + str(preds.on("table", "cube1")))
+    print("Cube on box 1: " + str(preds.on("container1", "cube1")))
+
+
 def main():
     # Command line arguments
     parser = argparse.ArgumentParser()
@@ -121,21 +129,24 @@ def main():
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot)
     sk_place = SkillPlacing(scene, robot)
+    sk_nav = SkillNavigate(scene, robot._model.uid)
 
     robot.to_start()
     world.step_seconds(0.5)
 
     # ---------- Run examples -----------
 
-    # drawer_example(sk_grasp, robot, scene, world)
+    # drawer_example(sk_grasp, sk_nav, robot, scene, world)
 
-    cube_example(sk_grasp, robot, scene, sk_place)
+    # cube_example(sk_grasp, sk_nav, robot, scene, sk_place)
 
     # drive_example(robot, world)
 
+    predicate_example(scene, robot)
+
     # -----------------------------------
 
-    world.step_seconds(50)
+    # world.step_seconds(50)
 
 
 if __name__ == "__main__":

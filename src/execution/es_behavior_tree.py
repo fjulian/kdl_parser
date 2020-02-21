@@ -28,6 +28,7 @@ class AutoBehaviourTree(ExecutionSystem):
 
     def step(self):
         self.tree.tick()
+        return False
 
     def print_status(self):
         py_trees.display.print_ascii_tree(self.tree.root, show_status=True)

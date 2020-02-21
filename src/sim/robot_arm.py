@@ -25,11 +25,13 @@ class RobotArm:
         self.arm_ee_link_idx = -100
 
         # Set up IK solver
-        self.urdf_path = os.path.join(os.getcwd(),"data/models/box_panda_hand.urdf")
+        self.urdf_path = os.path.join(os.getcwd(), "data/models/box_panda_hand.urdf")
         with open(self.urdf_path) as f:
-            if f.mode == 'r':
+            if f.mode == "r":
                 urdf_string = f.read()
-        self.ik_solver = IK("panda_link0", "panda_link8", urdf_string=urdf_string, solve_type="Speed")
+        self.ik_solver = IK(
+            "panda_link0", "panda_link8", urdf_string=urdf_string, solve_type="Speed"
+        )
 
         # Set up FK solver
         robot_urdf = urdf_parser.from_xml_string(urdf_string)
@@ -44,7 +46,9 @@ class RobotArm:
         # self.start_cmd = self.ik(self.start_pos, self.start_orient)
 
         # Specify start command
-        self.start_cmd = np.array([0, -m_pi/4.0, 0, -3.0*m_pi/4.0, 0, m_pi/2.0, m_pi/4.0])
+        self.start_cmd = np.array(
+            [0, -m_pi / 4.0, 0, -3.0 * m_pi / 4.0, 0, m_pi / 2.0, m_pi / 4.0]
+        )
         self.start_pos, self.start_orient = self.fk(self.start_cmd)
         # check_cmd = self.ik(self.start_pos, self.start_orient)
         # print("Arm start pose: " + str(self.start_pos) + " " + str(self.start_orient))
@@ -63,7 +67,7 @@ class RobotArm:
             self._model = self._world.add_model(
                 path=self.urdf_path,
                 position=[0.0, 0.0, 0.04],
-                orientation=[0.0, 0.0, 0.0, 1.0]
+                orientation=[0.0, 0.0, 0.0, 1.0],
             )
 
         self.num_joints = p.getNumJoints(self._model.uid)
@@ -74,7 +78,7 @@ class RobotArm:
             if "panda_joint" in joint_name and len(joint_name) == 12:
                 joint_num = int(joint_name.split("panda_joint")[1])
                 if joint_num < 8:
-                    self.joint_idx_arm[joint_num-1] = i
+                    self.joint_idx_arm[joint_num - 1] = i
                 if joint_num == 1:
                     # Save the index of the arm base link
                     self.arm_base_link_idx = info[16]
@@ -83,14 +87,21 @@ class RobotArm:
                 self.joint_idx_hand = i
             elif "panda_finger_joint" in joint_name:
                 joint_num = int(joint_name.split("panda_finger_joint")[1])
-                self.joint_idx_fingers[joint_num-1] = i
-                
-        p.enableJointForceTorqueSensor(self._model.uid, self.joint_idx_hand, enableSensor=1)
+                self.joint_idx_fingers[joint_num - 1] = i
+
+        p.enableJointForceTorqueSensor(
+            self._model.uid, self.joint_idx_hand, enableSensor=1
+        )
 
     def set_joints(self, desired):
         if desired is None:
             return
-        p.setJointMotorControlArray(self._model.uid, self.joint_idx_arm, p.POSITION_CONTROL, targetPositions=desired)
+        p.setJointMotorControlArray(
+            self._model.uid,
+            self.joint_idx_arm,
+            p.POSITION_CONTROL,
+            targetPositions=desired,
+        )
 
     def transition_cmd_to(self, desired, duration=None):
         desired_pos, _ = self.fk(desired)
@@ -107,7 +118,7 @@ class RobotArm:
         if duration > self._world.T_s:
             diff = (desired - current_cmd) / float(duration * self._world.f_s)
             for i in range(1, int(math.ceil(duration * self._world.f_s))):
-                cmd = current_cmd + i*diff
+                cmd = current_cmd + i * diff
                 self.set_joints(cmd.tolist())
                 self._world.step_one()
                 self._world.sleep(self._world.T_s)
@@ -115,7 +126,9 @@ class RobotArm:
 
     def transition_cartesian(self, pos_des, orient_des, duration=None):
         orient_des_rot = R.from_quat(orient_des)
-        pos_ee = pos_des - np.matmul(orient_des_rot.as_dcm(), np.array([0.0,0.0,0.103]))
+        pos_ee = pos_des - np.matmul(
+            orient_des_rot.as_dcm(), np.array([0.0, 0.0, 0.103])
+        )
 
         current_cmd = np.array(self.get_joints())
         current_pos, current_orient = self.fk(current_cmd)
@@ -130,8 +143,8 @@ class RobotArm:
         diff_orient = (orient_des - current_orient) / float(duration * self._world.f_s)
         fail_count = 0
         for i in range(1, int(math.ceil(duration * self._world.f_s))):
-            pos = current_pos + i*diff_pos
-            orient = current_orient + i*diff_orient
+            pos = current_pos + i * diff_pos
+            orient = current_orient + i * diff_orient
             cmd = self.ik(pos, orient, current_cmd)
             if cmd.tolist() is None or cmd is None:
                 fail_count += 1
@@ -178,16 +191,27 @@ class RobotArm:
 
     def open_gripper(self):
         pos = [0.038, 0.038]
-        p.setJointMotorControlArray(self._model.uid, self.joint_idx_fingers, p.POSITION_CONTROL, targetPositions=pos)
+        p.setJointMotorControlArray(
+            self._model.uid,
+            self.joint_idx_fingers,
+            p.POSITION_CONTROL,
+            targetPositions=pos,
+        )
 
     def close_gripper(self):
         pos = [0.0, 0.0]
         forces = [2.0, 2.0]
-        p.setJointMotorControlArray(self._model.uid, self.joint_idx_fingers, p.POSITION_CONTROL, targetPositions=pos, forces=forces)
+        p.setJointMotorControlArray(
+            self._model.uid,
+            self.joint_idx_fingers,
+            p.POSITION_CONTROL,
+            targetPositions=pos,
+            forces=forces,
+        )
 
     def check_grasp(self):
         gripper_state = p.getJointStates(self._model.uid, self.joint_idx_fingers)
-        assert(len(gripper_state) == 2)
+        assert len(gripper_state) == 2
 
         # dist_threshold = 0.01
         # dist = gripper_state[0][0] + gripper_state[1][0]
@@ -213,7 +237,16 @@ class RobotArm:
         else:
             seed_state = self.get_joints()
         orient = orient / np.linalg.norm(orient)
-        sol = self.ik_solver.get_ik(seed_state, pos[0], pos[1], pos[2], orient[0], orient[1], orient[2], orient[3])
+        sol = self.ik_solver.get_ik(
+            seed_state,
+            pos[0],
+            pos[1],
+            pos[2],
+            orient[0],
+            orient[1],
+            orient[2],
+            orient[3],
+        )
         return np.array(sol)
 
     def fk(self, joint_states):
@@ -247,7 +280,9 @@ class RobotArm:
         vel_trans_world = orient.apply(self.velocity_trans)
         # vel_rot doesn't need to be converted, since body and world z axis coincide.
 
-        p.resetBaseVelocity(self._model.uid, vel_trans_world.tolist(), [0.0, 0.0, self.velocity_turn])
+        p.resetBaseVelocity(
+            self._model.uid, vel_trans_world.tolist(), [0.0, 0.0, self.velocity_turn]
+        )
 
     def get_wrist_force(self):
         _, _, forces, _ = p.getJointState(self._model.uid, self.joint_idx_hand)

@@ -256,14 +256,15 @@ class PDDLFileInterface:
             pddl_str += "\t\t" + obj[0] + " - " + obj[1] + "\n"
         pddl_str += "\t)\n\n"
 
-        pddl_str += "\t(:init\n"
-        for init in self._initial_predicates:
-            pddl_str += "\t\t("
-            for it in init:
-                pddl_str += it + " "
-            pddl_str = pddl_str[:-1]
-            pddl_str += ")\n"
-        pddl_str += "\t)\n\n"
+        if len(self._initial_predicates) > 0:
+            pddl_str += "\t(:init\n"
+            for init in self._initial_predicates:
+                pddl_str += "\t\t("
+                for it in init:
+                    pddl_str += it + " "
+                pddl_str = pddl_str[:-1]
+                pddl_str += ")\n"
+            pddl_str += "\t)\n\n"
 
         pddl_str += "\t(:goal\n"
         pddl_str += "\t\t(and\n"

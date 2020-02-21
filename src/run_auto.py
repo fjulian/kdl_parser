@@ -10,11 +10,11 @@ from sim.robot_arm import RobotArm
 from sim.scene_planning_1 import ScenePlanning1
 
 # Skills
-from skills.navigate import ProcessNavigate
-from skills.grasping import ProcessGrasping
-from skills.placing import ProcessPlacing
+from skills.navigate import ProcessNavigate, SkillNavigate
+from skills.grasping import ProcessGrasping, SkillGrasping
+from skills.placing import ProcessPlacing, SkillPlacing
 from execution.es_behavior_tree import AutoBehaviourTree
-from execution.es_simple_state_machine import SimpleStateMachine
+from execution.es_sequential_execution import SequentialExecution
 from skills import pddl_descriptions
 from knowledge.predicates import Predicates
 from knowledge.problem import PlanningProblem
@@ -25,7 +25,7 @@ import py_trees
 # Interface to planner and PDDL
 from pddl_interface import pddl_file_if, planner_interface
 
-# -------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 
 def main():
@@ -73,6 +73,9 @@ def main():
     robot = RobotArm(world, robot_mdl)
     robot.reset()
 
+    robot.to_start()
+    world.step_seconds(0.5)
+
     # -----------------------------------
     # Set up predicates
 
@@ -84,6 +87,9 @@ def main():
         )
 
     planning_problem = PlanningProblem()
+    planning_problem.populate_objects(scene)
+    planning_problem.check_predicates(preds, robot)
+
     pddl_if.add_objects(planning_problem.objects)
     pddl_if.add_inital_predicates(planning_problem.initial_predicates)
     pddl_if.add_goal(planning_problem.goals)
@@ -98,45 +104,56 @@ def main():
 
     if plan is False:
         raise RuntimeError("Planning failed.")
+    else:
+        print("Found plan:")
+        print(plan)
+        raw_input("Press enter to run...")
 
     # -----------------------------------
 
-    # Set up skills
-    sk_grasp = ProcessGrasping(scene, robot, robot_lock)
-    sk_nav = ProcessNavigate(scene, robot._model.uid)
-    sk_place = ProcessPlacing(scene, robot, robot_lock)
-    pipes = {"grasp": sk_grasp.get_pipe(), "nav": sk_nav.get_pipe(), "place": sk_place}
-
-    # Set up behavior tree
+    # Set up execution system
     use_bt = False
     if use_bt:
+        # Set up skills
+        sk_grasp = ProcessGrasping(scene, robot, robot_lock)
+        sk_nav = ProcessNavigate(scene, robot._model.uid)
+        sk_place = ProcessPlacing(scene, robot, robot_lock)
+        pipes = {
+            "grasp": sk_grasp.get_pipe(),
+            "nav": sk_nav.get_pipe(),
+            "place": sk_place,
+        }
+
+        # Set up behavior tree
         es = AutoBehaviourTree(
             robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes
         )
         # py_trees.display.render_dot_tree(es.tree.root)
     else:
-        es = SimpleStateMachine()
+        # Set up skills
+        sk_grasp = SkillGrasping(scene, robot)
+        sk_place = SkillPlacing(scene, robot)
+        sk_nav = SkillNavigate(scene, robot._model.uid)
+        skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
+
+        es = SequentialExecution(skill_set, plan)
     es.setup()
 
     # -----------------------------------
 
-    robot.to_start()
-    world.step_seconds(0.5)
-
     try:
-        # es.tree.tick_tock(sleep_ms=500, number_of_iterations=py_trees.trees.CONTINUOUS_TICK_TOCK)
-
         index = 1
         while True:
-            es.step()
             print("------------- Iteration {} ---------------".format(index))
             es.print_status()
+            plan_finished = es.step()
             index += 1
             if es.ticking:
                 time.sleep(0.5)
-
+            if plan_finished:
+                print("Plan finished. Exiting.")
+                break
     except KeyboardInterrupt:
-        # es.tree.interrupt()
         pass
 
 

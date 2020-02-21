@@ -16,7 +16,7 @@ class World:
             self.physics_client = p.connect(p.SHARED_MEMORY)
         else:
             self.physics_client = p.connect(p.DIRECT)
-        
+
         if load_objects:
             p.resetSimulation(self.physics_client)
         else:
@@ -65,9 +65,15 @@ class World:
         color = np.array([255, 0, 0]) / 255.0
         width = 1.0
         lifetime = 0
-        uid1 = p.addUserDebugLine(start1.tolist(), end1, color.tolist(), width, lifetime)
-        uid2 = p.addUserDebugLine(start2.tolist(), end2, color.tolist(), width, lifetime)
-        uid3 = p.addUserDebugLine(start3.tolist(), end3, color.tolist(), width, lifetime)
+        uid1 = p.addUserDebugLine(
+            start1.tolist(), end1, color.tolist(), width, lifetime
+        )
+        uid2 = p.addUserDebugLine(
+            start2.tolist(), end2, color.tolist(), width, lifetime
+        )
+        uid3 = p.addUserDebugLine(
+            start3.tolist(), end3, color.tolist(), width, lifetime
+        )
         self.cross_uid = (uid1, uid2, uid3)
 
     def step_one(self):
@@ -96,12 +102,17 @@ class _Model:
     def __init__(self, physics_client):
         self._physics_client = physics_client
         self.uid = 0
-        self.name = ''
+        self.name = ""
 
     def load(self, path, position, orientation, scale):
         model_path = os.path.expanduser(path)
-        self.uid = p.loadURDF(model_path, position, orientation, globalScaling=scale,
-                              physicsClientId=self._physics_client)
+        self.uid = p.loadURDF(
+            model_path,
+            position,
+            orientation,
+            globalScaling=scale,
+            physicsClientId=self._physics_client,
+        )
         self.name = p.getBodyInfo(self.uid)
 
     def remove(self):
