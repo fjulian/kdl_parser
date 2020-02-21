@@ -233,10 +233,10 @@ def get_grasping_description():
     action_name = "grasp"
     action_params = [["obj", "object"], ["rob", "chimera"]]
     action_preconditions = [
-        ("in-reach", False, ["obj", "rob"]),
-        ("empty-hand", False, ["rob"]),
+        ("in-reach", True, ["obj", "rob"]),
+        ("empty-hand", True, ["rob"]),
     ]
-    action_effects = [("empty-hand", True, ["rob"]), ("in-hand", False, ["obj", "rob"])]
+    action_effects = [("empty-hand", False, ["rob"]), ("in-hand", True, ["obj", "rob"])]
     return (
         action_name,
         {

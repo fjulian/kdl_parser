@@ -147,7 +147,7 @@ def get_nav_description():
     action_name = "nav"
     action_params = [["obj", "object"], ["rob", "chimera"]]
     action_preconditions = []
-    action_effects = [("in-reach", False, ["obj", "rob"])]
+    action_effects = [("in-reach", True, ["obj", "rob"])]
     return (
         action_name,
         {

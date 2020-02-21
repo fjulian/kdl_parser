@@ -90,24 +90,24 @@ class PDDLFileInterface:
             pddl_str += "\t\t:precondition\n\t\t\t(and\n"
             for item in self._actions[act]["preconds"]:
                 pddl_str += "\t\t\t\t("
-                if item[1]:
+                if not item[1]:
                     pddl_str += "not ("
                 pddl_str += item[0]
                 for param in item[2]:
                     pddl_str += " ?" + param
-                if item[1]:
+                if not item[1]:
                     pddl_str += ")"
                 pddl_str += ")\n"
             pddl_str += "\t\t\t)\n\n"
             pddl_str += "\t\t:effect\n\t\t\t(and\n"
             for item in self._actions[act]["effects"]:
                 pddl_str += "\t\t\t\t("
-                if item[1]:
+                if not item[1]:
                     pddl_str += "not ("
                 pddl_str += item[0]
                 for param in item[2]:
                     pddl_str += " ?" + param
-                if item[1]:
+                if not item[1]:
                     pddl_str += ")"
                 pddl_str += ")\n"
             pddl_str += "\t\t\t)\n\n"
@@ -208,7 +208,7 @@ class PDDLFileInterface:
                                 param = splitted.pop(0)
                                 param = param.replace("?", "")
                                 precond_params.append(param)
-                            preconds.append((precond_name, negated, precond_params))
+                            preconds.append((precond_name, not negated, precond_params))
                             sub_curr = dom.pop(0).strip()
                     elif sub_curr.find(":effect") > -1:
                         sub_curr = dom.pop(0).strip()
@@ -234,7 +234,7 @@ class PDDLFileInterface:
                                 param = splitted.pop(0)
                                 param = param.replace("?", "")
                                 effect_params.append(param)
-                            effects.append((effect_name, negated, effect_params))
+                            effects.append((effect_name, not negated, effect_params))
                             sub_curr = dom.pop(0).strip()
                 self._actions[action] = {
                     "params": params,
@@ -270,14 +270,14 @@ class PDDLFileInterface:
         pddl_str += "\t\t(and\n"
         for g in self._goals:
             pddl_str += "\t\t\t("
-            if g[1]:
+            if not g[1]:
                 # Negated
                 pddl_str += "not ("
             pddl_str += g[0] + " "
             for it in g[2]:
                 pddl_str += it + " "
             pddl_str = pddl_str[:-1]
-            if g[1]:
+            if not g[1]:
                 pddl_str += ")"
             pddl_str += ")\n"
         pddl_str += "\t\t)\n"

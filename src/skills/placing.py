@@ -180,11 +180,11 @@ def get_placing_description():
     action_name = "place"
     action_params = [["obj", "object"], ["pos", "position"], ["rob", "chimera"]]
     action_preconditions = [
-        ("in-reach-pos", False, ["pos", "rob"]),
-        ("empty-hand", True, ["rob"]),
-        ("in-hand", False, ["obj", "rob"]),
+        ("in-reach-pos", True, ["pos", "rob"]),
+        ("empty-hand", False, ["rob"]),
+        ("in-hand", True, ["obj", "rob"]),
     ]
-    action_effects = [("empty-hand", False, ["rob"]), ("in-hand", True, ["obj", "rob"])]
+    action_effects = [("empty-hand", True, ["rob"]), ("in-hand", False, ["obj", "rob"])]
     return (
         action_name,
         {
