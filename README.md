@@ -94,13 +94,13 @@ The file `src/pddl_interface/pddl_file_if.py` contains the code to parse PDDL fi
     {
         "params": [["<param1>", "<type1>"], ["<param2>", "<type2>"], ...],
         "preconds": [
-            ("<predicate1>", <negated>, ["<param1>", "<param2>", ...]),
-        	("<predicate2>", <negated>, ["<param8>", "<param6>", ...]),
+            ("<predicate1>", <true/false>, ["<param1>", "<param2>", ...]),
+        	("<predicate2>", <true/false>, ["<param8>", "<param6>", ...]),
             ...
         ],
         "effects": [
-            ("<predicate1>", <negated>, ["<param1>", "<param2>", ...]),
-        	("<predicate7>", <negated>, ["<param2>", "<param4>", ...]),
+            ("<predicate1>", <true/false>, ["<param1>", "<param2>", ...]),
+        	("<predicate7>", <true/false>, ["<param2>", "<param4>", ...]),
             ...
         ]
     },
@@ -108,7 +108,7 @@ The file `src/pddl_interface/pddl_file_if.py` contains the code to parse PDDL fi
 }
 ```
 
-The variable `<negated>` is true if the predict mustn't hold (for preconditions) or doesn't hold (for effects, after applying them).
+The variable `<true/false>` is true if the predicate must hold before the action can be run (for preconditions) or does hold after the action was run (for effects).
 
 **Objects**
 
@@ -129,3 +129,15 @@ The variable `<negated>` is true if the predict mustn't hold (for preconditions)
     ("<predicate3>", "<param1>", "<param2>", ...)
 ]
 ```
+
+
+
+### Interface to External Planner
+
+The external planner can be called from a terminal using the following command:
+
+```bash
+./bin/ff -s 2 -o knowledge/chimera/domain/200221-154221_domain.pddl -f knowledge/chimera/problem/200221-154221_problem.pddl
+```
+
+Replace domain and problem files appropriately.

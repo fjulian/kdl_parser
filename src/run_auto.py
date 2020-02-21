@@ -105,6 +105,9 @@ def main():
     if plan is False:
         raise RuntimeError("Planning failed.")
     else:
+        if len(plan) == 0:
+            print("Nothing to do.")
+            return
         print("Found plan:")
         print(plan)
         raw_input("Press enter to run...")
