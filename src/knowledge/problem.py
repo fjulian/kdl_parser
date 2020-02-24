@@ -24,7 +24,13 @@ class PlanningProblem:
             self.objects.append((obj, "object"))
 
     def check_predicates(self, predicates, robot):
-        # If predicates need to be initialized when the system is launched, this can be done here.
+        """
+        If predicates need to be initialized when the system is launched, this can be done here.
+        
+        Args:
+            predicates ([type]): [description]
+            robot ([type]): [description]
+        """
 
         if predicates.empty_hand(robot):
             self.initial_predicates.append(("empty-hand", "robot1"))

@@ -1,6 +1,6 @@
 from datetime import datetime
 import json
-from os import path
+from os import path, mkdir
 import pickle
 
 
@@ -8,14 +8,16 @@ class PDDLFileInterface:
     def __init__(
         self, domain_dir, problem_dir=None, initial_domain_pddl=None, domain_name=""
     ):
-
-        # TODO check if domain and problem dirs exist. If not, create them.
-
+        # Some folder book keeping
         self._domain_dir = domain_dir
         if problem_dir is None:
             self._problem_dir = domain_dir
         else:
             self._problem_dir = problem_dir
+        if not path.isdir(self._domain_dir):
+            mkdir(self._domain_dir)
+        if not path.isdir(self._problem_dir):
+            mkdir(self._problem_dir)
 
         # Domain definition
         self._domain_name = domain_name
@@ -357,3 +359,4 @@ class PDDLFileInterface:
 # For actions, all parameters are in the same line, starting below the :parameters keyword.
 # For preconditions and effects, one is defined per line, starting on the line after "(and".
 # After preconditions and effects, a blank line is expected.
+# Lines starting with ';' are comments.

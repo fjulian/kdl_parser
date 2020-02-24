@@ -1,8 +1,8 @@
 import argparse
 import pickle
 import time
-
 from multiprocessing import Lock
+import numpy as np
 
 # Simulation
 from sim.world import World
@@ -19,8 +19,8 @@ from skills import pddl_descriptions
 from knowledge.predicates import Predicates
 from knowledge.problem import PlanningProblem
 
-# Interface to BT
-import py_trees
+# Learning
+from learning.explorer import Explorer
 
 # Interface to planner and PDDL
 from pddl_interface import pddl_file_if, planner_interface
@@ -29,6 +29,9 @@ from pddl_interface import pddl_file_if, planner_interface
 
 
 def main():
+    # Seed RNGs
+    np.random.seed(0)
+
     # Command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -102,8 +105,11 @@ def main():
         pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
     )
 
+    # Set up exploration
+    xplorer = Explorer(pddl_if)
+
     if plan is False:
-        raise RuntimeError("Planning failed.")
+        xplorer.exploration(planning_problem)
     else:
         if len(plan) == 0:
             print("Nothing to do.")
@@ -131,7 +137,6 @@ def main():
         es = AutoBehaviourTree(
             robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes
         )
-        # py_trees.display.render_dot_tree(es.tree.root)
     else:
         # Set up skills
         sk_grasp = SkillGrasping(scene, robot)
