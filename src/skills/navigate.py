@@ -145,7 +145,7 @@ class SkillNavigate:
 
 def get_nav_description():
     action_name = "nav"
-    action_params = [["obj", "object"], ["rob", "chimera"]]
+    action_params = [["obj", "object"], ["rob", "robot"]]
     action_preconditions = []
     action_effects = [("in-reach", True, ["obj", "rob"])]
     return (

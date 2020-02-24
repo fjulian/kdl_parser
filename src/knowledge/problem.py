@@ -9,7 +9,7 @@ class PlanningProblem:
     def __init__(self):
 
         self.objects = [
-            ("robot1", "chimera"),
+            ("robot1", "robot"),
             ("pos1", "position"),
         ]
 

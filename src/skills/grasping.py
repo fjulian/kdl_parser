@@ -231,7 +231,7 @@ class SkillGrasping:
 
 def get_grasping_description():
     action_name = "grasp"
-    action_params = [["obj", "object"], ["rob", "chimera"]]
+    action_params = [["obj", "object"], ["rob", "robot"]]
     action_preconditions = [
         ("in-reach", True, ["obj", "rob"]),
         ("empty-hand", True, ["rob"]),

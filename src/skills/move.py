@@ -55,7 +55,7 @@ from tools.util import IKError
 #         atexit.register(self.placing.terminate)
 #         self.placing.start()
 #         print("Placing process initiated")
-    
+
 #     def get_pipe(self):
 #         return self.parent_connection
 
@@ -103,7 +103,7 @@ class SkillMove:
             time.sleep(0.5)
 
             # Dummy code for now
-            travelled_distance += desired_distance/5.0
+            travelled_distance += desired_distance / 5.0
 
         return True
 
@@ -113,7 +113,7 @@ class SkillMove:
 #     action_params = [
 #         ["obj", "object"],
 #         ["pos", "position"],
-#         ["rob", "chimera"]
+#         ["rob", "robot"]
 #     ]
 #     action_preconditions = [
 #         ("in-reach-pos", False, ["pos", "rob"]),

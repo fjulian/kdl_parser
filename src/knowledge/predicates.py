@@ -15,10 +15,10 @@ class Predicates:
         }
 
         self.descriptions = {
-            "empty-hand": [["rob", "chimera"]],
-            "in-hand": [["obj", "object"], ["rob", "chimera"]],
-            "in-reach": [["obj", "object"], ["rob", "chimera"]],
-            "in-reach-pos": [["pos", "position"], ["rob", "chimera"]],
+            "empty-hand": [["rob", "robot"]],
+            "in-hand": [["obj", "object"], ["rob", "robot"]],
+            "in-reach": [["obj", "object"], ["rob", "robot"]],
+            "in-reach-pos": [["pos", "position"], ["rob", "robot"]],
             "inside": [["container", "object"], ["contained", "object"]],
             "on": [["supporting", "object"], ["supported", "object"]],
         }
