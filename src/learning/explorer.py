@@ -45,10 +45,29 @@ class Explorer:
         return sequence
 
     def sample_parameters(self, sequence):
+        parameter_samples = [None] * len(sequence)
+
         # Create list of relevant items in the scene
-        
-        for action in sequence:
-            for 
+        # TODO For now this is just adding all objects in the scene. Instead, just add objects
+        # currently in proximity to the robot and the objects of interest.
+        objects_of_interest_list = self.planning_problem.objects
+
+        # Sort objects of interest by type into a dictionary
+        objects_of_interest = dict()
+        for obj in objects_of_interest_list:
+            if obj[1] in objects_of_interest:
+                objects_of_interest[obj[1]].append(obj[0])
+            else:
+                objects_of_interest[obj[1]] = [obj[0]]
+
+        for idx_action, action in enumerate(sequence):
+            parameter_samples[idx_action] = list()
+            for parameter in action["params"]:
+                obj_type = parameter[1]
+                obj_sample = np.random.choice(objects_of_interest[obj_type])
+                parameter_samples[idx_action].append(obj_sample)
+
+        return parameter_samples
 
     def test_abstract_feasibility(self):
         # Check of the sequence is feasible on the abstract level
