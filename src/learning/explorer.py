@@ -27,12 +27,13 @@ class Explorer:
         # Sample action sequences until a successful one was found
         while True:
             # Iterate through action sequence lengths
-            for seq_len in range(1, 5):
-                seq = self._sample_sequence(seq_len)
-                params = self._sample_parameters(seq)
-
-            #     action_seqs = list(range(num_actions))
-            # random_action_idx = np.random.randint
+            for seq_len in range(2, 5):
+                # Sample sequences until a abstractly feasible one was found
+                while True:
+                    seq = self._sample_sequence(seq_len)
+                    params = self._sample_parameters(seq)
+                    if self._test_abstract_feasibility(seq, params):
+                        break
 
     def _sample_sequence(self, length):
         # Generate the sequence
@@ -62,26 +63,46 @@ class Explorer:
                 objects_of_interest[obj[1]] = [obj[0]]
 
         for idx_action, action in enumerate(sequence):
-            parameter_samples[idx_action] = list()
+            parameter_samples[idx_action] = dict()
             for parameter in self.pddl_if._actions[action]["params"]:
                 obj_type = parameter[1]
+                obj_name = parameter[0]
                 obj_sample = np.random.choice(objects_of_interest[obj_type])
-                parameter_samples[idx_action].append(obj_sample)
+                parameter_samples[idx_action][obj_name] = obj_sample
 
         return parameter_samples
 
-    def test_abstract_feasibility(self):
-        # Check of the sequence is feasible on the abstract level
-        facts = set()
+    def _test_abstract_feasibility(self, sequence, parameters):
+        """
+        Takes an action sequence and suitable parameters as inputs and checks
+        whether the sequence is logically feasible.
+        
+        Args:
+            sequence (list): The action sequence
+            parameters (list): Parameters for each action
+        
+        Returns:
+            bool: True if the sequence is feasible, False otherwise.
+        """
+
+        facts = list()
         sequence_invalid = False
-        for action_id in sequence:
+        for action_idx, action_id in enumerate(sequence):
             action_descr = self.pddl_if._actions[action_id]
 
             # Check if any fact contradicts the pre-conditions of this action
             for fact in facts:
-                for effect in action_descr["effects"]:
-                    if fact[0] == effect[0] and fact[2] == effect[2]:
-                        if not fact[1] == effect[1]:
+                for precond in action_descr["preconds"]:
+                    parametrized_precond = (
+                        precond[0],
+                        precond[1],
+                        [parameters[action_idx][obj_name] for obj_name in precond[2]],
+                    )
+                    if (
+                        fact[0] == parametrized_precond[0]
+                        and fact[2] == parametrized_precond[2]
+                    ):
+                        if not fact[1] == parametrized_precond[1]:
                             sequence_invalid = True
                             break
                 if sequence_invalid:
@@ -91,7 +112,16 @@ class Explorer:
                 break
 
             for effect in action_descr["effects"]:
+                parametrized_effect = (
+                    effect[0],
+                    effect[1],
+                    [parameters[action_idx][obj_name] for obj_name in effect[2]],
+                )
                 for fact in facts:
-                    if fact[0] == effect[0] and fact[2] == effect[2]:
+                    if (
+                        fact[0] == parametrized_effect[0]
+                        and fact[2] == parametrized_effect[2]
+                    ):
                         facts.remove(fact)
-                facts.add(effect)
+                facts.append(parametrized_effect)
+        return not sequence_invalid
