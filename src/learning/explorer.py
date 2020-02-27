@@ -28,12 +28,13 @@ class Explorer:
         while True:
             # Iterate through action sequence lengths
             for seq_len in range(1, 5):
-                seq = self.sample_sequence(seq_len)
+                seq = self._sample_sequence(seq_len)
+                params = self._sample_parameters(seq)
 
             #     action_seqs = list(range(num_actions))
             # random_action_idx = np.random.randint
 
-    def sample_sequence(self, length):
+    def _sample_sequence(self, length):
         # Generate the sequence
         sequence = []
         for _ in range(length):
@@ -44,7 +45,7 @@ class Explorer:
                     break
         return sequence
 
-    def sample_parameters(self, sequence):
+    def _sample_parameters(self, sequence):
         parameter_samples = [None] * len(sequence)
 
         # Create list of relevant items in the scene
@@ -62,7 +63,7 @@ class Explorer:
 
         for idx_action, action in enumerate(sequence):
             parameter_samples[idx_action] = list()
-            for parameter in action["params"]:
+            for parameter in self.pddl_if._actions[action]["params"]:
                 obj_type = parameter[1]
                 obj_sample = np.random.choice(objects_of_interest[obj_type])
                 parameter_samples[idx_action].append(obj_sample)

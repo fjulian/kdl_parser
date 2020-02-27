@@ -106,10 +106,10 @@ def main():
     )
 
     # Set up exploration
-    xplorer = Explorer(pddl_if)
+    xplorer = Explorer(pddl_if, planning_problem)
 
     if plan is False:
-        xplorer.exploration(planning_problem)
+        xplorer.exploration()
     else:
         if len(plan) == 0:
             print("Nothing to do.")

@@ -25,7 +25,16 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/run_auto.py",
             "console": "integratedTerminal"
-            // "args": ["--reuse-objects"]
+        },
+        {
+            "name": "Python: run_auto.py (reuse objects)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/run_auto.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--reuse-objects"
+            ]
         }
     ]
 }
