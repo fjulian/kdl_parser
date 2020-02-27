@@ -339,6 +339,16 @@ class PDDLFileInterface:
         # Remove duplicates
         self._goals = list(dict.fromkeys(self._goals))
 
+    def add_planning_problem(self, planning_problem):
+        self.add_objects(planning_problem.objects)
+        self.add_inital_predicates(planning_problem.initial_predicates)
+        self.add_goal(planning_problem.goals)
+
+    def clear_problem(self):
+        self._objects.clear()
+        self._initial_predicates.clear()
+        self._goals.clear()
+
     # ----- Helper functions ---------------------------------------------------
 
     def extract_types(self):

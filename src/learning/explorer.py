@@ -1,11 +1,16 @@
 # Imports
 import numpy as np
 from copy import deepcopy
+import pybullet as p
+
+from knowledge.problem import PlanningProblem
+from pddl_interface import pddl_file_if, planner_interface
 
 # Parameters
 # TODO: move them to config file
 
-num_samples_per_length = 20
+max_samples_per_seq_len = 50
+max_failed_samples = 50
 
 # ------------------------------------------------------
 
@@ -18,7 +23,10 @@ class Explorer:
 
     def exploration(self):
         # Some useful variables
-        num_actions = len(self.pddl_if._actions)
+        # num_actions = len(self.pddl_if._actions)
+
+        # Save the state the robot is currently in
+        current_state_id = p.saveState()
 
         # Identify objects that are involved in reaching the goal
         relevant_objects = []
@@ -28,16 +36,73 @@ class Explorer:
         # Sample action sequences until a successful one was found
         while True:
             # Iterate through action sequence lengths
-            for seq_len in range(2, 5):
-                # Sample sequences until a abstractly feasible one was found
-                while True:
-                    seq = self._sample_sequence(seq_len)
-                    params = self._sample_parameters(seq)
-                    sequence_preconds = self._determine_sequence_preconds(seq, params)
-                    if self._test_abstract_feasibility(seq, params, sequence_preconds):
+            for seq_len in range(1, 5):
+                count_plan_successful = 0
+                sequences_tried = set()
+                for _ in range(max_samples_per_seq_len):
+                    # Sample sequences until a abstractly feasible one was found
+                    failed_samples = 0
+                    sampling_failed = False
+                    while True:
+                        failed_samples += 1
+                        if failed_samples > max_failed_samples:
+                            sampling_failed = True
+                            break
+
+                        seq = self._sample_sequence(seq_len)
+                        params = self._sample_parameters(seq)
+                        if (
+                            tuple(seq),
+                            tuple(params),
+                        ) in sequences_tried:  # TODO this causes an error, fix it.
+                            continue
+                        sequences_tried.add((tuple(seq), tuple(params)))
+                        sequence_preconds = self._determine_sequence_preconds(
+                            seq, params
+                        )
+                        if self._test_abstract_feasibility(
+                            seq, params, sequence_preconds
+                        ):
+                            break
+
+                    if sampling_failed:
+                        print(
+                            "Sampling failed. Abort searching in this sequence length."
+                        )
                         break
 
-                # Found a feasible action sequence. Now test it.
+                    # Found a feasible action sequence. Now test it.
+                    print("------------------------------------------")
+                    print("Sequence: " + str(seq))
+                    print("Params: " + str(params))
+                    print("Preconds: " + str(sequence_preconds))
+
+                    # Set up planning problem that takes us to state where all preconditions are met
+                    problem_preplan = deepcopy(self.planning_problem)
+                    problem_preplan.goals = sequence_preconds
+
+                    pddl_if = pddl_file_if.PDDLFileInterface(
+                        domain_dir="knowledge/chimera/explore/domain",
+                        problem_dir="knowledge/chimera/explore/problem",
+                        domain_name="chimera-domain",
+                    )
+                    pddl_if._actions = self.pddl_if._actions
+                    pddl_if._predicates = self.pddl_if._predicates
+                    pddl_if.add_planning_problem(problem_preplan)
+                    pddl_if.write_domain_pddl()
+                    pddl_if.write_problem_pddl()
+
+                    plan = planner_interface.pddl_planner(
+                        pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
+                    )
+                    print(plan)
+                    if plan:
+                        count_plan_successful += 1
+                print(
+                    "Successful plans for sequence length {}: {}".format(
+                        seq_len, count_plan_successful
+                    )
+                )
 
     def _sample_sequence(self, length):
         # Generate the sequence
@@ -45,7 +110,14 @@ class Explorer:
         for _ in range(length):
             while True:
                 temp = np.random.choice(self.action_list)
-                if not temp in sequence:
+                # if not temp in sequence:
+                #     sequence.append(temp)
+                #     break
+                if len(sequence) == 0:
+                    sequence.append(temp)
+                    break
+                elif temp != sequence[-1]:
+                    # This ensures that we don't sample the same action twice in a row
                     sequence.append(temp)
                     break
         return sequence
@@ -159,5 +231,5 @@ class Explorer:
         return (
             predicate[0],
             predicate[1],
-            [action_parameters[obj_name] for obj_name in predicate[2]],
+            tuple([action_parameters[obj_name] for obj_name in predicate[2]]),
         )

@@ -54,16 +54,16 @@ def main():
 
     # Set up planner interface and domain representation
     pddl_if = pddl_file_if.PDDLFileInterface(
-        domain_dir="knowledge/chimera/domain",
-        problem_dir="knowledge/chimera/problem",
+        domain_dir="knowledge/chimera/main/domain",
+        problem_dir="knowledge/chimera/main/problem",
         domain_name="chimera-domain",
     )
     temp = pddl_descriptions.get_action_description("grasp")
-    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
+    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=True)
     temp = pddl_descriptions.get_action_description("nav")
-    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
+    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=True)
     temp = pddl_descriptions.get_action_description("place")
-    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
+    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=True)
 
     # -----------------------------------
 
@@ -93,9 +93,7 @@ def main():
     planning_problem.populate_objects(scene)
     planning_problem.check_predicates(preds, robot)
 
-    pddl_if.add_objects(planning_problem.objects)
-    pddl_if.add_inital_predicates(planning_problem.initial_predicates)
-    pddl_if.add_goal(planning_problem.goals)
+    pddl_if.add_planning_problem(planning_problem)
 
     pddl_if.save_domain()
     pddl_if.write_domain_pddl()
@@ -110,6 +108,7 @@ def main():
 
     if plan is False:
         xplorer.exploration()
+        return
     else:
         if len(plan) == 0:
             print("Nothing to do.")
