@@ -1,5 +1,6 @@
 # Imports
 import numpy as np
+from copy import deepcopy
 
 # Parameters
 # TODO: move them to config file
@@ -32,8 +33,11 @@ class Explorer:
                 while True:
                     seq = self._sample_sequence(seq_len)
                     params = self._sample_parameters(seq)
-                    if self._test_abstract_feasibility(seq, params):
+                    sequence_preconds = self._determine_sequence_preconds(seq, params)
+                    if self._test_abstract_feasibility(seq, params, sequence_preconds):
                         break
+
+                # Found a feasible action sequence. Now test it.
 
     def _sample_sequence(self, length):
         # Generate the sequence
@@ -72,7 +76,7 @@ class Explorer:
 
         return parameter_samples
 
-    def _test_abstract_feasibility(self, sequence, parameters):
+    def _test_abstract_feasibility(self, sequence, parameters, preconds):
         """
         Takes an action sequence and suitable parameters as inputs and checks
         whether the sequence is logically feasible.
@@ -85,7 +89,7 @@ class Explorer:
             bool: True if the sequence is feasible, False otherwise.
         """
 
-        facts = list()
+        facts = deepcopy(preconds)
         sequence_invalid = False
         for action_idx, action_id in enumerate(sequence):
             action_descr = self.pddl_if._actions[action_id]
@@ -93,18 +97,16 @@ class Explorer:
             # Check if any fact contradicts the pre-conditions of this action
             for fact in facts:
                 for precond in action_descr["preconds"]:
-                    parametrized_precond = (
-                        precond[0],
-                        precond[1],
-                        [parameters[action_idx][obj_name] for obj_name in precond[2]],
+                    parametrized_precond = self._parametrize_predicate(
+                        precond, parameters[action_idx]
                     )
                     if (
                         fact[0] == parametrized_precond[0]
                         and fact[2] == parametrized_precond[2]
+                        and not fact[1] == parametrized_precond[1]
                     ):
-                        if not fact[1] == parametrized_precond[1]:
-                            sequence_invalid = True
-                            break
+                        sequence_invalid = True
+                        break
                 if sequence_invalid:
                     break
 
@@ -112,16 +114,50 @@ class Explorer:
                 break
 
             for effect in action_descr["effects"]:
-                parametrized_effect = (
-                    effect[0],
-                    effect[1],
-                    [parameters[action_idx][obj_name] for obj_name in effect[2]],
+                parametrized_effect = self._parametrize_predicate(
+                    effect, parameters[action_idx]
                 )
+                facts_to_remove = list()
                 for fact in facts:
                     if (
                         fact[0] == parametrized_effect[0]
                         and fact[2] == parametrized_effect[2]
                     ):
-                        facts.remove(fact)
+                        facts_to_remove.append(fact)
+                for fact in facts_to_remove:
+                    facts.remove(fact)
                 facts.append(parametrized_effect)
         return not sequence_invalid
+
+    def _determine_sequence_preconds(self, sequence, parameters):
+        seq_preconds = list()
+        for action_idx, action_id in reversed(list(enumerate(sequence))):
+            action_descr = self.pddl_if._actions[action_id]
+
+            # Remove all effects of this action from the precond list
+            preconds_to_remove = list()
+            for seq_precond in seq_preconds:
+                for effect in action_descr["effects"]:
+                    parametrized_effect = self._parametrize_predicate(
+                        effect, parameters[action_idx]
+                    )
+                    if seq_precond == parametrized_effect:
+                        preconds_to_remove.append(seq_precond)
+            for seq_precond in preconds_to_remove:
+                seq_preconds.remove(seq_precond)
+
+            # Add all preconditions of this action to the precond list
+            for precond in action_descr["preconds"]:
+                parametrized_precond = self._parametrize_predicate(
+                    precond, parameters[action_idx]
+                )
+                if parametrized_precond not in seq_preconds:
+                    seq_preconds.append(parametrized_precond)
+        return seq_preconds
+
+    def _parametrize_predicate(self, predicate, action_parameters):
+        return (
+            predicate[0],
+            predicate[1],
+            [action_parameters[obj_name] for obj_name in predicate[2]],
+        )
