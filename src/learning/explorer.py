@@ -50,13 +50,13 @@ class Explorer:
                             break
 
                         seq = self._sample_sequence(seq_len)
-                        params = self._sample_parameters(seq)
+                        params, params_tuple = self._sample_parameters(seq)
                         if (
                             tuple(seq),
-                            tuple(params),
+                            tuple(params_tuple),
                         ) in sequences_tried:  # TODO this causes an error, fix it.
                             continue
-                        sequences_tried.add((tuple(seq), tuple(params)))
+                        sequences_tried.add((tuple(seq), tuple(params_tuple)))
                         sequence_preconds = self._determine_sequence_preconds(
                             seq, params
                         )
@@ -124,6 +124,7 @@ class Explorer:
 
     def _sample_parameters(self, sequence):
         parameter_samples = [None] * len(sequence)
+        parameter_samples_tuples = [None] * len(sequence)
 
         # Create list of relevant items in the scene
         # TODO For now this is just adding all objects in the scene. Instead, just add objects
@@ -140,13 +141,17 @@ class Explorer:
 
         for idx_action, action in enumerate(sequence):
             parameter_samples[idx_action] = dict()
+            parameters_current_action = list()
             for parameter in self.pddl_if._actions[action]["params"]:
                 obj_type = parameter[1]
                 obj_name = parameter[0]
                 obj_sample = np.random.choice(objects_of_interest[obj_type])
                 parameter_samples[idx_action][obj_name] = obj_sample
 
-        return parameter_samples
+                parameters_current_action.append(obj_sample)
+            parameter_samples_tuples[idx_action] = tuple(parameters_current_action)
+
+        return parameter_samples, parameter_samples_tuples
 
     def _test_abstract_feasibility(self, sequence, parameters, preconds):
         """
