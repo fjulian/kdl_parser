@@ -119,7 +119,7 @@ class PDDLFileInterface:
         new_filename = path.join(self._domain_dir, self._time_now_str + "_domain.pddl")
         with open(new_filename, "w") as f:
             f.write(pddl_str)
-        print("Wrote new PDDL domain file: " + new_filename.split("/")[-1])
+        # print("Wrote new PDDL domain file: " + new_filename.split("/")[-1])
         self._domain_file_pddl = new_filename
 
     def read_domain_pddl(self):
@@ -292,7 +292,7 @@ class PDDLFileInterface:
         )
         with open(new_filename, "w") as f:
             f.write(pddl_str)
-        print("Wrote new PDDL problem file: " + new_filename.split("/")[-1])
+        # print("Wrote new PDDL problem file: " + new_filename.split("/")[-1])
         self._problem_file_pddl = new_filename
 
     # ----- Adding to the domain description ------------------------------------
@@ -344,10 +344,10 @@ class PDDLFileInterface:
         self.add_inital_predicates(planning_problem.initial_predicates)
         self.add_goal(planning_problem.goals)
 
-    def clear_problem(self):
-        self._objects.clear()
-        self._initial_predicates.clear()
-        self._goals.clear()
+    def clear_planning_problem(self):
+        del self._objects[:]
+        del self._initial_predicates[:]
+        del self._goals[:]
 
     # ----- Helper functions ---------------------------------------------------
 

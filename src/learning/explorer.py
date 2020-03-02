@@ -5,6 +5,7 @@ import pybullet as p
 
 from knowledge.problem import PlanningProblem
 from pddl_interface import pddl_file_if, planner_interface
+from execution.es_sequential_execution import SequentialExecution
 
 # Parameters
 # TODO: move them to config file
@@ -16,10 +17,11 @@ max_failed_samples = 50
 
 
 class Explorer:
-    def __init__(self, pddl_if, planning_problem):
+    def __init__(self, pddl_if, planning_problem, skill_set):
         self.pddl_if = pddl_if
         self.action_list = [act for act in pddl_if._actions]
         self.planning_problem = planning_problem
+        self.skill_set = skill_set
 
     def exploration(self):
         # Some useful variables
@@ -29,9 +31,18 @@ class Explorer:
         current_state_id = p.saveState()
 
         # Identify objects that are involved in reaching the goal
-        relevant_objects = []
+        relevant_objects = list()
         for goal in self.planning_problem.goals:
             relevant_objects.extend(goal[2])
+
+        # Start PDDL file interface
+        pddl_if = pddl_file_if.PDDLFileInterface(
+            domain_dir="knowledge/chimera/explore/domain",
+            problem_dir="knowledge/chimera/explore/problem",
+            domain_name="chimera-domain",
+        )
+        pddl_if._actions = self.pddl_if._actions
+        pddl_if._predicates = self.pddl_if._predicates
 
         # Sample action sequences until a successful one was found
         while True:
@@ -40,54 +51,31 @@ class Explorer:
                 count_plan_successful = 0
                 sequences_tried = set()
                 for _ in range(max_samples_per_seq_len):
-                    # Sample sequences until a abstractly feasible one was found
-                    failed_samples = 0
-                    sampling_failed = False
-                    while True:
-                        failed_samples += 1
-                        if failed_samples > max_failed_samples:
-                            sampling_failed = True
-                            break
+                    # Sample sequences until an abstractly feasible one was found
+                    (
+                        success,
+                        seq,
+                        params,
+                        sequence_preconds,
+                    ) = self._sample_feasible_sequence(seq_len, sequences_tried)
 
-                        seq = self._sample_sequence(seq_len)
-                        params, params_tuple = self._sample_parameters(seq)
-                        if (
-                            tuple(seq),
-                            tuple(params_tuple),
-                        ) in sequences_tried:  # TODO this causes an error, fix it.
-                            continue
-                        sequences_tried.add((tuple(seq), tuple(params_tuple)))
-                        sequence_preconds = self._determine_sequence_preconds(
-                            seq, params
-                        )
-                        if self._test_abstract_feasibility(
-                            seq, params, sequence_preconds
-                        ):
-                            break
-
-                    if sampling_failed:
+                    if not success:
                         print(
                             "Sampling failed. Abort searching in this sequence length."
                         )
                         break
 
                     # Found a feasible action sequence. Now test it.
-                    print("------------------------------------------")
-                    print("Sequence: " + str(seq))
-                    print("Params: " + str(params))
-                    print("Preconds: " + str(sequence_preconds))
+                    # print("------------------------------------------")
+                    # print("Sequence: " + str(seq))
+                    # print("Params: " + str(params))
+                    # print("Preconds: " + str(sequence_preconds))
 
                     # Set up planning problem that takes us to state where all preconditions are met
                     problem_preplan = deepcopy(self.planning_problem)
                     problem_preplan.goals = sequence_preconds
 
-                    pddl_if = pddl_file_if.PDDLFileInterface(
-                        domain_dir="knowledge/chimera/explore/domain",
-                        problem_dir="knowledge/chimera/explore/problem",
-                        domain_name="chimera-domain",
-                    )
-                    pddl_if._actions = self.pddl_if._actions
-                    pddl_if._predicates = self.pddl_if._predicates
+                    pddl_if.clear_planning_problem()
                     pddl_if.add_planning_problem(problem_preplan)
                     pddl_if.write_domain_pddl()
                     pddl_if.write_problem_pddl()
@@ -95,14 +83,53 @@ class Explorer:
                     plan = planner_interface.pddl_planner(
                         pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
                     )
-                    print(plan)
+                    # print(plan)
                     if plan:
                         count_plan_successful += 1
+
+                        # Restore initial state
+                        p.restoreState(stateId=current_state_id)
+
+                        # Execute plan to get to start of sequence
+                        self._execute_plan(plan)
+
                 print(
                     "Successful plans for sequence length {}: {}".format(
                         seq_len, count_plan_successful
                     )
                 )
+            break
+
+    def _execute_plan(self, plan):
+        es = SequentialExecution(self.skill_set, plan)
+        es.setup()
+        while True:
+            plan_finished = es.step()
+            if plan_finished:
+                break
+
+    def _sample_feasible_sequence(self, sequence_length, sequences_tried):
+        # Sample sequences until an abstractly feasible one was found
+        failed_samples = 0
+        success = True
+        while True:
+            failed_samples += 1
+            if failed_samples > max_failed_samples:
+                success = False
+                break
+
+            seq = self._sample_sequence(sequence_length)
+            params, params_tuple = self._sample_parameters(seq)
+            if (
+                tuple(seq),
+                tuple(params_tuple),
+            ) in sequences_tried:  # TODO this causes an error, fix it.
+                continue
+            sequences_tried.add((tuple(seq), tuple(params_tuple)))
+            sequence_preconds = self._determine_sequence_preconds(seq, params)
+            if self._test_abstract_feasibility(seq, params, sequence_preconds):
+                break
+        return success, seq, params, sequence_preconds
 
     def _sample_sequence(self, length):
         # Generate the sequence

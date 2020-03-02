@@ -68,7 +68,7 @@ def main():
     # -----------------------------------
 
     # Create world
-    world = World(gui_=True, sleep_=True, load_objects=not restore_existing_objects)
+    world = World(gui_=True, sleep_=False, load_objects=not restore_existing_objects)
     scene = ScenePlanning1(world, restored_objects=objects)
 
     # Spawn robot
@@ -103,8 +103,14 @@ def main():
         pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
     )
 
+    # Set up skills
+    sk_grasp = SkillGrasping(scene, robot)
+    sk_place = SkillPlacing(scene, robot)
+    sk_nav = SkillNavigate(scene, robot._model.uid)
+    skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
+
     # Set up exploration
-    xplorer = Explorer(pddl_if, planning_problem)
+    xplorer = Explorer(pddl_if, planning_problem, skill_set)
 
     if plan is False:
         xplorer.exploration()
@@ -137,12 +143,6 @@ def main():
             robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes
         )
     else:
-        # Set up skills
-        sk_grasp = SkillGrasping(scene, robot)
-        sk_place = SkillPlacing(scene, robot)
-        sk_nav = SkillNavigate(scene, robot._model.uid)
-        skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
-
         es = SequentialExecution(skill_set, plan)
     es.setup()
 

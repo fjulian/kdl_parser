@@ -1,6 +1,9 @@
 import subprocess
 
 
+# TODO add a debug flag for print statements
+
+
 def pddl_planner(domain_file, problem_file):
     try:
         res = subprocess.check_output(
@@ -11,11 +14,11 @@ def pddl_planner(domain_file, problem_file):
         # Check if empty plan solves it
         empty_idx = e.output.find("The empty plan solves it")
         if empty_idx > -1:
-            print("Empty plan solves the goal.")
+            # print("Empty plan solves the goal.")
             return []
         else:
-            print("Planning failed: ")
-            print(e.output)
+            # print("Planning failed: ")
+            # print(e.output)
             return False
     try:
         res = cut_string_before(res, "ff: found legal plan as follows", complain=True)
