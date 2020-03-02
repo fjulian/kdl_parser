@@ -54,8 +54,8 @@ class Explorer:
                     # Sample sequences until an abstractly feasible one was found
                     (
                         success,
-                        seq,
-                        params,
+                        sequence,
+                        parameter_samples,
                         sequence_preconds,
                     ) = self._sample_feasible_sequence(seq_len, sequences_tried)
 
@@ -83,7 +83,7 @@ class Explorer:
                     plan = planner_interface.pddl_planner(
                         pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
                     )
-                    # print(plan)
+
                     if plan:
                         count_plan_successful += 1
 
@@ -92,6 +92,21 @@ class Explorer:
 
                         # Execute plan to get to start of sequence
                         self._execute_plan(plan)
+
+                        # Execute sequence
+                        sequence_plan = list()
+                        for idx_action, action in enumerate(sequence):
+                            act_string = str(idx_action) + ": " + action
+                            for parameter in self.pddl_if._actions[action]["params"]:
+                                act_string += (
+                                    " " + parameter_samples[idx_action][parameter[0]]
+                                )
+                            sequence_plan.append(act_string)
+                        self._execute_plan(sequence_plan)
+                        # TODO make execution script work with arbitrary numbers of parameters.
+
+                        # Check if the goal was reached
+                        # TODO do this check
 
                 print(
                     "Successful plans for sequence length {}: {}".format(
@@ -120,10 +135,7 @@ class Explorer:
 
             seq = self._sample_sequence(sequence_length)
             params, params_tuple = self._sample_parameters(seq)
-            if (
-                tuple(seq),
-                tuple(params_tuple),
-            ) in sequences_tried:  # TODO this causes an error, fix it.
+            if (tuple(seq), tuple(params_tuple),) in sequences_tried:
                 continue
             sequences_tried.add((tuple(seq), tuple(params_tuple)))
             sequence_preconds = self._determine_sequence_preconds(seq, params)
@@ -133,13 +145,10 @@ class Explorer:
 
     def _sample_sequence(self, length):
         # Generate the sequence
-        sequence = []
+        sequence = list()
         for _ in range(length):
             while True:
                 temp = np.random.choice(self.action_list)
-                # if not temp in sequence:
-                #     sequence.append(temp)
-                #     break
                 if len(sequence) == 0:
                     sequence.append(temp)
                     break
