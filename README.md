@@ -46,10 +46,10 @@ sudo apt-get install ros-melodic-trac-ik ros-melodic-franka-description ros-melo
 In addition, the library `pykdl_utils` - included as submodule - needs to be installed. This can be done using the following commands:
 
 ```
-cd <repo-root>/src/tools/hrl-kdl/pykdl_utils
-python setup.py install --prefix <repo-root>/venv
-cd <repo-root>/src/tools/hrl-kdl/hrl_geom
-python setup.py install --prefix <repo-root>/venv
+cd <repo-root>/submodules/hrl-kdl/pykdl_utils
+python setup.py install --prefix <repo-root>/.venv
+cd <repo-root>/submodules/hrl-kdl/hrl_geom
+python setup.py install --prefix <repo-root>/.venv
 ```
 
 ### Robot Description
