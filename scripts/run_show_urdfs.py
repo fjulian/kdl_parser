@@ -1,4 +1,4 @@
-from sim.world import World
+from highlevel_planning.sim.world import World
 
 import pybullet as p
 
@@ -14,7 +14,11 @@ def main():
 
     # ======== Cupboard ====================================
 
-    cupboard_mdl = world.add_model(os.path.join(os.getcwd(),"data/models/cupboard_drawers/cupboard_drawers.urdf"), position=[0.0, 0.0, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
+    cupboard_mdl = world.add_model(
+        os.path.join(os.getcwd(), "data/models/cupboard_drawers/cupboard_drawers.urdf"),
+        position=[0.0, 0.0, 0.0],
+        orientation=[0.0, 0.0, 0.0, 1.0],
+    )
 
     drawer_link_idx = []
     for i in range(p.getNumJoints(cupboard_mdl.uid)):
@@ -24,20 +28,23 @@ def main():
             drawer_link_idx.append(i)
 
     for i in drawer_link_idx:
-        p.setJointMotorControl2(cupboard_mdl.uid, i, controlMode=p.VELOCITY_CONTROL, force=0.0)
+        p.setJointMotorControl2(
+            cupboard_mdl.uid, i, controlMode=p.VELOCITY_CONTROL, force=0.0
+        )
 
     # ======== Container ======================================
 
-    #container_mdl = world.add_model("data/models/container/container_no_lid.urdf", position=[0.0, 0.0, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
-    #lid_mdl = world.add_model("data/models/container/lid.urdf", position=[0.0, 0.0, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
+    # container_mdl = world.add_model("data/models/container/container_no_lid.urdf", position=[0.0, 0.0, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
+    # lid_mdl = world.add_model("data/models/container/lid.urdf", position=[0.0, 0.0, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
 
-    #container_sliding_mdl = world.add_model("data/models/container/container_sliding_lid.urdf", position=[0.0, 0.5, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
+    # container_sliding_mdl = world.add_model("data/models/container/container_sliding_lid.urdf", position=[0.0, 0.5, 0.0], orientation=[0.0, 0.0, 0.0,1.0])
 
     # =========================================================
 
     world.step_seconds(50)
 
     world.close()
+
 
 if __name__ == "__main__":
     main()

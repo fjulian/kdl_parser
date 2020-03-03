@@ -12,7 +12,7 @@ import py_trees
 import py_trees.console as console
 import time
 
-from execution.custom_chooser import CustomChooser
+from highlevel_planning.execution.custom_chooser import CustomChooser
 
 ##############################################################################
 # Classes
@@ -26,20 +26,46 @@ def description():
 
 def epilog():
     if py_trees.console.has_colours:
-        return console.cyan + "And his noodly appendage reached forth to tickle the blessed...\n" + console.reset
+        return (
+            console.cyan
+            + "And his noodly appendage reached forth to tickle the blessed...\n"
+            + console.reset
+        )
     else:
         return None
 
 
 def command_line_argument_parser():
-    parser = argparse.ArgumentParser(description=description(),
-                                     epilog=epilog(),
-                                     formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     )
+    parser = argparse.ArgumentParser(
+        description=description(),
+        epilog=epilog(),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument('-i', '--immediate-failure', action='store_const', dest="scenario", const="immediate-failure", help='immediate failure, falls back to the second priority')
-    group.add_argument('-o', '--fail-after-one', action='store_const', dest="scenario", const="fail-after-one", help='fail after one, never falls back to the second priority')
-    group.add_argument('-f', '--fail-after-one-then-immediate', action='store_const', dest="scenario", const="fail-after-one-then-immediate", help='fail after one and then replaces with an immediate failure')
+    group.add_argument(
+        "-i",
+        "--immediate-failure",
+        action="store_const",
+        dest="scenario",
+        const="immediate-failure",
+        help="immediate failure, falls back to the second priority",
+    )
+    group.add_argument(
+        "-o",
+        "--fail-after-one",
+        action="store_const",
+        dest="scenario",
+        const="fail-after-one",
+        help="fail after one, never falls back to the second priority",
+    )
+    group.add_argument(
+        "-f",
+        "--fail-after-one-then-immediate",
+        action="store_const",
+        dest="scenario",
+        const="fail-after-one-then-immediate",
+        help="fail after one and then replaces with an immediate failure",
+    )
     parser.set_defaults(scenario="immediate-failure")
     return parser
 
@@ -87,12 +113,13 @@ def create_tree(scenario):
     root.add_child(success)
     return root
 
+
 ##############################################################################
 # Main
 ##############################################################################
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
     Entry point for the demo script.
     """

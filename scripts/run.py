@@ -1,8 +1,8 @@
-from sim.world import World
-from sim.robot_arm import RobotArm
+from highlevel_planning.sim.world import World
+from highlevel_planning.sim.robot_arm import RobotArm
 
-from sim.scene_tossing import SceneTossing
-from sim.scene_planning_1 import ScenePlanning1
+from highlevel_planning.sim.scene_tossing import SceneTossing
+from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
 
 from highlevel_planning.skills.navigate import SkillNavigation
 from highlevel_planning.skills.grasping import SkillGrasping

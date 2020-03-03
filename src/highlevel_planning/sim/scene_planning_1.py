@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import os
-from tools.util import rotate_orient, ObjectInfo
-from sim.cupboard import Cupboard
+from highlevel_planning.tools.util import rotate_orient, ObjectInfo
+from highlevel_planning.sim.cupboard import Cupboard
 
 
 class ScenePlanning1:

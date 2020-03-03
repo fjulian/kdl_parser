@@ -3,9 +3,9 @@ from highlevel_planning.skills.grasping import ActionGrasping
 from highlevel_planning.skills.navigate import ActionNavigate
 from highlevel_planning.skills.placing import ActionPlacing
 from highlevel_planning.skills.pddl_descriptions import get_action_description
-from execution.condition_check import ConditionChecker_Predicate
-from execution.custom_chooser import CustomChooser
-from execution.es import ExecutionSystem
+from highlevel_planning.execution.condition_check import ConditionChecker_Predicate
+from highlevel_planning.execution.custom_chooser import CustomChooser
+from highlevel_planning.execution.es import ExecutionSystem
 import copy
 
 

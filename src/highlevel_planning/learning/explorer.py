@@ -3,9 +3,9 @@ import numpy as np
 from copy import deepcopy
 import pybullet as p
 
-from knowledge.problem import PlanningProblem
-from pddl_interface import pddl_file_if, planner_interface
-from execution.es_sequential_execution import SequentialExecution
+from highlevel_planning.knowledge.problem import PlanningProblem
+from highlevel_planning.pddl_interface import pddl_file_if, planner_interface
+from highlevel_planning.execution.es_sequential_execution import SequentialExecution
 
 # Parameters
 # TODO: move them to config file

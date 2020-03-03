@@ -3,7 +3,7 @@ import pybullet as p
 import numpy as np
 from math import pi as m_pi
 import math
-from tools.util import IKError, quat_from_mat
+from highlevel_planning.tools.util import IKError, quat_from_mat
 
 from trac_ik_python.trac_ik import IK
 

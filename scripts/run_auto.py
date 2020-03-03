@@ -5,25 +5,25 @@ from multiprocessing import Lock
 import numpy as np
 
 # Simulation
-from sim.world import World
-from sim.robot_arm import RobotArm
-from sim.scene_planning_1 import ScenePlanning1
+from highlevel_planning.sim.world import World
+from highlevel_planning.sim.robot_arm import RobotArm
+from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
 
 # Skills
 from highlevel_planning.skills.navigate import ProcessNavigate, SkillNavigate
 from highlevel_planning.skills.grasping import ProcessGrasping, SkillGrasping
 from highlevel_planning.skills.placing import ProcessPlacing, SkillPlacing
-from execution.es_behavior_tree import AutoBehaviourTree
-from execution.es_sequential_execution import SequentialExecution
-from skills import pddl_descriptions
-from knowledge.predicates import Predicates
-from knowledge.problem import PlanningProblem
+from highlevel_planning.execution.es_behavior_tree import AutoBehaviourTree
+from highlevel_planning.execution.es_sequential_execution import SequentialExecution
+from highlevel_planning.skills import pddl_descriptions
+from highlevel_planning.knowledge.predicates import Predicates
+from highlevel_planning.knowledge.problem import PlanningProblem
 
 # Learning
-from learning.explorer import Explorer
+from highlevel_planning.learning.explorer import Explorer
 
 # Interface to planner and PDDL
-from pddl_interface import pddl_file_if, planner_interface
+from highlevel_planning.pddl_interface import pddl_file_if, planner_interface
 
 # ----------------------------------------------------------------------
 

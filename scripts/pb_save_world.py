@@ -1,16 +1,17 @@
 import sys
 from os import path, getcwd
-sys.path.append( path.join(path.dirname( path.dirname( path.abspath(__file__) ) ), 'src') )
 
-from sim.world import World
-from sim.robot_arm import RobotArm
-from sim.scene_planning_1 import ScenePlanning1
+sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), "src"))
+
+from highlevel_planning.sim.world import World
+from highlevel_planning.sim.robot_arm import RobotArm
+from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
 
 import pybullet as p
 
 import pickle
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     restore_existing_objects = False
     objects = None
     robot_mdl = None
@@ -32,4 +33,4 @@ if __name__ == '__main__':
     # Save
     with open("data/sim/objects.pkl", "wb") as output:
         pickle.dump((scene.objects, robot._model), output)
-    p.saveBullet(path.join(getcwd(),"data/sim/state.bullet"))
+    p.saveBullet(path.join(getcwd(), "data/sim/state.bullet"))
