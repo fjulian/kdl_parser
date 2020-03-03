@@ -1,4 +1,4 @@
-from skills.grasping import SkillGrasping
+from highlevel_planning.skills.grasping import SkillGrasping
 import pybullet as p
 import numpy as np
 

@@ -4,3 +4,4 @@ venv
 *.pkl
 *.bullet
 knowledge/chimera
+*.egg-info

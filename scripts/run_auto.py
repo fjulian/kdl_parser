@@ -10,9 +10,9 @@ from sim.robot_arm import RobotArm
 from sim.scene_planning_1 import ScenePlanning1
 
 # Skills
-from skills.navigate import ProcessNavigate, SkillNavigate
-from skills.grasping import ProcessGrasping, SkillGrasping
-from skills.placing import ProcessPlacing, SkillPlacing
+from highlevel_planning.skills.navigate import ProcessNavigate, SkillNavigate
+from highlevel_planning.skills.grasping import ProcessGrasping, SkillGrasping
+from highlevel_planning.skills.placing import ProcessPlacing, SkillPlacing
 from execution.es_behavior_tree import AutoBehaviourTree
 from execution.es_sequential_execution import SequentialExecution
 from skills import pddl_descriptions

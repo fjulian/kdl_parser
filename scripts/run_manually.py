@@ -5,9 +5,9 @@ from sim.scene_tossing import SceneTossing
 from sim.scene_planning_1 import ScenePlanning1
 from sim.scene_move_skill import SceneMoveSkill
 
-from skills.navigate import SkillNavigate
-from skills.grasping import SkillGrasping
-from skills.placing import SkillPlacing
+from highlevel_planning.skills.navigate import SkillNavigate
+from highlevel_planning.skills.grasping import SkillGrasping
+from highlevel_planning.skills.placing import SkillPlacing
 
 from knowledge.predicates import Predicates
 
