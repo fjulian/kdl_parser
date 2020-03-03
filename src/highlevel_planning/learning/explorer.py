@@ -48,6 +48,7 @@ class Explorer:
         while True:
             # Iterate through action sequence lengths
             for seq_len in range(1, 5):
+                print("----- Sequence length: {} ----------".format(seq_len))
                 count_plan_successful = 0
                 sequences_tried = set()
                 for _ in range(max_samples_per_seq_len):
@@ -84,7 +85,7 @@ class Explorer:
                         pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
                     )
 
-                    if plan:
+                    if plan is not False:
                         count_plan_successful += 1
 
                         # Restore initial state
@@ -102,8 +103,13 @@ class Explorer:
                                     " " + parameter_samples[idx_action][parameter[0]]
                                 )
                             sequence_plan.append(act_string)
-                        self._execute_plan(sequence_plan)
-                        # TODO make execution script work with arbitrary numbers of parameters.
+                        success = self._execute_plan(sequence_plan)
+                        if not success:
+                            continue
+
+                        print("Successful plan execution: ")
+                        for act in sequence_plan:
+                            print(act)
 
                         # Check if the goal was reached
                         # TODO do this check
@@ -119,14 +125,17 @@ class Explorer:
         es = SequentialExecution(self.skill_set, plan)
         es.setup()
         while True:
-            plan_finished = es.step()
-            if plan_finished:
+            success, plan_finished = es.step()
+            # TODO if we run into a failure, check why this failure happened and adapt the PDDL if necessary
+            if plan_finished or not success:
                 break
+        return success
 
     def _sample_feasible_sequence(self, sequence_length, sequences_tried):
         # Sample sequences until an abstractly feasible one was found
         failed_samples = 0
         success = True
+        sequence_preconds = None
         while True:
             failed_samples += 1
             if failed_samples > max_failed_samples:

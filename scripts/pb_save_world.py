@@ -1,8 +1,6 @@
 import sys
 from os import path, getcwd
 
-sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), "src"))
-
 from highlevel_planning.sim.world import World
 from highlevel_planning.sim.robot_arm import RobotArm
 from highlevel_planning.sim.scene_planning_1 import ScenePlanning1

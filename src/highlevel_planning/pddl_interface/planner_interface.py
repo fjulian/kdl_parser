@@ -26,7 +26,11 @@ def pddl_planner(domain_file, problem_file):
         print("Planning failed: ")
         print(res)
         return False
-    res = cut_string_before(res, "0:")
+    try:
+        res = cut_string_before(res, "0:", complain=True)
+    except NameError:
+        # Empty plan solves this problem
+        return []
     res = cut_string_at(res, "time spent")
     res = res.split("\n")
     for i in range(len(res)):
