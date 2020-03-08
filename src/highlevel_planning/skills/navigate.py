@@ -156,3 +156,18 @@ def get_nav_description():
             "effects": action_effects,
         },
     )
+
+
+def get_nav_pos_description():
+    action_name = "nav"
+    action_params = [["pos", "position"], ["rob", "robot"]]
+    action_preconditions = []
+    action_effects = [("in-reach-pos", True, ["pos", "rob"])]
+    return (
+        action_name,
+        {
+            "params": action_params,
+            "preconds": action_preconditions,
+            "effects": action_effects,
+        },
+    )

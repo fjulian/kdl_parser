@@ -58,12 +58,15 @@ def main():
         problem_dir="knowledge/chimera/main/problem",
         domain_name="chimera-domain",
     )
-    temp = pddl_descriptions.get_action_description("grasp")
-    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=True)
-    temp = pddl_descriptions.get_action_description("nav")
-    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=True)
-    temp = pddl_descriptions.get_action_description("place")
-    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=True)
+
+    # Add skill descriptions
+    skill_descriptions = pddl_descriptions.get_action_descriptions()
+    for skill_name in skill_descriptions:
+        pddl_if.add_action(
+            action_name=skill_name,
+            action_definition=skill_descriptions[skill_name],
+            overwrite=True,
+        )
 
     # -----------------------------------
 

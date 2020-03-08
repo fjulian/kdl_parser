@@ -1,13 +1,17 @@
 from grasping import get_grasping_description
-from navigate import get_nav_description
+from navigate import get_nav_description, get_nav_pos_description
 from placing import get_placing_description
 
-def get_action_description(action):
-    if action == "grasp":
-        return get_grasping_description()
-    elif action == "nav":
-        return get_nav_description()
-    elif action == "place":
-        return get_placing_description()
-    else:
-        raise ValueError("Description of non-existent skill requested.")
+
+def get_action_descriptions():
+    functions = [
+        get_grasping_description,
+        get_nav_description,
+        get_nav_pos_description,
+        get_placing_description,
+    ]
+    descr = dict()
+    for func in functions:
+        temp = func()
+        descr[temp[0]] = temp[1]
+    return descr
