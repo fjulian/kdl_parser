@@ -23,6 +23,7 @@ class PDDLFileInterface:
         self._domain_name = domain_name
         self._predicates = {}
         self._actions = {}
+        self._types = list()
 
         # Problem definition
         self._objects = []
@@ -66,14 +67,36 @@ class PDDLFileInterface:
     # ----- Loading and saving PDDL files --------------------------------------
 
     def write_domain_pddl(self):
-        types = self.extract_types()
+        all_types_present = self.check_types()
+        if not all_types_present:
+            raise ValueError("Not all types were defined properly")
+
+        # Sort types by parent type
+        types = dict()
+        for type_item in self._types:
+            if type_item[1] not in types:
+                types[type_item[1]] = list()
+            types[type_item[1]].append(type_item[0])
 
         pddl_str = ""
         pddl_str += "(define (domain " + self._domain_name + ")\n"
         pddl_str += "\t(:requirements " + self._requirements + ")\n\n"
-        types_str = " "
-        types_str = types_str.join(types)
-        pddl_str += "\t(:types " + types_str + ")\n\n"
+
+        pddl_str += "\t(:types\n"
+        if None in types:
+            pddl_str += "\t\t"
+            for type_item in types[None]:
+                pddl_str += type_item + " "
+            pddl_str += "- object\n"
+        for parent_type in types:
+            if parent_type is None:
+                continue
+            pddl_str += "\t\t"
+            for type_item in types[parent_type]:
+                pddl_str += type_item + " "
+            pddl_str += "- " + parent_type + "\n"
+        pddl_str += "\t)\n\n"
+
         pddl_str += "\t(:predicates\n"
         for pred in self._predicates:
             pddl_str += "\t\t(" + pred
@@ -319,6 +342,13 @@ class PDDLFileInterface:
             assert isinstance(predicate_name, str)
             self._predicates[predicate_name] = predicate_definition
 
+    def add_type(self, new_type, parent_type=None):
+        assert isinstance(new_type, str)
+        for type_name in self._types:
+            if type_name[0] == new_type:
+                raise ValueError("Type name already exists")
+        self._types.append((new_type, parent_type))
+
     # ----- Adding to the problem description ----------------------------------
 
     def add_objects(self, object_list):
@@ -351,17 +381,20 @@ class PDDLFileInterface:
 
     # ----- Helper functions ---------------------------------------------------
 
-    def extract_types(self):
-        types = []
+    def check_types(self):
+        # Makes sure that all type were defined
+        types = [item[0] for item in self._types]
         for pred in self._predicates:
             for item in self._predicates[pred]:
                 if item[1] not in types:
-                    types.append(item[1])
+                    print("The following type was not pre-defined: {}".format(item[1]))
+                    return False
         for act in self._actions:
             for item in self._actions[act]["params"]:
                 if item[1] not in types:
-                    types.append(item[1])
-        return types
+                    print("The following type was not pre-defined: {}".format(item[1]))
+                    return False
+        return True
 
 
 ### Assumed conventions:

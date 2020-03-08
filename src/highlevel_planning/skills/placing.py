@@ -178,9 +178,9 @@ class SkillPlacing:
 
 def get_placing_description():
     action_name = "place"
-    action_params = [["obj", "object"], ["pos", "position"], ["rob", "robot"]]
+    action_params = [["obj", "item"], ["pos", "position"], ["rob", "robot"]]
     action_preconditions = [
-        ("in-reach-pos", True, ["pos", "rob"]),
+        ("in-reach", True, ["pos", "rob"]),
         ("empty-hand", False, ["rob"]),
         ("in-hand", True, ["obj", "rob"]),
     ]

@@ -18,6 +18,7 @@ from highlevel_planning.execution.es_sequential_execution import SequentialExecu
 from highlevel_planning.skills import pddl_descriptions
 from highlevel_planning.knowledge.predicates import Predicates
 from highlevel_planning.knowledge.problem import PlanningProblem
+from highlevel_planning.knowledge.lookup_tables import LookupTable
 
 # Learning
 from highlevel_planning.learning.explorer import Explorer
@@ -68,6 +69,17 @@ def main():
             overwrite=True,
         )
 
+    # Add required types
+    pddl_if.add_type("robot")
+    pddl_if.add_type("navgoal")  # Anything we can navigate to
+    pddl_if.add_type("position", "navgoal")  # Pure positions
+    pddl_if.add_type("item", "navgoal")  # Anything we can grasp
+
+    # Set up knowledge data structure
+    knowledge_lookups = dict()
+    knowledge_lookups["position"] = LookupTable("position")
+    knowledge_lookups["position"].add("origin", np.array([0.0, 0.0, 0.0]))
+
     # -----------------------------------
 
     # Create world
@@ -82,19 +94,22 @@ def main():
     robot.to_start()
     world.step_seconds(0.5)
 
+    knowledge_lookups["robot"] = LookupTable("robot")
+    knowledge_lookups["robot"].add("robot1", robot)
+
     # -----------------------------------
     # Set up predicates
 
-    preds = Predicates(scene, robot, robot_lock)
+    preds = Predicates(scene, robot, knowledge_lookups, robot_lock)
 
     for descr in preds.descriptions.items():
         pddl_if.add_predicate(
-            predicate_name=descr[0], predicate_definition=descr[1], overwrite=False
+            predicate_name=descr[0], predicate_definition=descr[1], overwrite=True
         )
 
     planning_problem = PlanningProblem()
-    planning_problem.populate_objects(scene)
-    planning_problem.check_predicates(preds, robot)
+    planning_problem.populate_objects(scene, knowledge_lookups)
+    planning_problem.check_predicates(preds)
 
     pddl_if.add_planning_problem(planning_problem)
 
@@ -113,7 +128,7 @@ def main():
     skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
 
     # Set up exploration
-    xplorer = Explorer(pddl_if, planning_problem, skill_set)
+    xplorer = Explorer(pddl_if, planning_problem, skill_set, knowledge_lookups)
 
     if plan is False:
         xplorer.exploration()
@@ -146,17 +161,18 @@ def main():
             robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes
         )
     else:
-        es = SequentialExecution(skill_set, plan)
+        es = SequentialExecution(skill_set, plan, knowledge_lookups)
     es.setup()
 
     # -----------------------------------
 
+    # Run
     try:
         index = 1
         while True:
             print("------------- Iteration {} ---------------".format(index))
             es.print_status()
-            plan_finished = es.step()
+            success, plan_finished = es.step()
             index += 1
             if es.ticking:
                 time.sleep(0.5)

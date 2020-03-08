@@ -8,22 +8,21 @@ class PlanningProblem:
 
     def __init__(self):
 
-        self.objects = [
-            ("robot1", "robot"),
-            ("pos1", "position"),
-        ]
-
-        self.initial_predicates = []
+        self.objects = list()
+        self.initial_predicates = list()
 
         # self.goals = [("in-hand", True, ("cube1", "robot1"))]
         self.goals = [("on", True, ("cupboard", "cube1"))]
         # self.goals = [("inside", True, ("container1", "cube1"))]
 
-    def populate_objects(self, scene):
+    def populate_objects(self, scene, knowledge_lookups):
         for obj in scene.objects:
-            self.objects.append((obj, "object"))
+            self.objects.append((obj, "item"))
+        for cat in knowledge_lookups:
+            for item in knowledge_lookups[cat].data:
+                self.objects.append((item, cat))
 
-    def check_predicates(self, predicates, robot):
+    def check_predicates(self, predicates):
         """
         If predicates need to be initialized when the system is launched, this can be done here.
         
@@ -32,8 +31,9 @@ class PlanningProblem:
             robot ([type]): [description]
         """
 
-        if predicates.empty_hand(robot):
+        if predicates.empty_hand("robot1"):
             self.initial_predicates.append(("empty-hand", "robot1"))
+        self.initial_predicates.append(("in-reach", "origin", "robot1"))
 
         # Check any predicates in relation with the goal
         for goal in self.goals:

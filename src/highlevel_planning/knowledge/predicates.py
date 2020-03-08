@@ -4,31 +4,31 @@ import numpy as np
 
 
 class Predicates:
-    def __init__(self, scene, robot, robot_lock=None):
+    def __init__(self, scene, robot, knowledge_lookup, robot_lock=None):
         self.call = {
             "empty-hand": self.empty_hand,
             "in-hand": self.in_hand,
             "in-reach": self.in_reach,
-            "in-reach-pos": self.in_reach_pos,
             "inside": self.inside,
             "on": self.on,
         }
 
         self.descriptions = {
             "empty-hand": [["rob", "robot"]],
-            "in-hand": [["obj", "object"], ["rob", "robot"]],
-            "in-reach": [["obj", "object"], ["rob", "robot"]],
-            "in-reach-pos": [["pos", "position"], ["rob", "robot"]],
-            "inside": [["container", "object"], ["contained", "object"]],
-            "on": [["supporting", "object"], ["supported", "object"]],
+            "in-hand": [["obj", "item"], ["rob", "robot"]],
+            "in-reach": [["target", "navgoal"], ["rob", "robot"]],
+            "inside": [["container", "item"], ["contained", "item"]],
+            "on": [["supporting", "item"], ["supported", "item"]],
         }
 
         self.sk_grasping = SkillGrasping(scene, robot)
         self._scene = scene
         self._robot_uid = robot._model.uid
         self._robot_lock = robot_lock
+        self._knowledge_lookup = knowledge_lookup
 
-    def empty_hand(self, robot):
+    def empty_hand(self, robot_name):
+        robot = self._knowledge_lookup["robot"].get(robot_name)
         if self._robot_lock:
             self._robot_lock.acquire()
         grasped_sth = robot.check_grasp()
@@ -36,8 +36,9 @@ class Predicates:
             self._robot_lock.release()
         return not grasped_sth
 
-    def in_hand(self, target_object, robot):
-        empty_hand_res = self.empty_hand(robot)
+    def in_hand(self, target_object, robot_name):
+        robot = self._knowledge_lookup["robot"].get(robot_name)
+        empty_hand_res = self.empty_hand(robot_name)
         temp = p.getClosestPoints(
             self._robot_uid, self._scene.objects[target_object].model.uid, distance=0.01
         )
@@ -53,7 +54,15 @@ class Predicates:
         )
         return (not empty_hand_res) and desired_object_in_hand
 
-    def in_reach(self, target_object, robot):
+    def in_reach(self, target_item, robot):
+        if type(target_item) is str:
+            return self.in_reach_obj(target_item, robot)
+        elif type(target_item) is list:
+            return self.in_reach_pos(target_item, robot)
+        else:
+            raise ValueError
+
+    def in_reach_obj(self, target_object, robot):
         """
         Check if an object in the scene is in reach of the robot arm.
         

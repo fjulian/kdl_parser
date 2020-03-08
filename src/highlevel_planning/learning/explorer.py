@@ -17,15 +17,16 @@ max_failed_samples = 50
 
 
 class Explorer:
-    def __init__(self, pddl_if, planning_problem, skill_set):
-        self.pddl_if = pddl_if
+    def __init__(self, pddl_if, planning_problem, skill_set, knowledge_lookups):
+        self.pddl_if_main = pddl_if
         self.action_list = [act for act in pddl_if._actions]
         self.planning_problem = planning_problem
         self.skill_set = skill_set
+        self.knowledge_lookups = knowledge_lookups
 
     def exploration(self):
         # Some useful variables
-        # num_actions = len(self.pddl_if._actions)
+        # num_actions = len(self.pddl_if_main._actions)
 
         # Save the state the robot is currently in
         current_state_id = p.saveState()
@@ -41,8 +42,9 @@ class Explorer:
             problem_dir="knowledge/chimera/explore/problem",
             domain_name="chimera-domain",
         )
-        pddl_if._actions = self.pddl_if._actions
-        pddl_if._predicates = self.pddl_if._predicates
+        pddl_if._actions = self.pddl_if_main._actions
+        pddl_if._predicates = self.pddl_if_main._predicates
+        pddl_if._types = self.pddl_if_main._types
 
         # Sample action sequences until a successful one was found
         while True:
@@ -98,7 +100,9 @@ class Explorer:
                         sequence_plan = list()
                         for idx_action, action in enumerate(sequence):
                             act_string = str(idx_action) + ": " + action
-                            for parameter in self.pddl_if._actions[action]["params"]:
+                            for parameter in self.pddl_if_main._actions[action][
+                                "params"
+                            ]:
                                 act_string += (
                                     " " + parameter_samples[idx_action][parameter[0]]
                                 )
@@ -122,7 +126,7 @@ class Explorer:
             break
 
     def _execute_plan(self, plan):
-        es = SequentialExecution(self.skill_set, plan)
+        es = SequentialExecution(self.skill_set, plan, self.knowledge_lookups)
         es.setup()
         while True:
             success, plan_finished = es.step()
@@ -187,7 +191,7 @@ class Explorer:
         for idx_action, action in enumerate(sequence):
             parameter_samples[idx_action] = dict()
             parameters_current_action = list()
-            for parameter in self.pddl_if._actions[action]["params"]:
+            for parameter in self.pddl_if_main._actions[action]["params"]:
                 obj_type = parameter[1]
                 obj_name = parameter[0]
                 obj_sample = np.random.choice(objects_of_interest[obj_type])
@@ -214,7 +218,7 @@ class Explorer:
         facts = deepcopy(preconds)
         sequence_invalid = False
         for action_idx, action_id in enumerate(sequence):
-            action_descr = self.pddl_if._actions[action_id]
+            action_descr = self.pddl_if_main._actions[action_id]
 
             # Check if any fact contradicts the pre-conditions of this action
             for fact in facts:
@@ -254,7 +258,7 @@ class Explorer:
     def _determine_sequence_preconds(self, sequence, parameters):
         seq_preconds = list()
         for action_idx, action_id in reversed(list(enumerate(sequence))):
-            action_descr = self.pddl_if._actions[action_id]
+            action_descr = self.pddl_if_main._actions[action_id]
 
             # Remove all effects of this action from the precond list
             preconds_to_remove = list()

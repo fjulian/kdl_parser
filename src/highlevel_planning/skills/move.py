@@ -111,7 +111,7 @@ class SkillMove:
 # def get_move_description():
 #     action_name = "place"
 #     action_params = [
-#         ["obj", "object"],
+#         ["obj", "item"],
 #         ["pos", "position"],
 #         ["rob", "robot"]
 #     ]

@@ -113,6 +113,9 @@ class SkillNavigate:
         return self.move_to_pos(target_pos, nav_angle, nav_min_dist)
 
     def move_to_pos(self, target_pos, nav_angle=None, nav_min_dist=None):
+        assert len(target_pos) == 3
+        assert type(target_pos) is np.ndarray
+
         # Get robot position
         temp = p.getBasePositionAndOrientation(self.robot_uid_)
         robot_pos = np.array(temp[0])
@@ -145,24 +148,16 @@ class SkillNavigate:
 
 def get_nav_description():
     action_name = "nav"
-    action_params = [["obj", "object"], ["rob", "robot"]]
-    action_preconditions = []
-    action_effects = [("in-reach", True, ["obj", "rob"])]
-    return (
-        action_name,
-        {
-            "params": action_params,
-            "preconds": action_preconditions,
-            "effects": action_effects,
-        },
-    )
-
-
-def get_nav_pos_description():
-    action_name = "nav"
-    action_params = [["pos", "position"], ["rob", "robot"]]
-    action_preconditions = []
-    action_effects = [("in-reach-pos", True, ["pos", "rob"])]
+    action_params = [
+        ["current_pos", "navgoal"],
+        ["goal_pos", "navgoal"],
+        ["rob", "robot"],
+    ]
+    action_preconditions = [("in-reach", True, ["current_pos", "rob"])]
+    action_effects = [
+        ("in-reach", True, ["goal_pos", "rob"]),
+        ("in-reach", False, ["current_pos", "rob"]),
+    ]
     return (
         action_name,
         {
