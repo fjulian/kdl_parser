@@ -1,13 +1,17 @@
 import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from highlevel_planning.tools.util import homogenous_trafo, invert_hom_trafo
 import py_trees.common
 import multiprocessing
 import time
 import atexit
 
-from highlevel_planning.tools.util import IKError
+from highlevel_planning.tools.util import (
+    homogenous_trafo,
+    invert_hom_trafo,
+    SkillExecutionError,
+    IKError,
+)
 
 
 class ActionPlacing(py_trees.behaviour.Behaviour):
@@ -169,7 +173,7 @@ class SkillPlacing:
         except IKError:
             if lock is not None:
                 lock.release()
-            return False
+            raise SkillExecutionError
 
         if lock is not None:
             lock.release()
