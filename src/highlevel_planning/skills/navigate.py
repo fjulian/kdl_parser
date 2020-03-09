@@ -2,8 +2,13 @@ import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import py_trees
-
 import multiprocessing, atexit, time
+
+from highlevel_planning.tools.util import (
+    homogenous_trafo,
+    invert_hom_trafo,
+    pos_and_orient_from_hom_trafo,
+)
 
 
 class ActionNavigate(py_trees.behaviour.Behaviour):
@@ -79,8 +84,9 @@ def nav_process(pipe_connection, scene, robot_uid):
 
 
 class SkillNavigate:
-    def __init__(self, scene, robot_uid):
-        self.robot_uid_ = robot_uid
+    def __init__(self, scene, robot):
+        self.robot_ = robot
+        self.robot_uid_ = robot._model.uid
         self.scene_ = scene
 
     def _check_collisions(self):
@@ -116,9 +122,18 @@ class SkillNavigate:
         assert len(target_pos) == 3
         assert type(target_pos) is np.ndarray
 
+        self.robot_.to_start()
+
         # Get robot position
         temp = p.getBasePositionAndOrientation(self.robot_uid_)
         robot_pos = np.array(temp[0])
+        robot_orient = R.from_quat(temp[1])
+
+        # Get position and orientation of any object in the robot hand w.r.t the robot base
+        object_in_hand_uid = self._find_object_in_hand()
+        T_rob_obj = self._get_object_relative_pose(
+            object_in_hand_uid, robot_pos, robot_orient
+        )
 
         if nav_angle is None:
             alphas = np.arange(0.0, 2.0 * np.pi, 2.0 * np.pi / 10.0)
@@ -142,8 +157,73 @@ class SkillNavigate:
                 # Put robot into this position
                 self._move(robot_pos, robot_orient)
                 if not self._check_collisions():
+                    # Move object into robot's hand
+                    self._set_object_relative_pose(
+                        object_in_hand_uid, robot_pos, robot_orient, T_rob_obj
+                    )
+
                     return True
         return False
+
+    def _find_object_in_hand(self):
+        # Determine which object is in the robot's hand
+        object_in_hand_uid = None
+        for _, obj in self.scene_.objects.items():
+            temp = p.getClosestPoints(
+                self.robot_uid_,
+                obj.model.uid,
+                distance=0.01,
+                linkIndexA=self.robot_.link_name_to_index["panda_leftfinger"],
+            )
+            if len(temp) > 0:
+                if object_in_hand_uid is not None:
+                    raise RuntimeError(
+                        "Don't know how to deal with more than one object in robot's hand"
+                    )
+                object_in_hand_uid = obj.model.uid
+        return object_in_hand_uid
+
+    def _get_object_relative_pose(self, object_in_hand_uid, robot_pos, robot_orient):
+        T_rob_obj = None
+        if object_in_hand_uid is not None:
+            # Get object position
+            temp = p.getBasePositionAndOrientation(object_in_hand_uid)
+            held_object_pos = np.array(temp[0])
+            held_object_orient = R.from_quat(temp[1])
+
+            # Compute object pose relative to robot
+            r_O_O_obj = held_object_pos
+            C_O_obj = held_object_orient
+            T_O_obj = homogenous_trafo(r_O_O_obj, C_O_obj)
+            r_O_O_rob = robot_pos
+            C_O_rob = robot_orient
+            T_O_rob = homogenous_trafo(r_O_O_rob, C_O_rob)
+
+            T_rob_obj = np.matmul(invert_hom_trafo(T_O_rob), T_O_obj)
+
+            # Check result
+            T_test = np.matmul(T_O_rob, T_rob_obj)
+            assert np.all(T_test - T_O_obj < 1e-12)
+
+        return T_rob_obj
+
+    def _set_object_relative_pose(
+        self, object_in_hand_uid, robot_pos, robot_orient, T_rob_obj
+    ):
+        if object_in_hand_uid is not None:
+            r_O_O_rob = robot_pos
+            C_O_rob = R.from_quat(robot_orient)
+            T_O_rob = homogenous_trafo(r_O_O_rob, C_O_rob)
+
+            T_O_obj = np.matmul(T_O_rob, T_rob_obj)
+            (held_object_pos, held_object_orient,) = pos_and_orient_from_hom_trafo(
+                T_O_obj
+            )
+            p.resetBasePositionAndOrientation(
+                object_in_hand_uid,
+                held_object_pos.tolist(),
+                held_object_orient.tolist(),
+            )
 
 
 def get_nav_description():
