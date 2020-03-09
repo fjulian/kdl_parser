@@ -39,7 +39,10 @@ class SequentialExecution(ExecutionSystem):
                     else:
                         self.skill_set_["nav"].move_to_object(target_name)
                 elif action_name == "place":
-                    target_pos = plan_item_list[2]
+                    target_pos_name = plan_item_list[3]
+                    target_pos = self.knowledge_lookups_["position"].get(
+                        target_pos_name
+                    )
                     self.skill_set_["place"].place_object(target_pos)
                 else:
                     raise (

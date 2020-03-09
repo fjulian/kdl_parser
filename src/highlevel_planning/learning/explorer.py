@@ -17,12 +17,22 @@ max_failed_samples = 50
 
 
 class Explorer:
-    def __init__(self, pddl_if, planning_problem, skill_set, knowledge_lookups):
+    def __init__(
+        self,
+        pddl_if,
+        planning_problem,
+        skill_set,
+        knowledge_lookups,
+        robot_uid,
+        scene_objects,
+    ):
         self.pddl_if_main = pddl_if
         self.action_list = [act for act in pddl_if._actions]
         self.planning_problem = planning_problem
         self.skill_set = skill_set
         self.knowledge_lookups = knowledge_lookups
+        self.robot_uid_ = robot_uid
+        self.scene_objects = scene_objects
 
     def exploration(self):
         # Some useful variables
@@ -107,13 +117,15 @@ class Explorer:
                                     " " + parameter_samples[idx_action][parameter[0]]
                                 )
                             sequence_plan.append(act_string)
+
+                        print("Sequence: ")
+                        for act in sequence_plan:
+                            print(act)
                         success = self._execute_plan(sequence_plan)
                         if not success:
                             continue
 
-                        print("Successful plan execution: ")
-                        for act in sequence_plan:
-                            print(act)
+                        print("Success")
 
                         # Check if the goal was reached
                         # TODO do this check
@@ -147,7 +159,10 @@ class Explorer:
                 break
 
             seq = self._sample_sequence(sequence_length)
-            params, params_tuple = self._sample_parameters(seq)
+            try:
+                params, params_tuple = self._sample_parameters(seq)
+            except NameError as e:
+                continue
             if (tuple(seq), tuple(params_tuple),) in sequences_tried:
                 continue
             sequences_tried.add((tuple(seq), tuple(params_tuple)))
@@ -188,13 +203,36 @@ class Explorer:
             else:
                 objects_of_interest[obj[1]] = [obj[0]]
 
+        types_by_parent = self.pddl_if_main.get_types_by_parent_type()
+
         for idx_action, action in enumerate(sequence):
             parameter_samples[idx_action] = dict()
             parameters_current_action = list()
             for parameter in self.pddl_if_main._actions[action]["params"]:
                 obj_type = parameter[1]
                 obj_name = parameter[0]
-                obj_sample = np.random.choice(objects_of_interest[obj_type])
+
+                if obj_type in types_by_parent:
+                    objects_to_sample_from = [
+                        objects_of_interest[sub_type]
+                        for sub_type in types_by_parent[obj_type]
+                    ]
+                    try:
+                        objects_to_sample_from.append(objects_of_interest[obj_type])
+                    except KeyError:
+                        pass
+                    objects_to_sample_from = [
+                        item for sublist in objects_to_sample_from for item in sublist
+                    ]
+                else:
+                    objects_to_sample_from = objects_of_interest[obj_type]
+
+                if len(objects_to_sample_from) == 0:
+                    # No object of the desired type exists, sample new sequence
+                    raise NameError(
+                        "No object of desired type among objects of interest"
+                    )
+                obj_sample = np.random.choice(objects_to_sample_from)
                 parameter_samples[idx_action][obj_name] = obj_sample
 
                 parameters_current_action.append(obj_sample)

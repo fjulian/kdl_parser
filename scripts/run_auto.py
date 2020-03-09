@@ -128,7 +128,14 @@ def main():
     skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
 
     # Set up exploration
-    xplorer = Explorer(pddl_if, planning_problem, skill_set, knowledge_lookups)
+    xplorer = Explorer(
+        pddl_if,
+        planning_problem,
+        skill_set,
+        knowledge_lookups,
+        robot._model.uid,
+        scene.objects,
+    )
 
     if plan is False:
         xplorer.exploration()
