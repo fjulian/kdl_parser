@@ -3,5 +3,5 @@ venv
 *.pyc
 *.pkl
 *.bullet
-knowledge/chimera/domain
-knowledge/chimera/problem
+knowledge/chimera
+*.egg-info

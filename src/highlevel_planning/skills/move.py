@@ -1,13 +1,13 @@
 import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from tools.util import homogenous_trafo, invert_hom_trafo
+from highlevel_planning.tools.util import homogenous_trafo, invert_hom_trafo
 import py_trees.common
 import multiprocessing
 import time
 import atexit
 
-from tools.util import IKError
+from highlevel_planning.tools.util import IKError
 
 
 # class ActionPlacing(py_trees.behaviour.Behaviour):
@@ -55,7 +55,7 @@ from tools.util import IKError
 #         atexit.register(self.placing.terminate)
 #         self.placing.start()
 #         print("Placing process initiated")
-    
+
 #     def get_pipe(self):
 #         return self.parent_connection
 
@@ -103,7 +103,7 @@ class SkillMove:
             time.sleep(0.5)
 
             # Dummy code for now
-            travelled_distance += desired_distance/5.0
+            travelled_distance += desired_distance / 5.0
 
         return True
 
@@ -111,9 +111,9 @@ class SkillMove:
 # def get_move_description():
 #     action_name = "place"
 #     action_params = [
-#         ["obj", "object"],
+#         ["obj", "item"],
 #         ["pos", "position"],
-#         ["rob", "chimera"]
+#         ["rob", "robot"]
 #     ]
 #     action_preconditions = [
 #         ("in-reach-pos", False, ["pos", "rob"]),

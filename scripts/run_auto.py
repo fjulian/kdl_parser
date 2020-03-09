@@ -1,34 +1,38 @@
 import argparse
 import pickle
 import time
-
 from multiprocessing import Lock
+import numpy as np
 
 # Simulation
-from sim.world import World
-from sim.robot_arm import RobotArm
-from sim.scene_planning_1 import ScenePlanning1
+from highlevel_planning.sim.world import World
+from highlevel_planning.sim.robot_arm import RobotArm
+from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
 
 # Skills
-from skills.navigate import ProcessNavigate, SkillNavigate
-from skills.grasping import ProcessGrasping, SkillGrasping
-from skills.placing import ProcessPlacing, SkillPlacing
-from execution.es_behavior_tree import AutoBehaviourTree
-from execution.es_sequential_execution import SequentialExecution
-from skills import pddl_descriptions
-from knowledge.predicates import Predicates
-from knowledge.problem import PlanningProblem
+from highlevel_planning.skills.navigate import ProcessNavigate, SkillNavigate
+from highlevel_planning.skills.grasping import ProcessGrasping, SkillGrasping
+from highlevel_planning.skills.placing import ProcessPlacing, SkillPlacing
+from highlevel_planning.execution.es_behavior_tree import AutoBehaviourTree
+from highlevel_planning.execution.es_sequential_execution import SequentialExecution
+from highlevel_planning.skills import pddl_descriptions
+from highlevel_planning.knowledge.predicates import Predicates
+from highlevel_planning.knowledge.problem import PlanningProblem
+from highlevel_planning.knowledge.lookup_tables import LookupTable
 
-# Interface to BT
-import py_trees
+# Learning
+from highlevel_planning.learning.explorer import Explorer
 
 # Interface to planner and PDDL
-from pddl_interface import pddl_file_if, planner_interface
+from highlevel_planning.pddl_interface import pddl_file_if, planner_interface
 
 # ----------------------------------------------------------------------
 
 
 def main():
+    # Seed RNGs
+    np.random.seed(0)
+
     # Command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -51,21 +55,35 @@ def main():
 
     # Set up planner interface and domain representation
     pddl_if = pddl_file_if.PDDLFileInterface(
-        domain_dir="knowledge/chimera/domain",
-        problem_dir="knowledge/chimera/problem",
+        domain_dir="knowledge/chimera/main/domain",
+        problem_dir="knowledge/chimera/main/problem",
         domain_name="chimera-domain",
     )
-    temp = pddl_descriptions.get_action_description("grasp")
-    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
-    temp = pddl_descriptions.get_action_description("nav")
-    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
-    temp = pddl_descriptions.get_action_description("place")
-    pddl_if.add_action(action_name=temp[0], action_definition=temp[1], overwrite=False)
+
+    # Add skill descriptions
+    skill_descriptions = pddl_descriptions.get_action_descriptions()
+    for skill_name in skill_descriptions:
+        pddl_if.add_action(
+            action_name=skill_name,
+            action_definition=skill_descriptions[skill_name],
+            overwrite=True,
+        )
+
+    # Add required types
+    pddl_if.add_type("robot")
+    pddl_if.add_type("navgoal")  # Anything we can navigate to
+    pddl_if.add_type("position", "navgoal")  # Pure positions
+    pddl_if.add_type("item", "navgoal")  # Anything we can grasp
+
+    # Set up knowledge data structure
+    knowledge_lookups = dict()
+    knowledge_lookups["position"] = LookupTable("position")
+    knowledge_lookups["position"].add("origin", np.array([0.0, 0.0, 0.0]))
 
     # -----------------------------------
 
     # Create world
-    world = World(gui_=True, sleep_=True, load_objects=not restore_existing_objects)
+    world = World(gui_=True, sleep_=False, load_objects=not restore_existing_objects)
     scene = ScenePlanning1(world, restored_objects=objects)
 
     # Spawn robot
@@ -76,23 +94,24 @@ def main():
     robot.to_start()
     world.step_seconds(0.5)
 
+    knowledge_lookups["robot"] = LookupTable("robot")
+    knowledge_lookups["robot"].add("robot1", robot)
+
     # -----------------------------------
     # Set up predicates
 
-    preds = Predicates(scene, robot, robot_lock)
+    preds = Predicates(scene, robot, knowledge_lookups, robot_lock)
 
     for descr in preds.descriptions.items():
         pddl_if.add_predicate(
-            predicate_name=descr[0], predicate_definition=descr[1], overwrite=False
+            predicate_name=descr[0], predicate_definition=descr[1], overwrite=True
         )
 
     planning_problem = PlanningProblem()
-    planning_problem.populate_objects(scene)
-    planning_problem.check_predicates(preds, robot)
+    planning_problem.populate_objects(scene, knowledge_lookups)
+    planning_problem.check_predicates(preds)
 
-    pddl_if.add_objects(planning_problem.objects)
-    pddl_if.add_inital_predicates(planning_problem.initial_predicates)
-    pddl_if.add_goal(planning_problem.goals)
+    pddl_if.add_planning_problem(planning_problem)
 
     pddl_if.save_domain()
     pddl_if.write_domain_pddl()
@@ -102,8 +121,25 @@ def main():
         pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
     )
 
+    # Set up skills
+    sk_grasp = SkillGrasping(scene, robot)
+    sk_place = SkillPlacing(scene, robot)
+    sk_nav = SkillNavigate(scene, robot)
+    skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
+
+    # Set up exploration
+    xplorer = Explorer(
+        pddl_if,
+        planning_problem,
+        skill_set,
+        knowledge_lookups,
+        robot._model.uid,
+        scene.objects,
+    )
+
     if plan is False:
-        raise RuntimeError("Planning failed.")
+        xplorer.exploration(preds)
+        return
     else:
         if len(plan) == 0:
             print("Nothing to do.")
@@ -131,25 +167,19 @@ def main():
         es = AutoBehaviourTree(
             robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes
         )
-        # py_trees.display.render_dot_tree(es.tree.root)
     else:
-        # Set up skills
-        sk_grasp = SkillGrasping(scene, robot)
-        sk_place = SkillPlacing(scene, robot)
-        sk_nav = SkillNavigate(scene, robot._model.uid)
-        skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
-
-        es = SequentialExecution(skill_set, plan)
+        es = SequentialExecution(skill_set, plan, knowledge_lookups)
     es.setup()
 
     # -----------------------------------
 
+    # Run
     try:
         index = 1
         while True:
             print("------------- Iteration {} ---------------".format(index))
             es.print_status()
-            plan_finished = es.step()
+            success, plan_finished = es.step()
             index += 1
             if es.ticking:
                 time.sleep(0.5)

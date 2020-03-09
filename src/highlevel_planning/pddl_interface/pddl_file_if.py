@@ -1,6 +1,6 @@
 from datetime import datetime
 import json
-from os import path
+from os import path, mkdir
 import pickle
 
 
@@ -8,19 +8,22 @@ class PDDLFileInterface:
     def __init__(
         self, domain_dir, problem_dir=None, initial_domain_pddl=None, domain_name=""
     ):
-
-        # TODO check if domain and problem dirs exist. If not, create them.
-
+        # Some folder book keeping
         self._domain_dir = domain_dir
         if problem_dir is None:
             self._problem_dir = domain_dir
         else:
             self._problem_dir = problem_dir
+        if not path.isdir(self._domain_dir):
+            mkdir(self._domain_dir)
+        if not path.isdir(self._problem_dir):
+            mkdir(self._problem_dir)
 
         # Domain definition
         self._domain_name = domain_name
         self._predicates = {}
         self._actions = {}
+        self._types = list()
 
         # Problem definition
         self._objects = []
@@ -64,14 +67,31 @@ class PDDLFileInterface:
     # ----- Loading and saving PDDL files --------------------------------------
 
     def write_domain_pddl(self):
-        types = self.extract_types()
+        all_types_present = self.check_types()
+        if not all_types_present:
+            raise ValueError("Not all types were defined properly")
+
+        types_by_parent = self.get_types_by_parent_type()
 
         pddl_str = ""
         pddl_str += "(define (domain " + self._domain_name + ")\n"
         pddl_str += "\t(:requirements " + self._requirements + ")\n\n"
-        types_str = " "
-        types_str = types_str.join(types)
-        pddl_str += "\t(:types " + types_str + ")\n\n"
+
+        pddl_str += "\t(:types\n"
+        if None in types_by_parent:
+            pddl_str += "\t\t"
+            for type_item in types_by_parent[None]:
+                pddl_str += type_item + " "
+            pddl_str += "- object\n"
+        for parent_type in types_by_parent:
+            if parent_type is None:
+                continue
+            pddl_str += "\t\t"
+            for type_item in types_by_parent[parent_type]:
+                pddl_str += type_item + " "
+            pddl_str += "- " + parent_type + "\n"
+        pddl_str += "\t)\n\n"
+
         pddl_str += "\t(:predicates\n"
         for pred in self._predicates:
             pddl_str += "\t\t(" + pred
@@ -117,7 +137,7 @@ class PDDLFileInterface:
         new_filename = path.join(self._domain_dir, self._time_now_str + "_domain.pddl")
         with open(new_filename, "w") as f:
             f.write(pddl_str)
-        print("Wrote new PDDL domain file: " + new_filename.split("/")[-1])
+        # print("Wrote new PDDL domain file: " + new_filename.split("/")[-1])
         self._domain_file_pddl = new_filename
 
     def read_domain_pddl(self):
@@ -290,7 +310,7 @@ class PDDLFileInterface:
         )
         with open(new_filename, "w") as f:
             f.write(pddl_str)
-        print("Wrote new PDDL problem file: " + new_filename.split("/")[-1])
+        # print("Wrote new PDDL problem file: " + new_filename.split("/")[-1])
         self._problem_file_pddl = new_filename
 
     # ----- Adding to the domain description ------------------------------------
@@ -317,6 +337,13 @@ class PDDLFileInterface:
             assert isinstance(predicate_name, str)
             self._predicates[predicate_name] = predicate_definition
 
+    def add_type(self, new_type, parent_type=None):
+        assert isinstance(new_type, str)
+        for type_name in self._types:
+            if type_name[0] == new_type:
+                raise ValueError("Type name already exists")
+        self._types.append((new_type, parent_type))
+
     # ----- Adding to the problem description ----------------------------------
 
     def add_objects(self, object_list):
@@ -337,19 +364,41 @@ class PDDLFileInterface:
         # Remove duplicates
         self._goals = list(dict.fromkeys(self._goals))
 
+    def add_planning_problem(self, planning_problem):
+        self.add_objects(planning_problem.objects)
+        self.add_inital_predicates(planning_problem.initial_predicates)
+        self.add_goal(planning_problem.goals)
+
+    def clear_planning_problem(self):
+        del self._objects[:]
+        del self._initial_predicates[:]
+        del self._goals[:]
+
     # ----- Helper functions ---------------------------------------------------
 
-    def extract_types(self):
-        types = []
+    def check_types(self):
+        # Makes sure that all type were defined
+        types = [item[0] for item in self._types]
         for pred in self._predicates:
             for item in self._predicates[pred]:
                 if item[1] not in types:
-                    types.append(item[1])
+                    print("The following type was not pre-defined: {}".format(item[1]))
+                    return False
         for act in self._actions:
             for item in self._actions[act]["params"]:
                 if item[1] not in types:
-                    types.append(item[1])
-        return types
+                    print("The following type was not pre-defined: {}".format(item[1]))
+                    return False
+        return True
+
+    # Sort types by parent type
+    def get_types_by_parent_type(self):
+        types_by_parent = dict()
+        for type_item in self._types:
+            if type_item[1] not in types_by_parent:
+                types_by_parent[type_item[1]] = list()
+            types_by_parent[type_item[1]].append(type_item[0])
+        return types_by_parent
 
 
 ### Assumed conventions:
@@ -357,3 +406,4 @@ class PDDLFileInterface:
 # For actions, all parameters are in the same line, starting below the :parameters keyword.
 # For preconditions and effects, one is defined per line, starting on the line after "(and".
 # After preconditions and effects, a blank line is expected.
+# Lines starting with ';' are comments.

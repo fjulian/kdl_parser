@@ -16,16 +16,25 @@
             "name": "Python: run_manually.py",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/src/run_manually.py",
+            "program": "${workspaceFolder}/scripts/run_manually.py",
             "console": "integratedTerminal"
         },
         {
             "name": "Python: run_auto.py",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/src/run_auto.py",
+            "program": "${workspaceFolder}/scripts/run_auto.py",
             "console": "integratedTerminal"
-            // "args": ["--reuse-objects"]
+        },
+        {
+            "name": "Python: run_auto.py (reuse objects)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/run_auto.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--reuse-objects"
+            ]
         }
     ]
 }

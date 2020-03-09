@@ -1,8 +1,9 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import os
-from tools.util import rotate_orient, ObjectInfo
-from sim.cupboard import Cupboard
+from highlevel_planning.tools.util import rotate_orient, ObjectInfo
+from highlevel_planning.sim.cupboard import Cupboard
+
 
 class SceneMoveSkill:
     def __init__(self, world, restored_objects=None):
@@ -42,7 +43,9 @@ class SceneMoveSkill:
             #                                 init_orient_=np.array([0.0, 0.0, 0.0, 1.0])
             #                                 )
 
-            cupboard = Cupboard(world, pos_=[0.0, 2.0, 0.0], orient_=[0.0, 0.0, 0.0, 1.0])
+            cupboard = Cupboard(
+                world, pos_=[0.0, 2.0, 0.0], orient_=[0.0, 0.0, 0.0, 1.0]
+            )
             self.objects["cupboard"] = cupboard.get_info()
 
             self.add_objects()
@@ -53,8 +56,10 @@ class SceneMoveSkill:
         print("---------------------------")
         for key, obj in self.objects.items():
             if self.objects[key].model is None:
-                self.objects[key].model = self._world.add_model(obj.urdf_path, obj.init_pos, obj.init_orient, scale=obj.scale)
-            print("Added object "+key+". ID: "+str(obj.model.uid))
+                self.objects[key].model = self._world.add_model(
+                    obj.urdf_path, obj.init_pos, obj.init_orient, scale=obj.scale
+                )
+            print("Added object " + key + ". ID: " + str(obj.model.uid))
         print("---------------------------")
 
     def reset(self):

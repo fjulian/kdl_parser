@@ -3,9 +3,11 @@ import py_trees
 
 import sys
 from os import path
-sys.path.append( path.join(path.dirname( path.dirname( path.abspath(__file__) ) ), 'src') )
 
-from execution.custom_chooser import CustomChooser
+sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), "src"))
+
+from highlevel_planning.execution.custom_chooser import CustomChooser
+
 
 class TestCustomChooser(unittest.TestCase):
     def setUp(self):
@@ -45,7 +47,7 @@ class TestCustomChooser(unittest.TestCase):
 
 
 def tick_four_times(tree):
-    for i in range(1,5):
+    for i in range(1, 5):
         print("\n--------- Tick {0} ---------\n".format(i))
         tree.tick_once()
         print("\n")
@@ -93,5 +95,5 @@ def create_tree(chooser, scenario):
     return root
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

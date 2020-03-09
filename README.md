@@ -2,13 +2,13 @@
 ## Todo
 
 - High priority
-  - [ ] Define predicates
   - [ ] Write code that generates problem definition based on observations from the simulation
   - [ ] Use python logger instead of print statements.
   - [ ] Try other IK library
 - Low priority
   - [ ] Write tests for robot arm control code.
-- Done
+- Done (new on top)
+  - [x] Define predicates
   - [x] Define scene for symbol learning (table, cup, box, cupboard with drawers, ...)
   - [x] Implement grasping skill
   - [x] Try closing the whole loop with a trivial example
@@ -46,10 +46,10 @@ sudo apt-get install ros-melodic-trac-ik ros-melodic-franka-description ros-melo
 In addition, the library `pykdl_utils` - included as submodule - needs to be installed. This can be done using the following commands:
 
 ```
-cd <repo-root>/src/tools/hrl-kdl/pykdl_utils
-python setup.py install --prefix <repo-root>/venv
-cd <repo-root>/src/tools/hrl-kdl/hrl_geom
-python setup.py install --prefix <repo-root>/venv
+cd <repo-root>/submodules/hrl-kdl/pykdl_utils
+python setup.py install --prefix <repo-root>/.venv
+cd <repo-root>/submodules/hrl-kdl/hrl_geom
+python setup.py install --prefix <repo-root>/.venv
 ```
 
 ### Robot Description
@@ -69,6 +69,10 @@ For the first option, no additional setup needs to be done after installing pybu
 For the second option, you need to clone and build bullet3 [according to the instructions](https://github.com/bulletphysics/bullet3). It boils down to simply executing the shell script `./build_cmake_pybullet_double.sh` which comes with the repo. Afterwards, the binary is located in the directory `bullet3/build_cmake/examples/ExampleBrowser`. When launching it for the first time, the correct mode "Physics Server" needs to be selected in the left pane. At subsequent launches, this mode will be automatically selected (it gets saved to the file `0_Bullet3Demo.txt`, located in the same folder as the binary).
 
 Depending on which option is selected, the initialization of the simulator interface needs to be adapted in the file `src/sim/world.py`.
+
+### Symbolic Planner
+
+TODO Write this!
 
 ## Documentation
 

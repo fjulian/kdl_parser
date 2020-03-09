@@ -1,11 +1,11 @@
 import py_trees
-from skills.grasping import ActionGrasping
-from skills.navigate import ActionNavigate
-from skills.placing import ActionPlacing
-from skills.pddl_descriptions import get_action_description
-from execution.condition_check import ConditionChecker_Predicate
-from execution.custom_chooser import CustomChooser
-from execution.es import ExecutionSystem
+from highlevel_planning.skills.grasping import ActionGrasping
+from highlevel_planning.skills.navigate import ActionNavigate
+from highlevel_planning.skills.placing import ActionPlacing
+from highlevel_planning.skills.pddl_descriptions import get_action_descriptions
+from highlevel_planning.execution.condition_check import ConditionChecker_Predicate
+from highlevel_planning.execution.custom_chooser import CustomChooser
+from highlevel_planning.execution.es import ExecutionSystem
 import copy
 
 
@@ -38,6 +38,8 @@ class AutoBehaviourTree(ExecutionSystem):
     def _create_tree_from_plan(self, plan, goals):
         N = len(plan)
 
+        action_descriptions = get_action_descriptions()
+
         # Compute all actions' preconditions and effects
         all_preconds = [None] * N
         all_effects = [None] * N
@@ -47,7 +49,7 @@ class AutoBehaviourTree(ExecutionSystem):
             plan_item = plan[k]
             plan_item_list = plan_item.split(" ")
             action_name = plan_item_list[1]
-            descr_action = get_action_description(action_name)
+            descr_action = action_descriptions[action_name]
             all_action_descriptions.append(descr_action)
             action_arg_dict = {}
             if len(plan_item_list) > 2:

@@ -3,7 +3,7 @@ import pybullet as p
 import numpy as np
 from math import pi as m_pi
 import math
-from tools.util import IKError, quat_from_mat
+from highlevel_planning.tools.util import IKError, quat_from_mat
 
 from trac_ik_python.trac_ik import IK
 
@@ -70,6 +70,10 @@ class RobotArm:
                 orientation=[0.0, 0.0, 0.0, 1.0],
             )
 
+        self.link_name_to_index = {
+            p.getBodyInfo(self._model.uid)[0]: -1,
+        }
+
         self.num_joints = p.getNumJoints(self._model.uid)
         for i in range(self.num_joints):
             info = p.getJointInfo(self._model.uid, i)
@@ -88,6 +92,9 @@ class RobotArm:
             elif "panda_finger_joint" in joint_name:
                 joint_num = int(joint_name.split("panda_finger_joint")[1])
                 self.joint_idx_fingers[joint_num - 1] = i
+
+            _name = info[12]
+            self.link_name_to_index[_name] = i
 
         p.enableJointForceTorqueSensor(
             self._model.uid, self.joint_idx_hand, enableSensor=1

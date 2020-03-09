@@ -1,15 +1,15 @@
-from sim.world import World
-from sim.robot_arm import RobotArm
+from highlevel_planning.sim.world import World
+from highlevel_planning.sim.robot_arm import RobotArm
 
-from sim.scene_tossing import SceneTossing
-from sim.scene_planning_1 import ScenePlanning1
-from sim.scene_move_skill import SceneMoveSkill
+from highlevel_planning.sim.scene_tossing import SceneTossing
+from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
+from highlevel_planning.sim.scene_move_skill import SceneMoveSkill
 
-from skills.navigate import SkillNavigate
-from skills.grasping import SkillGrasping
-from skills.placing import SkillPlacing
+from highlevel_planning.skills.navigate import SkillNavigate
+from highlevel_planning.skills.grasping import SkillGrasping
+from highlevel_planning.skills.placing import SkillPlacing
 
-from knowledge.predicates import Predicates
+from highlevel_planning.knowledge.predicates import Predicates
 
 import pybullet as p
 import numpy as np
@@ -86,6 +86,16 @@ def cube_example(sk_grasp, sk_nav, robot, scene, sk_place):
     sk_place.place_object(scene.objects["cube1"].init_pos + np.array([0.0, 0.2, 0.0]))
 
 
+def navigate_with_cube(sk_nav, sk_grasp):
+    # Run move skill
+    sk_nav.move_to_object("cube1")
+
+    # Grasp the cube
+    sk_grasp.grasp_object("cube1")
+
+    sk_nav.move_to_pos(np.array([0.0, 0.0, 0.0]), nav_min_dist=0.3)
+
+
 def drive_example(robot, world):
     robot.update_velocity([0.4, 0.0, 0.0], 0.17)
     world.step_seconds(10)
@@ -129,7 +139,7 @@ def main():
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot)
     sk_place = SkillPlacing(scene, robot)
-    sk_nav = SkillNavigate(scene, robot._model.uid)
+    sk_nav = SkillNavigate(scene, robot)
 
     robot.to_start()
     world.step_seconds(0.5)
@@ -142,11 +152,13 @@ def main():
 
     # drive_example(robot, world)
 
-    predicate_example(scene, robot)
+    # predicate_example(scene, robot)
+
+    navigate_with_cube(sk_nav, sk_grasp)
 
     # -----------------------------------
 
-    # world.step_seconds(50)
+    world.step_seconds(10)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,11 @@
 import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from tools.util import homogenous_trafo, invert_hom_trafo
+from highlevel_planning.tools.util import (
+    homogenous_trafo,
+    invert_hom_trafo,
+    SkillExecutionError,
+)
 import py_trees.common
 import multiprocessing
 import time
@@ -129,14 +133,10 @@ class SkillGrasping:
         target_id = obj_info.model.uid
 
         num_grasps = len(obj_info.grasp_pos)
-        assert (
-            grasp_id < num_grasps,
-            "Invalid grasp ID: "
-            + str(grasp_id)
-            + " (num_grasps: "
-            + str(num_grasps)
-            + ")",
-        )
+        if num_grasps == 0:
+            raise SkillExecutionError("No grasps defined for this object")
+        if grasp_id >= num_grasps:
+            raise SkillExecutionError("Invalid grasp ID")
 
         # Get the object pose
         if link_id is None:
@@ -231,7 +231,7 @@ class SkillGrasping:
 
 def get_grasping_description():
     action_name = "grasp"
-    action_params = [["obj", "object"], ["rob", "chimera"]]
+    action_params = [["obj", "item"], ["rob", "robot"]]
     action_preconditions = [
         ("in-reach", True, ["obj", "rob"]),
         ("empty-hand", True, ["rob"]),
