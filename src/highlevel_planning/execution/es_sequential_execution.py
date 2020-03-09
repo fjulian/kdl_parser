@@ -35,7 +35,7 @@ class SequentialExecution(ExecutionSystem):
                     target_name = plan_item_list[3]
                     if target_name in self.knowledge_lookups_["position"].data:
                         position = self.knowledge_lookups_["position"].get(target_name)
-                        self.skill_set_["nav"].move_to_pos(position)
+                        self.skill_set_["nav"].move_to_pos(position, nav_min_dist=0.3)
                     else:
                         self.skill_set_["nav"].move_to_object(target_name)
                 elif action_name == "place":

@@ -56,12 +56,17 @@ class Explorer:
         pddl_if._predicates = self.pddl_if_main._predicates
         pddl_if._types = self.pddl_if_main._types
 
+        count_seq_found = [0] * 4
+        count_preplan_plan_success = [0] * 4
+        count_preplan_run_success = [0] * 4
+        count_seq_run_success = [0] * 4
+        count_goal_reached = [0] * 4
+
         # Sample action sequences until a successful one was found
         while True:
             # Iterate through action sequence lengths
             for seq_len in range(1, 5):
                 print("----- Sequence length: {} ----------".format(seq_len))
-                count_plan_successful = 0
                 sequences_tried = set()
                 for _ in range(max_samples_per_seq_len):
                     # Sample sequences until an abstractly feasible one was found
@@ -77,6 +82,8 @@ class Explorer:
                             "Sampling failed. Abort searching in this sequence length."
                         )
                         break
+
+                    count_seq_found[seq_len - 1] += 1
 
                     # Found a feasible action sequence. Now test it.
                     # print("------------------------------------------")
@@ -98,13 +105,21 @@ class Explorer:
                     )
 
                     if plan is not False:
-                        count_plan_successful += 1
+                        count_preplan_plan_success[seq_len - 1] += 1
+
+                        print("============")
+                        print("Preplan:")
+                        print(plan)
 
                         # Restore initial state
                         p.restoreState(stateId=current_state_id)
 
                         # Execute plan to get to start of sequence
-                        self._execute_plan(plan)
+                        success = self._execute_plan(plan)
+                        if not success:
+                            continue
+                        print("Preplan SUCCESS")
+                        count_preplan_run_success[seq_len - 1] += 1
 
                         # Execute sequence
                         sequence_plan = list()
@@ -118,6 +133,7 @@ class Explorer:
                                 )
                             sequence_plan.append(act_string)
 
+                        print("----------")
                         print("Sequence: ")
                         for act in sequence_plan:
                             print(act)
@@ -125,17 +141,29 @@ class Explorer:
                         if not success:
                             continue
 
-                        print("Success")
+                        print("Sequence SUCCESS")
+                        count_seq_run_success[seq_len - 1] += 1
 
                         # Check if the goal was reached
-                        # TODO do this check
+                        success = self.planning_problem.test_goals()
+                        if not success:
+                            continue
+                        print("GOAL REACHED!!!")
+                        count_goal_reached[seq_len - 1] += 1
 
-                print(
-                    "Successful plans for sequence length {}: {}".format(
-                        seq_len, count_plan_successful
-                    )
-                )
             break
+
+        print("===============================================================")
+        print("count_seq_found")
+        print(count_seq_found)
+        print("count_preplan_plan_success")
+        print(count_preplan_plan_success)
+        print("count_preplan_run_success")
+        print(count_preplan_run_success)
+        print("count_seq_run_success")
+        print(count_seq_run_success)
+        print("count_goal_reached")
+        print(count_goal_reached)
 
     def _execute_plan(self, plan):
         es = SequentialExecution(self.skill_set, plan, self.knowledge_lookups)
@@ -239,6 +267,31 @@ class Explorer:
             parameter_samples_tuples[idx_action] = tuple(parameters_current_action)
 
         return parameter_samples, parameter_samples_tuples
+
+    def _get_objects_of_interest(self):
+        # TODO finish and use this function
+        interest_locations = list()
+
+        # Get robot position
+        temp = p.getBasePositionAndOrientation(self.robot_uid_)
+        robot_pos = np.array(temp[0])
+        interest_locations.append(robot_pos)
+
+        # Get positions of objects that are in the goal description
+        for goal in self.planning_problem.goals:
+            for arg in goal[2]:
+                if arg in self.scene_objects:
+                    pos = p.getBasePositionAndOrientation(
+                        self.scene_objects[arg].model.uid
+                    )
+                    interest_locations.append(np.array(pos))
+                elif arg in self.knowledge_lookups["position"].data:
+                    interest_locations.append(
+                        self.knowledge_lookups["position"].get(arg)
+                    )
+
+        # Add scene objects that are close to interest locations
+        # TODO
 
     def _test_abstract_feasibility(self, sequence, parameters, preconds):
         """
