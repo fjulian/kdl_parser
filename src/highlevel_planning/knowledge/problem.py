@@ -40,3 +40,9 @@ class PlanningProblem:
             if predicates.call[goal[0]](*goal[2]):
                 pred_tuple = (goal[0],) + goal[2]
                 self.initial_predicates.append(pred_tuple)
+
+    def test_goals(self, predicates):
+        for goal in self.goals:
+            if not predicates.call[goal[0]](*goal[2]):
+                return False
+        return True

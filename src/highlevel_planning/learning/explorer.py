@@ -34,7 +34,7 @@ class Explorer:
         self.robot_uid_ = robot_uid
         self.scene_objects = scene_objects
 
-    def exploration(self):
+    def exploration(self, predicates):
         # Some useful variables
         # num_actions = len(self.pddl_if_main._actions)
 
@@ -145,7 +145,7 @@ class Explorer:
                         count_seq_run_success[seq_len - 1] += 1
 
                         # Check if the goal was reached
-                        success = self.planning_problem.test_goals()
+                        success = self.planning_problem.test_goals(predicates)
                         if not success:
                             continue
                         print("GOAL REACHED!!!")

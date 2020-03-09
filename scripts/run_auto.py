@@ -124,7 +124,7 @@ def main():
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot)
     sk_place = SkillPlacing(scene, robot)
-    sk_nav = SkillNavigate(scene, robot._model.uid)
+    sk_nav = SkillNavigate(scene, robot)
     skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
 
     # Set up exploration
@@ -138,7 +138,7 @@ def main():
     )
 
     if plan is False:
-        xplorer.exploration()
+        xplorer.exploration(preds)
         return
     else:
         if len(plan) == 0:
