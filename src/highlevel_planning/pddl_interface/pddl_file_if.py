@@ -71,28 +71,23 @@ class PDDLFileInterface:
         if not all_types_present:
             raise ValueError("Not all types were defined properly")
 
-        # Sort types by parent type
-        types = dict()
-        for type_item in self._types:
-            if type_item[1] not in types:
-                types[type_item[1]] = list()
-            types[type_item[1]].append(type_item[0])
+        types_by_parent = self.get_types_by_parent_type()
 
         pddl_str = ""
         pddl_str += "(define (domain " + self._domain_name + ")\n"
         pddl_str += "\t(:requirements " + self._requirements + ")\n\n"
 
         pddl_str += "\t(:types\n"
-        if None in types:
+        if None in types_by_parent:
             pddl_str += "\t\t"
-            for type_item in types[None]:
+            for type_item in types_by_parent[None]:
                 pddl_str += type_item + " "
             pddl_str += "- object\n"
-        for parent_type in types:
+        for parent_type in types_by_parent:
             if parent_type is None:
                 continue
             pddl_str += "\t\t"
-            for type_item in types[parent_type]:
+            for type_item in types_by_parent[parent_type]:
                 pddl_str += type_item + " "
             pddl_str += "- " + parent_type + "\n"
         pddl_str += "\t)\n\n"
@@ -395,6 +390,15 @@ class PDDLFileInterface:
                     print("The following type was not pre-defined: {}".format(item[1]))
                     return False
         return True
+
+    # Sort types by parent type
+    def get_types_by_parent_type(self):
+        types_by_parent = dict()
+        for type_item in self._types:
+            if type_item[1] not in types_by_parent:
+                types_by_parent[type_item[1]] = list()
+            types_by_parent[type_item[1]].append(type_item[0])
+        return types_by_parent
 
 
 ### Assumed conventions:
