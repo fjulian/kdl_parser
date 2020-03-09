@@ -83,6 +83,13 @@ class Explorer:
                         )
                         break
 
+                    # try:
+                    #     find_idx = sequence.index("place")
+                    #     if parameter_samples[find_idx]["obj"] == "cube1":
+                    #         print("hey")
+                    # except ValueError:
+                    #     pass
+
                     count_seq_found[seq_len - 1] += 1
 
                     # Found a feasible action sequence. Now test it.
@@ -189,7 +196,7 @@ class Explorer:
             seq = self._sample_sequence(sequence_length)
             try:
                 params, params_tuple = self._sample_parameters(seq)
-            except NameError as e:
+            except NameError:
                 continue
             if (tuple(seq), tuple(params_tuple),) in sequences_tried:
                 continue
