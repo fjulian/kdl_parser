@@ -31,9 +31,16 @@ def rotate_orient(orig, axis="z", deg=0.0):
 
 
 def homogenous_trafo(translation, rotation):
+    assert type(translation) is np.ndarray
+    assert len(translation) == 3
+    assert type(rotation) is R
     T = np.concatenate((rotation.as_dcm(), translation.reshape(-1, 1)), axis=1)
     T = np.concatenate((T, np.array([[0.0, 0.0, 0.0, 1.0]])), axis=0)
     return T
+
+
+def pos_and_orient_from_hom_trafo(hom_trafo):
+    return hom_trafo[:3, 3], R.from_dcm(hom_trafo[:3, :3]).as_quat()
 
 
 def invert_hom_trafo(hom_trafo):

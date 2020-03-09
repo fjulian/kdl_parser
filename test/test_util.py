@@ -3,13 +3,13 @@ import unittest
 import sys
 from os import path
 
-sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), "src"))
-
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from scipy.spatial.transform import Rotation as R
 
 from highlevel_planning.tools.fitting import *
+import highlevel_planning.tools.util as util
 
 
 class TestModelFitting(unittest.TestCase):
@@ -74,6 +74,20 @@ class TestModelFitting(unittest.TestCase):
         plt.show()
 
         self.assertTrue(True)
+
+
+class TestTransforms(unittest.TestCase):
+    def test_inverse_trafo(self):
+        pos = np.array([0.5, 0.2, 0.8])
+        orient = R.from_quat([0.001, 0.416, -0.139, -0.899])
+        T1 = util.homogenous_trafo(pos, orient)
+
+        T2_man = util.invert_hom_trafo(T1)
+
+        orient_inv = orient.inv()
+        T2_auto = util.homogenous_trafo(-orient_inv.apply(pos), orient_inv)
+
+        self.assertTrue(np.all(T2_man - T2_auto < 1e-12))
 
 
 if __name__ == "__main__":
