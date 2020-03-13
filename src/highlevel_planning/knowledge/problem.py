@@ -15,12 +15,17 @@ class PlanningProblem:
         self.goals = [("on", True, ("cupboard", "cube1"))]
         # self.goals = [("inside", True, ("container1", "cube1"))]
 
-    def populate_objects(self, scene, knowledge_lookups):
-        for obj in scene.objects:
-            self.objects.append((obj, "item"))
-        for cat in knowledge_lookups:
-            for item in knowledge_lookups[cat].data:
-                self.objects.append((item, cat))
+    def populate_objects(self, scene=None, knowledge_lookups=None):
+        if scene is not None:
+            for obj in scene.objects:
+                self.objects.append((obj, "item"))
+        if knowledge_lookups is not None:
+            for cat in knowledge_lookups:
+                for item in knowledge_lookups[cat].data:
+                    self.objects.append((item, cat))
+
+        # Remove duplicates
+        self.objects = list(dict.fromkeys(self.objects))
 
     def check_predicates(self, predicates):
         """

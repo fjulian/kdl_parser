@@ -13,6 +13,8 @@ from highlevel_planning.execution.es_sequential_execution import SequentialExecu
 max_samples_per_seq_len = 50
 max_failed_samples = 50
 
+bounding_box_inflation_length = 0.5
+
 # ------------------------------------------------------
 
 
@@ -101,6 +103,9 @@ class Explorer:
                     # Set up planning problem that takes us to state where all preconditions are met
                     problem_preplan = deepcopy(self.planning_problem)
                     problem_preplan.goals = sequence_preconds
+                    problem_preplan.populate_objects(
+                        knowledge_lookups=self.knowledge_lookups
+                    )
 
                     pddl_if.clear_planning_problem()
                     pddl_if.add_planning_problem(problem_preplan)
@@ -247,33 +252,59 @@ class Explorer:
                 obj_type = parameter[1]
                 obj_name = parameter[0]
 
-                if obj_type in types_by_parent:
-                    objects_to_sample_from = [
-                        objects_of_interest[sub_type]
-                        for sub_type in types_by_parent[obj_type]
-                    ]
-                    try:
-                        objects_to_sample_from.append(objects_of_interest[obj_type])
-                    except KeyError:
-                        pass
-                    objects_to_sample_from = [
-                        item for sublist in objects_to_sample_from for item in sublist
-                    ]
+                if obj_type == "position":
+                    position = self._sample_position()
+                    obj_sample = self.knowledge_lookups["position"].add(position)
                 else:
-                    objects_to_sample_from = objects_of_interest[obj_type]
+                    if obj_type in types_by_parent:
+                        objects_to_sample_from = [
+                            objects_of_interest[sub_type]
+                            for sub_type in types_by_parent[obj_type]
+                        ]
+                        try:
+                            objects_to_sample_from.append(objects_of_interest[obj_type])
+                        except KeyError:
+                            pass
+                        objects_to_sample_from = [
+                            item
+                            for sublist in objects_to_sample_from
+                            for item in sublist
+                        ]
+                    else:
+                        objects_to_sample_from = objects_of_interest[obj_type]
 
-                if len(objects_to_sample_from) == 0:
-                    # No object of the desired type exists, sample new sequence
-                    raise NameError(
-                        "No object of desired type among objects of interest"
-                    )
-                obj_sample = np.random.choice(objects_to_sample_from)
+                    if len(objects_to_sample_from) == 0:
+                        # No object of the desired type exists, sample new sequence
+                        raise NameError(
+                            "No object of desired type among objects of interest"
+                        )
+                    obj_sample = np.random.choice(objects_to_sample_from)
                 parameter_samples[idx_action][obj_name] = obj_sample
 
                 parameters_current_action.append(obj_sample)
             parameter_samples_tuples[idx_action] = tuple(parameters_current_action)
 
         return parameter_samples, parameter_samples_tuples
+
+    def _sample_position(self):
+        # Choose one goal object next to which to sample
+        objects_goal = self._get_items_goal(objects_only=True)
+        obj_sample = np.random.choice(objects_goal)
+        uid = self.scene_objects[obj_sample].model.uid
+
+        # Get AABB
+        bounding_box = p.getAABB(bodyUniqueId=uid)
+
+        # Inflate the bounding box
+        min_coords = np.array(bounding_box[0])
+        max_coords = np.array(bounding_box[1])
+        max_coords += bounding_box_inflation_length
+        min_coords -= bounding_box_inflation_length
+        min_coords[2] = np.max([min_coords[2], 0.0])
+
+        # Sample
+        sample = np.random.uniform(low=min_coords, high=max_coords)
+        return sample
 
     def _get_objects_of_interest(self):
         # TODO finish and use this function
@@ -298,7 +329,20 @@ class Explorer:
                     )
 
         # Add scene objects that are close to interest locations
-        # TODO
+
+    def _get_items_goal(self, objects_only=False):
+        """
+        Get objects that involved in the goal description
+        """
+        item_list = list()
+        for goal in self.planning_problem.goals:
+            for arg in goal[2]:
+                if objects_only:
+                    if arg in self.scene_objects:
+                        item_list.append(arg)
+                else:
+                    item_list.append(arg)
+        return item_list
 
     def _test_abstract_feasibility(self, sequence, parameters, preconds):
         """

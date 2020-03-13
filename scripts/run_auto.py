@@ -78,7 +78,7 @@ def main():
     # Set up knowledge data structure
     knowledge_lookups = dict()
     knowledge_lookups["position"] = LookupTable("position")
-    knowledge_lookups["position"].add("origin", np.array([0.0, 0.0, 0.0]))
+    knowledge_lookups["position"].add(np.array([0.0, 0.0, 0.0]), "origin")
 
     # -----------------------------------
 
@@ -95,7 +95,7 @@ def main():
     world.step_seconds(0.5)
 
     knowledge_lookups["robot"] = LookupTable("robot")
-    knowledge_lookups["robot"].add("robot1", robot)
+    knowledge_lookups["robot"].add(robot, "robot1")
 
     # -----------------------------------
     # Set up predicates
