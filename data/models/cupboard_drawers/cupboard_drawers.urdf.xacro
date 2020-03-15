@@ -2,7 +2,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="cupboard_drawers">
 
 <xacro:property name="wall_thickness" value="0.03"/>
-<xacro:property name="total_height" value="0.9"/>
+<xacro:property name="total_height" value="0.7"/>
 <xacro:property name="total_width" value="0.9"/>
 <xacro:property name="total_depth" value="0.6"/>
 <xacro:property name="num_drawers" value="4"/>
