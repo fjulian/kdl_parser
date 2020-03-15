@@ -110,6 +110,7 @@ class _Model:
             model_path,
             position,
             orientation,
+            flags=p.URDF_MERGE_FIXED_LINKS,
             globalScaling=scale,
             physicsClientId=self._physics_client,
         )

@@ -6,6 +6,7 @@ import pybullet as p
 from highlevel_planning.knowledge.problem import PlanningProblem
 from highlevel_planning.pddl_interface import pddl_file_if, planner_interface
 from highlevel_planning.execution.es_sequential_execution import SequentialExecution
+from highlevel_planning.tools.util import get_combined_aabb
 
 # Parameters
 # TODO: move them to config file
@@ -67,7 +68,7 @@ class Explorer:
         # Sample action sequences until a successful one was found
         while True:
             # Iterate through action sequence lengths
-            for seq_len in range(1, 5):
+            for seq_len in range(1, 4):
                 print("----- Sequence length: {} ----------".format(seq_len))
                 sequences_tried = set()
                 for _ in range(max_samples_per_seq_len):
@@ -293,11 +294,11 @@ class Explorer:
         uid = self.scene_objects[obj_sample].model.uid
 
         # Get AABB
-        bounding_box = p.getAABB(bodyUniqueId=uid)
+        bounding_box = get_combined_aabb(uid)
 
         # Inflate the bounding box
-        min_coords = np.array(bounding_box[0])
-        max_coords = np.array(bounding_box[1])
+        min_coords = bounding_box[0]
+        max_coords = bounding_box[1]
         max_coords += bounding_box_inflation_length
         min_coords -= bounding_box_inflation_length
         min_coords[2] = np.max([min_coords[2], 0.0])

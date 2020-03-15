@@ -1,4 +1,5 @@
 from highlevel_planning.skills.grasping import SkillGrasping
+from highlevel_planning.tools.util import get_combined_aabb
 import pybullet as p
 import numpy as np
 
@@ -119,7 +120,7 @@ class Predicates:
         """
         container_uid = self._scene.objects[container_object].model.uid
         contained_uid = self._scene.objects[contained_object].model.uid
-        aabb_container = p.getAABB(container_uid)
+        aabb_container = get_combined_aabb(container_uid)
         pos_contained, _ = p.getBasePositionAndOrientation(contained_uid)
         pos_contained = np.array(pos_contained)
 
@@ -140,15 +141,15 @@ class Predicates:
         """
         supporting_uid = self._scene.objects[supporting_object].model.uid
         supported_uid = self._scene.objects[supported_object].model.uid
-        aabb_supporting = p.getAABB(supporting_uid)
+        aabb_supporting = get_combined_aabb(supporting_uid)
 
         pos_supported, _ = p.getBasePositionAndOrientation(supported_uid)
         pos_supported = np.array(pos_supported)
-        aabb_supported = p.getAABB(supported_uid)
+        aabb_supported = get_combined_aabb(supported_uid)
 
-        lower_supporting = np.array(aabb_supporting[0])
-        upper_supporting = np.array(aabb_supporting[1])
-        lower_supported = np.array(aabb_supported[0])
+        lower_supporting = aabb_supporting[0]
+        upper_supporting = aabb_supporting[1]
+        lower_supported = aabb_supported[0]
 
         # Check if supported object is above supporting one (z-coordinate)
         above_tol = 0.05  # TODO move this to parameter file
