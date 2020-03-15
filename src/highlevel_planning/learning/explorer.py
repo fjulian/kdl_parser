@@ -150,6 +150,14 @@ class Explorer:
                         print("Sequence: ")
                         for act in sequence_plan:
                             print(act)
+
+                        # Useful for debugging:
+                        # if (
+                        #     sequence[0] == "place"
+                        #     and parameter_samples[0]["obj"] == "cube1"
+                        # ):
+                        #     print("hey")
+
                         success = self._execute_plan(sequence_plan)
                         if not success:
                             continue
