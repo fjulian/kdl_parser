@@ -36,6 +36,32 @@ def determine_sequence_preconds(pddl_if, sequence, parameters):
     return seq_preconds
 
 
+def determine_sequence_effects(pddl_if, sequence, parameters):
+    seq_effects = list()
+    for action_idx, action_id in sequence:
+        action_descr = pddl_if._actions[action_id]
+
+        # Remove colliding effects from the effect list
+        effects_to_remove = list()
+        for effect in action_descr["effects"]:
+            parametrized_effect = parametrize_predicate(effect, parameters[action_idx])
+            for seq_effect in seq_effects:
+                if (
+                    seq_effect[0] == parametrized_effect[0]
+                    and seq_effect[2] == parametrized_effect[2]
+                ):
+                    effects_to_remove.append(seq_effect)
+        for seq_effect in seq_effects:
+            seq_effects.remove(seq_effect)
+
+        # Add all effects of this action to the effect list
+        for effect in action_descr["effects"]:
+            parametrized_effect = parametrize_predicate(effect, parameters[action_idx])
+            if parametrized_effect not in seq_effects:
+                seq_effects.append(parametrized_effect)
+    return seq_effects
+
+
 def test_abstract_feasibility(pddl_if, sequence, parameters, preconds):
     """
         Takes an action sequence and suitable parameters as inputs and checks
