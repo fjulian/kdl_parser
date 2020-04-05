@@ -63,6 +63,7 @@ class TestInterface(unittest.TestCase):
         self.assertEqual(self.fif._domain_name, fif2._domain_name)
         self.assertEqual(self.fif._predicates, fif2._predicates)
         self.assertEqual(self.fif._actions, fif2._actions)
+        self.assertEqual(self.fif._types, fif2._types)
 
         remove(self.fif._domain_file_pddl)
         remove(self.fif._domain_file)

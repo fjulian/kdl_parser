@@ -54,12 +54,13 @@ class PDDLFileInterface:
             self._domain_name = load_obj[0]
             self._predicates = load_obj[1]
             self._actions = load_obj[2]
+            self._types = load_obj[3]
             print("Trying to load domain file... DONE")
         else:
             print("Trying to load domain file... NOT FOUND --> starting from scratch")
 
     def save_domain(self):
-        save_obj = (self._domain_name, self._predicates, self._actions)
+        save_obj = (self._domain_name, self._predicates, self._actions, self._types)
         with open(self._domain_file, "wb") as f:
             pickle.dump(save_obj, f)
         print("Saved domain file")
@@ -154,6 +155,17 @@ class PDDLFileInterface:
             if curr.find("(define") > -1:
                 splitted = curr.split(" ")
                 self._domain_name = splitted[-1][:-1]
+            elif curr.find("(:types") > -1:
+                while True:
+                    sub_curr = dom.pop(0)
+                    sub_curr = sub_curr.strip()
+                    if sub_curr == ")":
+                        break
+                    line_split = sub_curr.split("-")
+                    child_types = line_split[0].strip().split(" ")
+                    parent_type = line_split[1].strip()
+                    for child_type in child_types:
+                        self.add_type(child_type, parent_type)
             elif curr.find("(:predicates") > -1:
                 while True:
                     sub_curr = dom.pop(0)
@@ -340,8 +352,10 @@ class PDDLFileInterface:
     def add_type(self, new_type, parent_type=None):
         assert isinstance(new_type, str)
         for type_name in self._types:
-            if type_name[0] == new_type:
-                raise ValueError("Type name already exists")
+            if type_name[0] == new_type and not type_name[1] == parent_type:
+                raise ValueError(
+                    "Type name already exists but with different parent type."
+                )
         self._types.append((new_type, parent_type))
 
     # ----- Adding to the problem description ----------------------------------

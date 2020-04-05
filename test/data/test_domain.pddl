@@ -1,7 +1,9 @@
 (define (domain rover-domain)
 	(:requirements :strips :typing)
 
-	(:types sample objective waypoint rover)
+	(:types
+		sample objective waypoint rover - object
+	)
 
 	(:predicates
 		(stored-sample ?sample - sample)

@@ -71,7 +71,7 @@ class TestModelFitting(unittest.TestCase):
         )
         ax.legend()
 
-        plt.show()
+        # plt.show()
 
         self.assertTrue(True)
 
