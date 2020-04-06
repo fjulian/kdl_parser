@@ -96,6 +96,20 @@ def navigate_with_cube(sk_nav, sk_grasp):
     sk_nav.move_to_pos(np.array([0.0, 0.0, 0.0]), nav_min_dist=0.3)
 
 
+def navigation_example(sk_nav, world):
+    sk_nav.move_to_object("cube1")
+    world.step_seconds(1.5)
+    sk_nav.move_to_object("lid1")
+    world.step_seconds(1.5)
+    sk_nav.move_to_object("cupboard")
+    world.step_seconds(1.5)
+    sk_nav.move_to_object("container2")
+    world.step_seconds(1.5)
+    sk_nav.move_to_object("cube1")
+    world.step_seconds(1.5)
+    sk_nav.move_to_object("table")
+
+
 def drive_example(robot, world):
     robot.update_velocity([0.4, 0.0, 0.0], 0.17)
     world.step_seconds(10)
@@ -148,13 +162,15 @@ def main():
 
     # drawer_example(sk_grasp, sk_nav, robot, scene, world)
 
-    cube_example(sk_grasp, sk_nav, robot, scene, sk_place)
+    # cube_example(sk_grasp, sk_nav, robot, scene, sk_place)
 
     # drive_example(robot, world)
 
     # predicate_example(scene, robot)
 
     # navigate_with_cube(sk_nav, sk_grasp)
+
+    navigation_example(sk_nav, world)
 
     # -----------------------------------
 
