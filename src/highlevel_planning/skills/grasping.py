@@ -245,4 +245,3 @@ def get_grasping_description():
             "effects": action_effects,
         },
     )
-

@@ -23,10 +23,10 @@ class PDDLFileInterface:
         self._domain_name = domain_name
         self._predicates = {}
         self._actions = {}
-        self._types = list()
+        self._types = dict()
 
         # Problem definition
-        self._objects = []
+        self._objects = dict()
         self._initial_predicates = []
         self._goals = []
 
@@ -285,7 +285,8 @@ class PDDLFileInterface:
 
         pddl_str += "\t(:objects\n"
         for obj in self._objects:
-            pddl_str += "\t\t" + obj[0] + " - " + obj[1] + "\n"
+            for obj_type in self._objects[obj]:
+                pddl_str += "\t\t" + obj + " - " + obj_type + "\n"
         pddl_str += "\t)\n\n"
 
         if len(self._initial_predicates) > 0:
@@ -351,20 +352,20 @@ class PDDLFileInterface:
 
     def add_type(self, new_type, parent_type=None):
         assert isinstance(new_type, str)
-        for type_name in self._types:
-            if type_name[0] == new_type and not type_name[1] == parent_type:
-                raise ValueError(
-                    "Type name already exists but with different parent type."
-                )
-        self._types.append((new_type, parent_type))
+        if new_type in self._types:
+            if parent_type not in self._types[new_type]:
+                self._types[new_type].append(parent_type)
+        else:
+            self._types[new_type] = [parent_type]
 
     # ----- Adding to the problem description ----------------------------------
 
-    def add_objects(self, object_list):
-        self._objects += object_list
-
-        # Remove duplicates
-        self._objects = list(dict.fromkeys(self._objects))
+    def add_objects(self, object_dict):
+        for obj in object_dict:
+            if obj in self._objects:
+                self._objects[obj].append(object_dict[obj])
+            else:
+                self._objects[obj] = [object_dict[obj]]
 
     def add_inital_predicates(self, pred_list):
         self._initial_predicates += pred_list
@@ -392,15 +393,14 @@ class PDDLFileInterface:
 
     def check_types(self):
         # Makes sure that all type were defined
-        types = [item[0] for item in self._types]
         for pred in self._predicates:
             for item in self._predicates[pred]:
-                if item[1] not in types:
+                if item[1] not in self._types:
                     print("The following type was not pre-defined: {}".format(item[1]))
                     return False
         for act in self._actions:
             for item in self._actions[act]["params"]:
-                if item[1] not in types:
+                if item[1] not in self._types:
                     print("The following type was not pre-defined: {}".format(item[1]))
                     return False
         return True
@@ -408,10 +408,11 @@ class PDDLFileInterface:
     # Sort types by parent type
     def get_types_by_parent_type(self):
         types_by_parent = dict()
-        for type_item in self._types:
-            if type_item[1] not in types_by_parent:
-                types_by_parent[type_item[1]] = list()
-            types_by_parent[type_item[1]].append(type_item[0])
+        for type_name in self._types:
+            for parent_type_name in self._types[type_name]:
+                if parent_type_name not in types_by_parent:
+                    types_by_parent[parent_type_name] = list()
+                types_by_parent[parent_type_name].append(type_name)
         return types_by_parent
 
 

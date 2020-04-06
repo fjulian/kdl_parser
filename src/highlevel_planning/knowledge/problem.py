@@ -8,7 +8,7 @@ class PlanningProblem:
 
     def __init__(self):
 
-        self.objects = list()
+        self.objects = dict()
         self.initial_predicates = list()
 
         # self.goals = [("in-hand", True, ("cube1", "robot1"))]
@@ -18,14 +18,11 @@ class PlanningProblem:
     def populate_objects(self, scene=None, knowledge_lookups=None):
         if scene is not None:
             for obj in scene.objects:
-                self.objects.append((obj, "item"))
+                self.objects[obj] = "item"
         if knowledge_lookups is not None:
             for cat in knowledge_lookups:
                 for item in knowledge_lookups[cat].data:
-                    self.objects.append((item, cat))
-
-        # Remove duplicates
-        self.objects = list(dict.fromkeys(self.objects))
+                    self.objects[item] = cat
 
     def check_predicates(self, predicates):
         """

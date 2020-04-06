@@ -3,7 +3,6 @@ import unittest
 import sys
 from os import path, remove
 
-sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), "src"))
 
 from highlevel_planning.pddl_interface.planner_interface import (
     pddl_planner,
