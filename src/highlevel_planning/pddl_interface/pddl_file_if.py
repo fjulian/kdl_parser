@@ -360,11 +360,15 @@ class PDDLFileInterface:
 
     # ----- Adding to the problem description ----------------------------------
 
-    def add_objects(self, object_dict):
+    def add_objects(self, object_dict, update_existing=False):
         for obj in object_dict:
             if obj in self._objects:
                 self._objects[obj].append(object_dict[obj])
             else:
+                if update_existing:
+                    raise ValueError(
+                        "Trying to update object that is unknown as of now."
+                    )
                 self._objects[obj] = [object_dict[obj]]
 
     def add_inital_predicates(self, pred_list):

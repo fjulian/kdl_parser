@@ -38,7 +38,7 @@ def determine_sequence_preconds(pddl_if, sequence, parameters):
 
 def determine_sequence_effects(pddl_if, sequence, parameters):
     seq_effects = list()
-    for action_idx, action_id in sequence:
+    for action_idx, action_id in enumerate(sequence):
         action_descr = pddl_if._actions[action_id]
 
         # Remove colliding effects from the effect list
@@ -51,7 +51,7 @@ def determine_sequence_effects(pddl_if, sequence, parameters):
                     and seq_effect[2] == parametrized_effect[2]
                 ):
                     effects_to_remove.append(seq_effect)
-        for seq_effect in seq_effects:
+        for seq_effect in effects_to_remove:
             seq_effects.remove(seq_effect)
 
         # Add all effects of this action to the effect list
