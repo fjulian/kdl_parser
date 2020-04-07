@@ -2,6 +2,7 @@ import unittest
 from highlevel_planning.pddl_interface.pddl_file_if import PDDLFileInterface
 from highlevel_planning.learning import logic_tools
 from highlevel_planning.learning.pddl_extender import PDDLExtender
+from highlevel_planning.learning.meta_action_handler import MetaActionHandler
 from support.fake_problem import FakePlanningProblem
 from support.fake_predicates import FakePredicates
 
@@ -33,15 +34,23 @@ class TestLearning(unittest.TestCase):
 
         self.predicates = FakePredicates()
 
-        self.pddl_extender = PDDLExtender(self.fif, self.predicates)
+        self.meta_action_handler = MetaActionHandler(self.fif)
+
+        self.pddl_extender = PDDLExtender(
+            self.fif, self.predicates, self.meta_action_handler
+        )
 
     def test_new_action(self):
-        self.pddl_extender.create_new_action(
+        new_action_name = self.pddl_extender.create_new_action(
             self.planning_problem.goals,
             self.sequence,
             self.parameters,
             self.sequence_preconds,
         )
+
+        plan = ["0: take-sample r1 s1 p1", "1: " + new_action_name + " p2 r1 p1 s1"]
+        expanded_plan = self.meta_action_handler.expand_plan(plan)
+
         self.assertTrue(True)
 
 

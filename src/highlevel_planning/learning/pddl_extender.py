@@ -5,9 +5,10 @@ from highlevel_planning.learning.logic_tools import determine_sequence_effects
 
 
 class PDDLExtender(object):
-    def __init__(self, pddl_if, predicates):
+    def __init__(self, pddl_if, predicates, meta_action_handler):
         self.pddl_if = pddl_if
         self.predicates = predicates
+        self.meta_action_handler = meta_action_handler
 
     def create_new_action(self, goals, sequence, parameters, sequence_preconds):
         time_string = time.strftime("%y%m%d%H%M%S")
@@ -40,17 +41,41 @@ class PDDLExtender(object):
             action_preconditions.append(precond)
 
         # Submit new action description
-        new_action_description = (
-            {
-                "params": action_params,
-                "preconds": action_preconditions,
-                "effects": action_effects,
-            },
-        )
+        new_action_description = {
+            "params": action_params,
+            "preconds": action_preconditions,
+            "effects": action_effects,
+        }
+
         self.pddl_if.add_action(action_name, new_action_description)
 
+        # Determine hidden parameters
+        hidden_parameters = [{}] * len(parameters)
+        for idx, params in enumerate(parameters):
+            for param_name, param_value in params.items():
+                if param_value not in already_retyped:
+                    hidden_parameters[idx][param_name] = param_value
+
+        # Determine translation between old argument names and new ones
+        param_translator = [dict.fromkeys(param_dict) for param_dict in parameters]
+        for idx, params in enumerate(parameters):
+            for param_name, param_value in params.items():
+                if param_value in already_retyped:
+                    param_translator[idx][param_name] = param_value
+                else:
+                    param_translator[idx][param_name] = param_name
+
         # Save action meta data
-        # TODO Information on what actions need to be called, together with potential hidden arguments.
+        self.meta_action_handler.add_meta_action(
+            action_name,
+            sequence,
+            parameters,
+            param_translator,
+            hidden_parameters,
+            new_action_description,
+        )
+
+        return action_name
 
     def _retype_argument(self, arg, action_params, already_retyped, time_string):
         if arg not in already_retyped:
@@ -85,6 +110,5 @@ class PDDLExtender(object):
             substitute_param_names.append(substitutes)
         return substitute_param_names
 
-
-def create_new_predicates():
-    pass
+    def create_new_predicates(self):
+        pass

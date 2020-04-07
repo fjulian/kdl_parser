@@ -11,4 +11,4 @@ class FakePlanningProblem:
             ("carry", True, ("r1", "s1",)),
             ("is-dropping-dock", True, ("p2",)),
         ]
-        self.goals = [("stored-sample", True, ("s1",))]
+        self.goals = [("new-predicate", True, ("p2", "r1"))]

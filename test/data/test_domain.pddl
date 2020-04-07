@@ -16,6 +16,7 @@
 		(can-move ?from-waypoint - waypoint ?to-waypoint - waypoint)
 		(taken-image ?objective - objective)
 		(empty ?rover - rover)
+		(new-predicate ?waypoint - waypoint ?rover - rover)
 	)
 
 	(:action take-sample

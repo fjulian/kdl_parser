@@ -21,14 +21,14 @@ class PDDLFileInterface:
 
         # Domain definition
         self._domain_name = domain_name
-        self._predicates = {}
-        self._actions = {}
+        self._predicates = dict()
+        self._actions = dict()
         self._types = dict()
 
         # Problem definition
         self._objects = dict()
-        self._initial_predicates = []
-        self._goals = []
+        self._initial_predicates = list()
+        self._goals = list()
 
         self._domain_file = path.join(self._domain_dir, "_domain.pkl")
         self._domain_file_pddl = None
