@@ -50,8 +50,12 @@ class TestLearning(unittest.TestCase):
 
         plan = ["0: take-sample r1 s1 p1", "1: " + new_action_name + " p2 r1 p1 s1"]
         expanded_plan = self.meta_action_handler.expand_plan(plan)
-
-        self.assertTrue(True)
+        gt_expanded_plan = [
+            "0: take-sample r1 s1 p1",
+            "1: move r1 p1 p2",
+            "2: drop-sample r1 s1 p1",
+        ]
+        self.assertEqual(expanded_plan, gt_expanded_plan)
 
 
 if __name__ == "__main__":

@@ -11,8 +11,8 @@ class PlanningProblem:
         self.objects = dict()
         self.initial_predicates = list()
 
-        # self.goals = [("in-hand", True, ("cube1", "robot1"))]
-        self.goals = [("on", True, ("cupboard", "cube1"))]
+        self.goals = [("in-hand", True, ("cube1", "robot1"))]
+        # self.goals = [("on", True, ("cupboard", "cube1"))]
         # self.goals = [("inside", True, ("container1", "cube1"))]
 
     def populate_objects(self, scene=None, knowledge_lookups=None):

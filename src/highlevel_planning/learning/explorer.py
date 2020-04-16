@@ -44,6 +44,8 @@ class Explorer:
         self.scene_objects = scene_objects
 
     def exploration(self, predicates):
+        np.random.seed(0)
+
         # Some useful variables
         # num_actions = len(self.pddl_if_main._actions)
 
@@ -77,7 +79,7 @@ class Explorer:
             for seq_len in range(1, max_seq_len + 1):
                 print("----- Sequence length: {} ----------".format(seq_len))
                 sequences_tried = set()
-                for _ in range(max_samples_per_seq_len):
+                for i_var in range(max_samples_per_seq_len):
                     # Sample sequences until an abstractly feasible one was found
                     (
                         success,
@@ -133,6 +135,16 @@ class Explorer:
                         # Restore initial state
                         p.restoreState(stateId=current_state_id)
 
+                        # Useful for debugging:
+                        if (
+                            sequence[0] == "place"
+                            and parameter_samples[0]["obj"] == "cube1"
+                        ):
+                            print("hey")
+
+                        if i_var == 39:
+                            print("hey")
+
                         # Execute plan to get to start of sequence
                         success = self._execute_plan(plan)
                         if not success:
@@ -158,11 +170,11 @@ class Explorer:
                             print(act)
 
                         # Useful for debugging:
-                        # if (
-                        #     sequence[0] == "place"
-                        #     and parameter_samples[0]["obj"] == "cube1"
-                        # ):
-                        #     print("hey")
+                        if (
+                            sequence[0] == "place"
+                            and parameter_samples[0]["obj"] == "cube1"
+                        ):
+                            print("hey")
 
                         success = self._execute_plan(sequence_plan)
                         if not success:
@@ -177,6 +189,8 @@ class Explorer:
                             continue
                         print("GOAL REACHED!!!")
                         count_goal_reached[seq_len - 1] += 1
+
+                        # Save the successful sequence and parameters.
 
             break
 
