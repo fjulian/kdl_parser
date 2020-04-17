@@ -5,3 +5,5 @@ venv
 *.bullet
 knowledge/chimera
 *.egg-info
+build/
+dist/
