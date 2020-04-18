@@ -3,11 +3,12 @@ from highlevel_planning.tools.util import SkillExecutionError
 
 
 class SequentialExecution(ExecutionSystem):
-    def __init__(self, skill_set, plan, knowledge_lookups):
+    def __init__(self, skill_set, plan, knowledge_lookups, meta_action_handler):
         self.ticking = False
 
         self.skill_set_ = skill_set
-        self.plan_ = plan
+        self.plan_ = meta_action_handler.expand_plan(plan)
+
         self.knowledge_lookups_ = knowledge_lookups
 
         self.current_idx_ = 0

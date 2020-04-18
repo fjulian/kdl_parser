@@ -34,6 +34,8 @@ class Explorer:
         knowledge_lookups,
         robot_uid,
         scene_objects,
+        meta_action_handler,
+        pddl_extender,
     ):
         self.pddl_if_main = pddl_if
         self.action_list = [act for act in pddl_if._actions]
@@ -42,6 +44,8 @@ class Explorer:
         self.knowledge_lookups = knowledge_lookups
         self.robot_uid_ = robot_uid
         self.scene_objects = scene_objects
+        self.mah = meta_action_handler
+        self.pddl_extender = pddl_extender
 
     def exploration(self, predicates):
         np.random.seed(0)
@@ -75,6 +79,8 @@ class Explorer:
 
         # Sample action sequences until a successful one was found
         while True:
+            found_plan = False
+
             # Iterate through action sequence lengths
             for seq_len in range(1, max_seq_len + 1):
                 print("----- Sequence length: {} ----------".format(seq_len))
@@ -191,7 +197,16 @@ class Explorer:
                         count_goal_reached[seq_len - 1] += 1
 
                         # Save the successful sequence and parameters.
-
+                        self.pddl_extender.create_new_action(
+                            goals=self.planning_problem.goals,
+                            sequence=sequence,
+                            parameters=parameter_samples,
+                            sequence_preconds=sequence_preconds,
+                        )
+                        found_plan = True
+                        break
+                if found_plan:
+                    break
             break
 
         print("===============================================================")
@@ -207,7 +222,9 @@ class Explorer:
         print(count_goal_reached)
 
     def _execute_plan(self, plan):
-        es = SequentialExecution(self.skill_set, plan, self.knowledge_lookups)
+        es = SequentialExecution(
+            self.skill_set, plan, self.knowledge_lookups, meta_action_handler=self.mah
+        )
         es.setup()
         while True:
             success, plan_finished = es.step()

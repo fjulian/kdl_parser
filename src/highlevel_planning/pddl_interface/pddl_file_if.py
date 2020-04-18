@@ -1,6 +1,6 @@
 from datetime import datetime
 import json
-from os import path, mkdir
+from os import path, makedirs
 import pickle
 
 
@@ -8,16 +8,16 @@ class PDDLFileInterface:
     def __init__(
         self, domain_dir, problem_dir=None, initial_domain_pddl=None, domain_name=""
     ):
-        # Some folder book keeping
+        # Some folders book keeping
         self._domain_dir = domain_dir
         if problem_dir is None:
             self._problem_dir = domain_dir
         else:
             self._problem_dir = problem_dir
         if not path.isdir(self._domain_dir):
-            mkdir(self._domain_dir)
+            makedirs(self._domain_dir)
         if not path.isdir(self._problem_dir):
-            mkdir(self._problem_dir)
+            makedirs(self._problem_dir)
 
         # Domain definition
         self._domain_name = domain_name

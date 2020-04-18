@@ -19,6 +19,8 @@ from highlevel_planning.skills import pddl_descriptions
 from highlevel_planning.knowledge.predicates import Predicates
 from highlevel_planning.knowledge.problem import PlanningProblem
 from highlevel_planning.knowledge.lookup_tables import LookupTable
+from highlevel_planning.learning.meta_action_handler import MetaActionHandler
+from highlevel_planning.learning.pddl_extender import PDDLExtender
 
 # Learning
 from highlevel_planning.learning.explorer import Explorer
@@ -80,6 +82,9 @@ def main():
     knowledge_lookups["position"] = LookupTable("position")
     knowledge_lookups["position"].add(np.array([0.0, 0.0, 0.0]), "origin")
 
+    # Meta action handler
+    mah = MetaActionHandler(pddl_if)
+
     # -----------------------------------
 
     # Create world
@@ -98,8 +103,8 @@ def main():
     knowledge_lookups["robot"].add(robot, "robot1")
 
     # -----------------------------------
-    # Set up predicates
 
+    # Set up predicates
     preds = Predicates(scene, robot, knowledge_lookups, robot_lock)
 
     for descr in preds.descriptions.items():
@@ -107,12 +112,14 @@ def main():
             predicate_name=descr[0], predicate_definition=descr[1], overwrite=True
         )
 
+    # Planning problem
     planning_problem = PlanningProblem()
     planning_problem.populate_objects(scene, knowledge_lookups)
     planning_problem.check_predicates(preds)
 
     pddl_if.add_planning_problem(planning_problem)
 
+    # Create PDDL files
     pddl_if.save_domain()
     pddl_if.write_domain_pddl()
     pddl_if.write_problem_pddl()
@@ -127,6 +134,9 @@ def main():
     sk_nav = SkillNavigate(scene, robot)
     skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
 
+    # PDDL extender
+    pddl_ex = PDDLExtender(pddl_if, preds, mah)
+
     # Set up exploration
     xplorer = Explorer(
         pddl_if,
@@ -135,6 +145,8 @@ def main():
         knowledge_lookups,
         robot._model.uid,
         scene.objects,
+        mah,
+        pddl_ex,
     )
 
     if plan is False:
@@ -168,7 +180,9 @@ def main():
             robot, preds, plan=plan, goals=planning_problem.goals, pipes=pipes
         )
     else:
-        es = SequentialExecution(skill_set, plan, knowledge_lookups)
+        es = SequentialExecution(
+            skill_set, plan, knowledge_lookups, meta_action_handler=mah
+        )
     es.setup()
 
     # -----------------------------------
