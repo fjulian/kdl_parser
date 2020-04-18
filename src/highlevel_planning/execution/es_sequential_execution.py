@@ -29,9 +29,11 @@ class SequentialExecution(ExecutionSystem):
                     target_name = plan_item_list[2]
                     target_link_id = None
                     target_grasp_id = 0
-                    self.skill_set_["grasp"].grasp_object(
+                    res = self.skill_set_["grasp"].grasp_object(
                         target_name, target_link_id, target_grasp_id
                     )
+                    if not res:
+                        raise SkillExecutionError
                 elif action_name == "nav":
                     target_name = plan_item_list[3]
                     if target_name in self.knowledge_lookups_["position"].data:

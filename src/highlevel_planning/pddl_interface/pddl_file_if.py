@@ -389,7 +389,7 @@ class PDDLFileInterface:
         self.add_goal(planning_problem.goals)
 
     def clear_planning_problem(self):
-        del self._objects[:]
+        self._objects.clear()
         del self._initial_predicates[:]
         del self._goals[:]
 

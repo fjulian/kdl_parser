@@ -1,5 +1,5 @@
 import sys
-from os import path, getcwd
+from os import path, getcwd, makedirs
 
 from highlevel_planning.sim.world import World
 from highlevel_planning.sim.robot_arm import RobotArm
@@ -29,6 +29,9 @@ if __name__ == "__main__":
     world.step_seconds(1)
 
     # Save
+    savedir = "data/sim"
+    if not path.isdir(savedir):
+        makedirs(savedir)
     with open("data/sim/objects.pkl", "wb") as output:
         pickle.dump((scene.objects, robot._model), output)
     p.saveBullet(path.join(getcwd(), "data/sim/state.bullet"))

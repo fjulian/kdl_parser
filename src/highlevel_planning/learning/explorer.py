@@ -16,11 +16,11 @@ from highlevel_planning.learning.logic_tools import (
 # ----- Parameters -------------------------------------
 # TODO: move them to config file
 
-max_seq_len = 3
-max_samples_per_seq_len = 50
+max_seq_len = 2
+max_samples_per_seq_len = 100
 max_failed_samples = 50
 
-bounding_box_inflation_length = 0.5
+bounding_box_inflation_length = 0.2
 
 # ------------------------------------------------------
 
@@ -78,136 +78,121 @@ class Explorer:
         count_goal_reached = [0] * 4
 
         # Sample action sequences until a successful one was found
-        while True:
-            found_plan = False
+        sequences_tried = set()
+        found_plan = False
+        for seq_len in range(1, max_seq_len + 1):
+            print("----- Sequence length: {} ----------".format(seq_len))
+            for sample_idx in range(max_samples_per_seq_len):
+                # Sample sequences until an abstractly feasible one was found
+                (
+                    success,
+                    sequence,
+                    parameter_samples,
+                    sequence_preconds,
+                ) = self._sample_feasible_sequence(seq_len, sequences_tried)
 
-            # Iterate through action sequence lengths
-            for seq_len in range(1, max_seq_len + 1):
-                print("----- Sequence length: {} ----------".format(seq_len))
-                sequences_tried = set()
-                for i_var in range(max_samples_per_seq_len):
-                    # Sample sequences until an abstractly feasible one was found
-                    (
-                        success,
-                        sequence,
-                        parameter_samples,
-                        sequence_preconds,
-                    ) = self._sample_feasible_sequence(seq_len, sequences_tried)
-
-                    if not success:
-                        print(
-                            "Sampling failed. Abort searching in this sequence length."
-                        )
-                        break
-
-                    # try:
-                    #     find_idx = sequence.index("place")
-                    #     if parameter_samples[find_idx]["obj"] == "cube1":
-                    #         print("hey")
-                    # except ValueError:
-                    #     pass
-
-                    count_seq_found[seq_len - 1] += 1
-
-                    # Found a feasible action sequence. Now test it.
-                    # print("------------------------------------------")
-                    # print("Sequence: " + str(seq))
-                    # print("Params: " + str(params))
-                    # print("Preconds: " + str(sequence_preconds))
-
-                    # Set up planning problem that takes us to state where all preconditions are met
-                    problem_preplan = deepcopy(self.planning_problem)
-                    problem_preplan.goals = sequence_preconds
-                    problem_preplan.populate_objects(
-                        knowledge_lookups=self.knowledge_lookups
-                    )
-
-                    pddl_if.clear_planning_problem()
-                    pddl_if.add_planning_problem(problem_preplan)
-                    pddl_if.write_domain_pddl()
-                    pddl_if.write_problem_pddl()
-
-                    plan = planner_interface.pddl_planner(
-                        pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
-                    )
-
-                    if plan is not False:
-                        count_preplan_plan_success[seq_len - 1] += 1
-
-                        print("============")
-                        print("Preplan:")
-                        print(plan)
-
-                        # Restore initial state
-                        p.restoreState(stateId=current_state_id)
-
-                        # Useful for debugging:
-                        if (
-                            sequence[0] == "place"
-                            and parameter_samples[0]["obj"] == "cube1"
-                        ):
-                            print("hey")
-
-                        if i_var == 39:
-                            print("hey")
-
-                        # Execute plan to get to start of sequence
-                        success = self._execute_plan(plan)
-                        if not success:
-                            continue
-                        print("Preplan SUCCESS")
-                        count_preplan_run_success[seq_len - 1] += 1
-
-                        # Execute sequence
-                        sequence_plan = list()
-                        for idx_action, action in enumerate(sequence):
-                            act_string = str(idx_action) + ": " + action
-                            for parameter in self.pddl_if_main._actions[action][
-                                "params"
-                            ]:
-                                act_string += (
-                                    " " + parameter_samples[idx_action][parameter[0]]
-                                )
-                            sequence_plan.append(act_string)
-
-                        print("----------")
-                        print("Sequence: ")
-                        for act in sequence_plan:
-                            print(act)
-
-                        # Useful for debugging:
-                        if (
-                            sequence[0] == "place"
-                            and parameter_samples[0]["obj"] == "cube1"
-                        ):
-                            print("hey")
-
-                        success = self._execute_plan(sequence_plan)
-                        if not success:
-                            continue
-
-                        print("Sequence SUCCESS")
-                        count_seq_run_success[seq_len - 1] += 1
-
-                        # Check if the goal was reached
-                        success = self.planning_problem.test_goals(predicates)
-                        if not success:
-                            continue
-                        print("GOAL REACHED!!!")
-                        count_goal_reached[seq_len - 1] += 1
-
-                        # Save the successful sequence and parameters.
-                        self.pddl_extender.create_new_action(
-                            goals=self.planning_problem.goals,
-                            sequence=sequence,
-                            parameters=parameter_samples,
-                            sequence_preconds=sequence_preconds,
-                        )
-                        found_plan = True
-                        break
-                if found_plan:
+                if not success:
+                    print("Sampling failed. Abort searching in this sequence length.")
                     break
-            break
+
+                count_seq_found[seq_len - 1] += 1
+
+                # Found a feasible action sequence. Now test it.
+                # print("------------------------------------------")
+                # print("Sequence: " + str(seq))
+                # print("Params: " + str(params))
+                # print("Preconds: " + str(sequence_preconds))
+
+                # Set up planning problem that takes us to state where all preconditions are met
+                problem_preplan = deepcopy(self.planning_problem)
+                problem_preplan.goals = sequence_preconds
+                problem_preplan.populate_objects(
+                    knowledge_lookups=self.knowledge_lookups
+                )
+
+                pddl_if.clear_planning_problem()
+                pddl_if.add_planning_problem(problem_preplan)
+                pddl_if.write_domain_pddl()
+                pddl_if.write_problem_pddl()
+
+                plan = planner_interface.pddl_planner(
+                    pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
+                )
+
+                if plan is not False:
+                    count_preplan_plan_success[seq_len - 1] += 1
+
+                    print("============")
+                    print("Preplan:")
+                    print(plan)
+
+                    # Restore initial state
+                    p.restoreState(stateId=current_state_id)
+
+                    # Useful for debugging:
+                    if (
+                        sequence[0] == "place"
+                        and parameter_samples[0]["obj"] == "cube1"
+                    ):
+                        print("hey")
+
+                    if sample_idx == 29:
+                        print("hey")
+
+                    # Execute plan to get to start of sequence
+                    success = self._execute_plan(plan)
+                    if not success:
+                        continue
+                    print("Preplan SUCCESS")
+                    count_preplan_run_success[seq_len - 1] += 1
+
+                    # Execute sequence
+                    sequence_plan = list()
+                    for idx_action, action in enumerate(sequence):
+                        act_string = str(idx_action) + ": " + action
+                        for parameter in self.pddl_if_main._actions[action]["params"]:
+                            act_string += (
+                                " " + parameter_samples[idx_action][parameter[0]]
+                            )
+                        sequence_plan.append(act_string)
+
+                    print("----------")
+                    print("Sequence: ")
+                    for act in sequence_plan:
+                        print(act)
+
+                    # Useful for debugging:
+                    if (
+                        sequence[0] == "place"
+                        and parameter_samples[0]["obj"] == "cube1"
+                    ):
+                        print("hey")
+
+                    success = self._execute_plan(sequence_plan)
+                    if not success:
+                        continue
+
+                    print("Sequence SUCCESS")
+                    count_seq_run_success[seq_len - 1] += 1
+
+                    # Check if the goal was reached
+                    success = self.planning_problem.test_goals(predicates)
+                    if not success:
+                        continue
+                    print("GOAL REACHED!!!")
+                    count_goal_reached[seq_len - 1] += 1
+
+                    # Save the successful sequence and parameters.
+                    self.pddl_extender.create_new_action(
+                        goals=self.planning_problem.goals,
+                        sequence=sequence,
+                        parameters=parameter_samples,
+                        sequence_preconds=sequence_preconds,
+                    )
+                    found_plan = True
+                    break
+            if found_plan:
+                break
 
         print("===============================================================")
         print("count_seq_found")
@@ -220,6 +205,11 @@ class Explorer:
         print(count_seq_run_success)
         print("count_goal_reached")
         print(count_goal_reached)
+
+        # Restore initial state
+        p.restoreState(stateId=current_state_id)
+
+        return found_plan
 
     def _execute_plan(self, plan):
         es = SequentialExecution(
@@ -283,17 +273,19 @@ class Explorer:
         # Create list of relevant items in the scene
         # TODO For now this is just adding all objects in the scene. Instead, just add objects
         # currently in proximity to the robot and the objects of interest.
-        objects_of_interest_list = self.planning_problem.objects
+        objects_of_interest_dict = self.planning_problem.objects
 
         # Sort objects of interest by type into a dictionary
         objects_of_interest = dict()
-        for obj in objects_of_interest_list:
-            if obj[1] in objects_of_interest:
-                objects_of_interest[obj[1]].append(obj[0])
+        for obj_name, obj_type in objects_of_interest_dict.items():
+            if obj_type in objects_of_interest:
+                objects_of_interest[obj_type].append(obj_name)
             else:
-                objects_of_interest[obj[1]] = [obj[0]]
+                objects_of_interest[obj_type] = [obj_name]
 
         types_by_parent = self.pddl_if_main.get_types_by_parent_type()
+
+        # TODO adjust this function to sample from desired object type and children
 
         for idx_action, action in enumerate(sequence):
             parameter_samples[idx_action] = dict()

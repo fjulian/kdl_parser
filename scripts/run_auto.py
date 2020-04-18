@@ -119,15 +119,6 @@ def main():
 
     pddl_if.add_planning_problem(planning_problem)
 
-    # Create PDDL files
-    pddl_if.save_domain()
-    pddl_if.write_domain_pddl()
-    pddl_if.write_problem_pddl()
-
-    plan = planner_interface.pddl_planner(
-        pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
-    )
-
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot)
     sk_place = SkillPlacing(scene, robot)
@@ -135,7 +126,7 @@ def main():
     skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
 
     # PDDL extender
-    pddl_ex = PDDLExtender(pddl_if, preds, mah)
+    pddl_ex = PDDLExtender(pddl_if, preds, mah, knowledge_lookups)
 
     # Set up exploration
     xplorer = Explorer(
@@ -149,9 +140,32 @@ def main():
         pddl_ex,
     )
 
+    # ---------------------------------------------------------------
+
+    # Run planner
+    pddl_if.save_domain()
+    pddl_if.write_domain_pddl()
+    pddl_if.write_problem_pddl()
+    plan = planner_interface.pddl_planner(
+        pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
+    )
+
     if plan is False:
-        xplorer.exploration(preds)
-        return
+        success = xplorer.exploration(preds)
+        if not success:
+            print("Exploration was not successful")
+            return
+
+        # Run planner again
+        pddl_if.save_domain()
+        pddl_if.write_domain_pddl()
+        pddl_if.write_problem_pddl()
+        plan = planner_interface.pddl_planner(
+            pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
+        )
+        if plan is False:
+            print("Planner failed despite exploration")
+            return
     else:
         if len(plan) == 0:
             print("Nothing to do.")

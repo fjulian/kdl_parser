@@ -5,10 +5,11 @@ from highlevel_planning.learning.logic_tools import determine_sequence_effects
 
 
 class PDDLExtender(object):
-    def __init__(self, pddl_if, predicates, meta_action_handler):
+    def __init__(self, pddl_if, predicates, meta_action_handler, knowledge_lookups):
         self.pddl_if = pddl_if
         self.predicates = predicates
         self.meta_action_handler = meta_action_handler
+        self.knowledge_lookups = knowledge_lookups
 
     def create_new_action(self, goals, sequence, parameters, sequence_preconds):
         time_string = time.strftime("%y%m%d%H%M%S")
@@ -79,10 +80,22 @@ class PDDLExtender(object):
 
     def _retype_argument(self, arg, action_params, already_retyped, time_string):
         if arg not in already_retyped:
-            original_types = self.pddl_if._objects[arg]
+            original_types = None
+            if arg in self.pddl_if._objects:
+                original_types = self.pddl_if._objects[arg]
+            else:
+                for knowledge_type in self.knowledge_lookups:
+                    if arg in self.knowledge_lookups[knowledge_type].data:
+                        original_types = [knowledge_type]
+                        break
+            if original_types is None:
+                raise RuntimeError("Unknown argument cannot be processed")
             new_type = arg + "-" + time_string
             action_params.append([arg, new_type])
-            self.pddl_if.add_type(new_type, original_types[0])
+            if original_types is not None:
+                self.pddl_if.add_type(new_type, original_types[0])
+            else:
+                self.pddl_if.add_type(new_type)
             self.pddl_if.add_objects({arg: new_type}, update_existing=True)
             already_retyped.append(arg)
 
