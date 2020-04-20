@@ -1,7 +1,7 @@
 class MetaActionHandler(object):
-    def __init__(self, pddl_if):
+    def __init__(self, knowledge_base):
+        self.knowledge_base = knowledge_base
         self.meta_actions = dict()
-        self.pddl_if = pddl_if
 
     def expand_plan(self, plan):
         expanded_plan = list()
@@ -22,9 +22,9 @@ class MetaActionHandler(object):
                 ]
                 for idx, sub_action_name in enumerate(meta_action["seq"]):
                     new_plan_item = str(current_idx) + ": " + sub_action_name + " "
-                    sub_action_parameters = self.pddl_if._actions[sub_action_name][
-                        "params"
-                    ]
+                    sub_action_parameters = self.knowledge_base.actions[
+                        sub_action_name
+                    ]["params"]
                     for param_spec in sub_action_parameters:
                         old_param_name = param_spec[0]
                         if old_param_name in meta_action["hidden_params"][idx]:

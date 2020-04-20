@@ -9,10 +9,10 @@ def parametrize_predicate(predicate, action_parameters):
     )
 
 
-def determine_sequence_preconds(pddl_if, sequence, parameters):
+def determine_sequence_preconds(knowledge_base, sequence, parameters):
     seq_preconds = list()
     for action_idx, action_id in reversed(list(enumerate(sequence))):
-        action_descr = pddl_if._actions[action_id]
+        action_descr = knowledge_base.actions[action_id]
 
         # Remove all effects of this action from the precond list
         preconds_to_remove = list()
@@ -36,10 +36,10 @@ def determine_sequence_preconds(pddl_if, sequence, parameters):
     return seq_preconds
 
 
-def determine_sequence_effects(pddl_if, sequence, parameters):
+def determine_sequence_effects(knowledge_base, sequence, parameters):
     seq_effects = list()
     for action_idx, action_id in enumerate(sequence):
-        action_descr = pddl_if._actions[action_id]
+        action_descr = knowledge_base.actions[action_id]
 
         # Remove colliding effects from the effect list
         effects_to_remove = list()
@@ -62,7 +62,7 @@ def determine_sequence_effects(pddl_if, sequence, parameters):
     return seq_effects
 
 
-def test_abstract_feasibility(pddl_if, sequence, parameters, preconds):
+def test_abstract_feasibility(knowledge_base, sequence, parameters, preconds):
     """
         Takes an action sequence and suitable parameters as inputs and checks
         whether the sequence is logically feasible.
@@ -78,7 +78,7 @@ def test_abstract_feasibility(pddl_if, sequence, parameters, preconds):
     facts = deepcopy(preconds)
     sequence_invalid = False
     for action_idx, action_id in enumerate(sequence):
-        action_descr = pddl_if._actions[action_id]
+        action_descr = knowledge_base.actions[action_id]
 
         # Check if any fact contradicts the pre-conditions of this action
         for fact in facts:
@@ -112,3 +112,13 @@ def test_abstract_feasibility(pddl_if, sequence, parameters, preconds):
                 facts.remove(fact)
             facts.append(parametrized_effect)
     return not sequence_invalid
+
+
+def get_types_by_parent_type(types):
+    types_by_parent = dict()
+    for type_name in types:
+        for parent_type_name in types[type_name]:
+            if parent_type_name not in types_by_parent:
+                types_by_parent[parent_type_name] = list()
+            types_by_parent[parent_type_name].append(type_name)
+    return types_by_parent

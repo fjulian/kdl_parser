@@ -5,11 +5,10 @@ from highlevel_planning.learning.logic_tools import determine_sequence_effects
 
 
 class PDDLExtender(object):
-    def __init__(self, pddl_if, predicates, meta_action_handler, knowledge_lookups):
-        self.pddl_if = pddl_if
+    def __init__(self, knowledge_base, predicates, meta_action_handler):
         self.predicates = predicates
         self.meta_action_handler = meta_action_handler
-        self.knowledge_lookups = knowledge_lookups
+        self.knowledge_base = knowledge_base
 
     def create_new_action(self, goals, sequence, parameters, sequence_preconds):
         time_string = time.strftime("%y%m%d%H%M%S")
@@ -27,7 +26,7 @@ class PDDLExtender(object):
             action_effects.append(goal)
 
         sequence_effects = determine_sequence_effects(
-            self.pddl_if, sequence, parameters
+            self.knowledge_base, sequence, parameters
         )
         for effect in sequence_effects:
             for arg in effect[2]:
@@ -48,7 +47,9 @@ class PDDLExtender(object):
             "effects": action_effects,
         }
 
-        self.pddl_if.add_action(action_name, new_action_description)
+        self.knowledge_base.add_action(
+            action_name, new_action_description, overwrite=False
+        )
 
         # Determine hidden parameters
         hidden_parameters = [{}] * len(parameters)
@@ -81,22 +82,18 @@ class PDDLExtender(object):
     def _retype_argument(self, arg, action_params, already_retyped, time_string):
         if arg not in already_retyped:
             original_types = None
-            if arg in self.pddl_if._objects:
-                original_types = self.pddl_if._objects[arg]
+            if arg in self.knowledge_base.objects:
+                original_types = self.knowledge_base.objects[arg]
             else:
-                for knowledge_type in self.knowledge_lookups:
-                    if arg in self.knowledge_lookups[knowledge_type].data:
-                        original_types = [knowledge_type]
-                        break
+                # Make arguments we use permanent
+                self.knowledge_base.make_permanent(arg)
+                original_types = self.knowledge_base.objects[arg]
             if original_types is None:
                 raise RuntimeError("Unknown argument cannot be processed")
             new_type = arg + "-" + time_string
             action_params.append([arg, new_type])
-            if original_types is not None:
-                self.pddl_if.add_type(new_type, original_types[0])
-            else:
-                self.pddl_if.add_type(new_type)
-            self.pddl_if.add_objects({arg: new_type}, update_existing=True)
+            self.knowledge_base.add_type(new_type, original_types[0])
+            self.knowledge_base.add_object(arg, new_type)
             already_retyped.append(arg)
 
     def _get_unique_param_names(self, sequence):
@@ -105,7 +102,7 @@ class PDDLExtender(object):
         used_param_names = list()
         for action_name in sequence:
             substitutes = dict()
-            params = self.pddl_if._actions[action_name]["params"]
+            params = self.knowledge_base.actions[action_name]["params"]
             for param in params:
                 if param[0] not in used_param_names:
                     used_param_names.append(param[0])

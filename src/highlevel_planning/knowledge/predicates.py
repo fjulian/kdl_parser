@@ -5,7 +5,7 @@ import numpy as np
 
 
 class Predicates:
-    def __init__(self, scene, robot, knowledge_lookup, robot_lock=None):
+    def __init__(self, scene, robot, knowledge_base, robot_lock=None):
         self.call = {
             "empty-hand": self.empty_hand,
             "in-hand": self.in_hand,
@@ -26,10 +26,10 @@ class Predicates:
         self._scene = scene
         self._robot_uid = robot._model.uid
         self._robot_lock = robot_lock
-        self._knowledge_lookup = knowledge_lookup
+        self._knowledge_base = knowledge_base
 
     def empty_hand(self, robot_name):
-        robot = self._knowledge_lookup["robot"].get(robot_name)
+        robot = self._knowledge_base.lookup_table[robot_name]
         if self._robot_lock:
             self._robot_lock.acquire()
         grasped_sth = robot.check_grasp()
@@ -38,7 +38,7 @@ class Predicates:
         return not grasped_sth
 
     def in_hand(self, target_object, robot_name):
-        robot = self._knowledge_lookup["robot"].get(robot_name)
+        robot = self._knowledge_base.lookup_table[robot_name]
         empty_hand_res = self.empty_hand(robot_name)
         temp = p.getClosestPoints(
             self._robot_uid, self._scene.objects[target_object].model.uid, distance=0.01

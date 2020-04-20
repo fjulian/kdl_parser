@@ -3,13 +3,13 @@ from highlevel_planning.tools.util import SkillExecutionError
 
 
 class SequentialExecution(ExecutionSystem):
-    def __init__(self, skill_set, plan, knowledge_lookups, meta_action_handler):
+    def __init__(self, skill_set, plan, knowledge_base, meta_action_handler):
         self.ticking = False
 
         self.skill_set_ = skill_set
         self.plan_ = meta_action_handler.expand_plan(plan)
 
-        self.knowledge_lookups_ = knowledge_lookups
+        self.knowledge_base = knowledge_base
 
         self.current_idx_ = 0
         if len(plan) == 0:
@@ -36,16 +36,14 @@ class SequentialExecution(ExecutionSystem):
                         raise SkillExecutionError
                 elif action_name == "nav":
                     target_name = plan_item_list[3]
-                    if target_name in self.knowledge_lookups_["position"].data:
-                        position = self.knowledge_lookups_["position"].get(target_name)
+                    if self.knowledge_base.obj_is_position(target_name):
+                        position = self.knowledge_base.lookup_table[target_name]
                         self.skill_set_["nav"].move_to_pos(position, nav_min_dist=0.3)
                     else:
                         self.skill_set_["nav"].move_to_object(target_name)
                 elif action_name == "place":
                     target_pos_name = plan_item_list[3]
-                    target_pos = self.knowledge_lookups_["position"].get(
-                        target_pos_name
-                    )
+                    target_pos = self.knowledge_base.lookup_table[target_pos_name]
                     self.skill_set_["place"].place_object(target_pos)
                 else:
                     raise (

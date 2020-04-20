@@ -3,14 +3,13 @@ import numpy as np
 from copy import deepcopy
 import pybullet as p
 
-from highlevel_planning.knowledge.problem import PlanningProblem
-from highlevel_planning.pddl_interface import pddl_file_if, planner_interface
 from highlevel_planning.execution.es_sequential_execution import SequentialExecution
 from highlevel_planning.tools.util import get_combined_aabb
 from highlevel_planning.learning.logic_tools import (
     parametrize_predicate,
     determine_sequence_preconds,
     test_abstract_feasibility,
+    get_types_by_parent_type,
 )
 
 # ----- Parameters -------------------------------------
@@ -28,48 +27,31 @@ bounding_box_inflation_length = 0.2
 class Explorer:
     def __init__(
         self,
-        pddl_if,
-        planning_problem,
         skill_set,
-        knowledge_lookups,
         robot_uid,
         scene_objects,
         meta_action_handler,
         pddl_extender,
+        knowledge_base,
     ):
-        self.pddl_if_main = pddl_if
-        self.action_list = [act for act in pddl_if._actions]
-        self.planning_problem = planning_problem
+        self.action_list = [act for act in knowledge_base.actions]
         self.skill_set = skill_set
-        self.knowledge_lookups = knowledge_lookups
         self.robot_uid_ = robot_uid
         self.scene_objects = scene_objects
         self.mah = meta_action_handler
         self.pddl_extender = pddl_extender
+        self.knowledge_base = knowledge_base
 
     def exploration(self, predicates):
         np.random.seed(0)
-
-        # Some useful variables
-        # num_actions = len(self.pddl_if_main._actions)
 
         # Save the state the robot is currently in
         current_state_id = p.saveState()
 
         # Identify objects that are involved in reaching the goal
         relevant_objects = list()
-        for goal in self.planning_problem.goals:
+        for goal in self.knowledge_base.goals:
             relevant_objects.extend(goal[2])
-
-        # Start PDDL file interface
-        pddl_if = pddl_file_if.PDDLFileInterface(
-            domain_dir="knowledge/chimera/explore/domain",
-            problem_dir="knowledge/chimera/explore/problem",
-            domain_name="chimera-domain",
-        )
-        pddl_if._actions = self.pddl_if_main._actions
-        pddl_if._predicates = self.pddl_if_main._predicates
-        pddl_if._types = self.pddl_if_main._types
 
         count_seq_found = [0] * 4
         count_preplan_plan_success = [0] * 4
@@ -90,34 +72,15 @@ class Explorer:
                     parameter_samples,
                     sequence_preconds,
                 ) = self._sample_feasible_sequence(seq_len, sequences_tried)
-
                 if not success:
                     print("Sampling failed. Abort searching in this sequence length.")
                     break
-
                 count_seq_found[seq_len - 1] += 1
 
                 # Found a feasible action sequence. Now test it.
-                # print("------------------------------------------")
-                # print("Sequence: " + str(seq))
-                # print("Params: " + str(params))
-                # print("Preconds: " + str(sequence_preconds))
-
                 # Set up planning problem that takes us to state where all preconditions are met
-                problem_preplan = deepcopy(self.planning_problem)
-                problem_preplan.goals = sequence_preconds
-                problem_preplan.populate_objects(
-                    knowledge_lookups=self.knowledge_lookups
-                )
-
-                pddl_if.clear_planning_problem()
-                pddl_if.add_planning_problem(problem_preplan)
-                pddl_if.write_domain_pddl()
-                pddl_if.write_problem_pddl()
-
-                plan = planner_interface.pddl_planner(
-                    pddl_if._domain_file_pddl, pddl_if._problem_file_pddl
-                )
+                self.knowledge_base.set_temp_goals(sequence_preconds)
+                plan = self.knowledge_base.solve_temp()
 
                 if plan is not False:
                     count_preplan_plan_success[seq_len - 1] += 1
@@ -128,16 +91,6 @@ class Explorer:
 
                     # Restore initial state
                     p.restoreState(stateId=current_state_id)
-
-                    # Useful for debugging:
-                    if (
-                        sequence[0] == "place"
-                        and parameter_samples[0]["obj"] == "cube1"
-                    ):
-                        print("hey")
-
-                    if sample_idx == 29:
-                        print("hey")
 
                     # Execute plan to get to start of sequence
                     success = self._execute_plan(plan)
@@ -150,7 +103,7 @@ class Explorer:
                     sequence_plan = list()
                     for idx_action, action in enumerate(sequence):
                         act_string = str(idx_action) + ": " + action
-                        for parameter in self.pddl_if_main._actions[action]["params"]:
+                        for parameter in self.knowledge_base.actions[action]["params"]:
                             act_string += (
                                 " " + parameter_samples[idx_action][parameter[0]]
                             )
@@ -162,11 +115,11 @@ class Explorer:
                         print(act)
 
                     # Useful for debugging:
-                    if (
-                        sequence[0] == "place"
-                        and parameter_samples[0]["obj"] == "cube1"
-                    ):
-                        print("hey")
+                    # if (
+                    #     sequence[0] == "place"
+                    #     and parameter_samples[0]["obj"] == "cube1"
+                    # ):
+                    #     print("hey")
 
                     success = self._execute_plan(sequence_plan)
                     if not success:
@@ -176,7 +129,7 @@ class Explorer:
                     count_seq_run_success[seq_len - 1] += 1
 
                     # Check if the goal was reached
-                    success = self.planning_problem.test_goals(predicates)
+                    success = self.knowledge_base.test_goals(predicates)
                     if not success:
                         continue
                     print("GOAL REACHED!!!")
@@ -184,11 +137,12 @@ class Explorer:
 
                     # Save the successful sequence and parameters.
                     self.pddl_extender.create_new_action(
-                        goals=self.planning_problem.goals,
+                        goals=self.knowledge_base.goals,
                         sequence=sequence,
                         parameters=parameter_samples,
                         sequence_preconds=sequence_preconds,
                     )
+                    self.knowledge_base.clear_temp()
                     found_plan = True
                     break
             if found_plan:
@@ -213,7 +167,7 @@ class Explorer:
 
     def _execute_plan(self, plan):
         es = SequentialExecution(
-            self.skill_set, plan, self.knowledge_lookups, meta_action_handler=self.mah
+            self.skill_set, plan, self.knowledge_base, meta_action_handler=self.mah
         )
         es.setup()
         while True:
@@ -243,10 +197,10 @@ class Explorer:
                 continue
             sequences_tried.add((tuple(seq), tuple(params_tuple)))
             sequence_preconds = determine_sequence_preconds(
-                self.pddl_if_main, seq, params
+                self.knowledge_base, seq, params
             )
             if test_abstract_feasibility(
-                self.pddl_if_main, seq, params, sequence_preconds
+                self.knowledge_base, seq, params, sequence_preconds
             ):
                 break
         return success, seq, params, sequence_preconds
@@ -273,36 +227,43 @@ class Explorer:
         # Create list of relevant items in the scene
         # TODO For now this is just adding all objects in the scene. Instead, just add objects
         # currently in proximity to the robot and the objects of interest.
-        objects_of_interest_dict = self.planning_problem.objects
+        objects_of_interest_dict = self.knowledge_base.objects
 
         # Sort objects of interest by type into a dictionary
         objects_of_interest = dict()
         for obj_name, obj_type in objects_of_interest_dict.items():
-            if obj_type in objects_of_interest:
-                objects_of_interest[obj_type].append(obj_name)
+            if (
+                obj_type[0] in objects_of_interest
+            ):  # TODO find a better way to record the object type
+                objects_of_interest[obj_type[0]].append(obj_name)
             else:
-                objects_of_interest[obj_type] = [obj_name]
+                objects_of_interest[obj_type[0]] = [obj_name]
 
-        types_by_parent = self.pddl_if_main.get_types_by_parent_type()
+        types_by_parent = get_types_by_parent_type(self.knowledge_base.types)
 
         # TODO adjust this function to sample from desired object type and children
 
         for idx_action, action in enumerate(sequence):
             parameter_samples[idx_action] = dict()
             parameters_current_action = list()
-            for parameter in self.pddl_if_main._actions[action]["params"]:
+            for parameter in self.knowledge_base.actions[action]["params"]:
                 obj_type = parameter[1]
                 obj_name = parameter[0]
 
                 if obj_type == "position":
                     position = self._sample_position()
-                    obj_sample = self.knowledge_lookups["position"].add(position)
+                    obj_sample = self.knowledge_base.add_temp_object(
+                        object_type="position", object_value=position
+                    )
                 else:
                     if obj_type in types_by_parent:
-                        objects_to_sample_from = [
-                            objects_of_interest[sub_type]
-                            for sub_type in types_by_parent[obj_type]
-                        ]
+                        objects_to_sample_from = list()
+                        for sub_type in types_by_parent[obj_type]:
+                            if sub_type in objects_of_interest:
+                                objects_to_sample_from.append(
+                                    objects_of_interest[sub_type]
+                                )
+                        # TODO: make this recursive and not just one level down in the type hierarchy
                         try:
                             objects_to_sample_from.append(objects_of_interest[obj_type])
                         except KeyError:
@@ -322,10 +283,8 @@ class Explorer:
                         )
                     obj_sample = np.random.choice(objects_to_sample_from)
                 parameter_samples[idx_action][obj_name] = obj_sample
-
                 parameters_current_action.append(obj_sample)
             parameter_samples_tuples[idx_action] = tuple(parameters_current_action)
-
         return parameter_samples, parameter_samples_tuples
 
     def _sample_position(self):
@@ -348,36 +307,36 @@ class Explorer:
         sample = np.random.uniform(low=min_coords, high=max_coords)
         return sample
 
-    def _get_objects_of_interest(self):
-        # TODO finish and use this function
-        interest_locations = list()
+    # def _get_objects_of_interest(self):
+    #     # TODO finish and use this function
+    #     interest_locations = list()
 
-        # Get robot position
-        temp = p.getBasePositionAndOrientation(self.robot_uid_)
-        robot_pos = np.array(temp[0])
-        interest_locations.append(robot_pos)
+    #     # Get robot position
+    #     temp = p.getBasePositionAndOrientation(self.robot_uid_)
+    #     robot_pos = np.array(temp[0])
+    #     interest_locations.append(robot_pos)
 
-        # Get positions of objects that are in the goal description
-        for goal in self.planning_problem.goals:
-            for arg in goal[2]:
-                if arg in self.scene_objects:
-                    pos = p.getBasePositionAndOrientation(
-                        self.scene_objects[arg].model.uid
-                    )
-                    interest_locations.append(np.array(pos))
-                elif arg in self.knowledge_lookups["position"].data:
-                    interest_locations.append(
-                        self.knowledge_lookups["position"].get(arg)
-                    )
+    #     # Get positions of objects that are in the goal description
+    #     for goal in self.knowledge_base.goals:
+    #         for arg in goal[2]:
+    #             if arg in self.scene_objects:
+    #                 pos = p.getBasePositionAndOrientation(
+    #                     self.scene_objects[arg].model.uid
+    #                 )
+    #                 interest_locations.append(np.array(pos))
+    #             elif arg in self.knowledge_lookups["position"].data:
+    #                 interest_locations.append(
+    #                     self.knowledge_lookups["position"].get(arg)
+    #                 )
 
-        # Add scene objects that are close to interest locations
+    #     # Add scene objects that are close to interest locations
 
     def _get_items_goal(self, objects_only=False):
         """
         Get objects that involved in the goal description
         """
         item_list = list()
-        for goal in self.planning_problem.goals:
+        for goal in self.knowledge_base.goals:
             for arg in goal[2]:
                 if objects_only:
                     if arg in self.scene_objects:
