@@ -20,6 +20,16 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "Python: run_manually.py (reuse objects)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/run_manually.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--reuse-objects"
+            ]
+        },
+        {
             "name": "Python: run_auto.py",
             "type": "python",
             "request": "launch",

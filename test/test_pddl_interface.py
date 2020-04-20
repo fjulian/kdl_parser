@@ -3,7 +3,6 @@ import unittest
 import sys
 from os import path, remove
 
-sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), "src"))
 
 from highlevel_planning.pddl_interface.planner_interface import (
     pddl_planner,
@@ -46,15 +45,15 @@ class TestInterface(unittest.TestCase):
         self.assertEqual(cut_string_at("Hello world", "up"), "Hello world")
 
     def test_pddl_read_write(self):
-        self.assertEqual(len(self.fif._predicates), 10)
+        self.assertEqual(len(self.fif._predicates), 11)
         self.assertEqual(len(self.fif._actions), 4)
 
         self.fif.write_domain_pddl()
 
-        with open(path.join(self.fif_domain_dir, self.fif_init_domain_name), "r") as f:
-            orig_pddl = f.read()
-        with open(self.fif._domain_file_pddl, "r") as f:
-            new_pddl = f.read()
+        # with open(path.join(self.fif_domain_dir, self.fif_init_domain_name), "r") as f:
+        #     orig_pddl = f.read()
+        # with open(self.fif._domain_file_pddl, "r") as f:
+        #     new_pddl = f.read()
         # Unfortunately cannot directly compare these, since dicts don't keep order
         # self.assertEqual(orig_pddl, new_pddl)
 
@@ -63,6 +62,7 @@ class TestInterface(unittest.TestCase):
         self.assertEqual(self.fif._domain_name, fif2._domain_name)
         self.assertEqual(self.fif._predicates, fif2._predicates)
         self.assertEqual(self.fif._actions, fif2._actions)
+        self.assertEqual(self.fif._types, fif2._types)
 
         remove(self.fif._domain_file_pddl)
         remove(self.fif._domain_file)

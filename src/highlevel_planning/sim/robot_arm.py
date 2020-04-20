@@ -13,6 +13,14 @@ from urdf_parser_py.urdf import URDF as urdf_parser
 from pykdl_utils.kdl_kinematics import KDLKinematics
 
 
+# ------- Parameters ------------------
+# TODO move to config file
+
+max_force_magnitude = 150
+
+# --------------------
+
+
 class RobotArm:
     def __init__(self, world, robot_model=None):
         self._world = world
@@ -36,14 +44,6 @@ class RobotArm:
         # Set up FK solver
         robot_urdf = urdf_parser.from_xml_string(urdf_string)
         self.kdl_kin = KDLKinematics(robot_urdf, "panda_link0", "panda_link8")
-
-        # # Specify start_pos and start_orient
-        # self.start_pos = np.array([0.3, 0.0, 0.6])
-        # r1 = R.from_euler('z', -45, degrees=True)       # Align the hand to be perpendicular to the x axis
-        # r2 = R.from_euler('x', 180, degrees=True)       # Let the hand point downwards
-        # r_total = r1*r2
-        # self.start_orient = r_total.as_quat()
-        # self.start_cmd = self.ik(self.start_pos, self.start_orient)
 
         # Specify start command
         self.start_cmd = np.array(
@@ -110,7 +110,7 @@ class RobotArm:
             targetPositions=desired,
         )
 
-    def transition_cmd_to(self, desired, duration=None):
+    def transition_cmd_to(self, desired, duration=None, stop_on_contact=False):
         desired_pos, _ = self.fk(desired)
 
         current_cmd = np.array(self.get_joints())
@@ -129,9 +129,14 @@ class RobotArm:
                 self.set_joints(cmd.tolist())
                 self._world.step_one()
                 self._world.sleep(self._world.T_s)
+                if stop_on_contact and not self.check_max_contact_force_ok():
+                    return False
         self.set_joints(desired.tolist())
+        return True
 
-    def transition_cartesian(self, pos_des, orient_des, duration=None):
+    def transition_cartesian(
+        self, pos_des, orient_des, duration=None, stop_on_contact=False
+    ):
         orient_des_rot = R.from_quat(orient_des)
         pos_ee = pos_des - np.matmul(
             orient_des_rot.as_dcm(), np.array([0.0, 0.0, 0.103])
@@ -164,8 +169,11 @@ class RobotArm:
             self.set_joints(cmd.tolist())
             self._world.step_one()
             self._world.sleep(self._world.T_s)
+            if stop_on_contact and not self.check_max_contact_force_ok():
+                return False
         cmd = self.ik(pos_ee, orient_des, current_cmd)
         self.set_joints(cmd.tolist())
+        return True
 
     def transition_function(self, fcn, t_fin):
         current_cmd = np.array(self.get_joints())
@@ -190,6 +198,15 @@ class RobotArm:
         pos, orient = fcn(t_fin)
         cmd = self.ik(pos, orient, current_cmd)
         self.set_joints(cmd.tolist())
+
+    def check_max_contact_force_ok(self):
+        force = self.get_wrist_force()
+        force = np.array(force[:3])
+        magnitude = np.linalg.norm(force)
+        if magnitude > max_force_magnitude:
+            return False
+        else:
+            return True
 
     def get_joints(self):
         temp = p.getJointStates(self._model.uid, self.joint_idx_arm)

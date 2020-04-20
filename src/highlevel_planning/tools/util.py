@@ -1,5 +1,6 @@
 from scipy.spatial.transform import Rotation as R
 import numpy as np
+import pybullet as p
 
 
 def quat_from_rpy(orient_rpy):
@@ -48,6 +49,29 @@ def invert_hom_trafo(hom_trafo):
     res[:3, :3] = np.transpose(hom_trafo[:3, :3])
     res[:3, 3] = -np.matmul(np.transpose(hom_trafo[:3, :3]), hom_trafo[:3, 3])
     return res
+
+
+def get_combined_aabb(uid):
+    """
+    By default, the getAABB function offered by pybullet only outputs the bounding
+    box for a single link (the base link by default). This function combines the 
+    AABBs of all links an object has.
+    
+    Args:
+        uid (int): The UID of the object we would like to compute the bounding box of.
+    """
+    num_joints = p.getNumJoints(uid)
+    aabb_min, aabb_max = p.getAABB(uid, linkIndex=-1)
+    aabb_min, aabb_max = np.array(aabb_min), np.array(aabb_max)
+    for i in range(num_joints):
+        aabb_local_min, aabb_local_max = p.getAABB(uid, linkIndex=i)
+        aabb_local_min, aabb_local_max = (
+            np.array(aabb_local_min),
+            np.array(aabb_local_max),
+        )
+        aabb_min = np.minimum(aabb_min, aabb_local_min)
+        aabb_max = np.maximum(aabb_max, aabb_local_max)
+    return aabb_min, aabb_max
 
 
 class IKError(Exception):

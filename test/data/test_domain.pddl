@@ -1,7 +1,9 @@
 (define (domain rover-domain)
 	(:requirements :strips :typing)
 
-	(:types sample objective waypoint rover)
+	(:types
+		sample objective waypoint rover - object
+	)
 
 	(:predicates
 		(stored-sample ?sample - sample)
@@ -14,6 +16,7 @@
 		(can-move ?from-waypoint - waypoint ?to-waypoint - waypoint)
 		(taken-image ?objective - objective)
 		(empty ?rover - rover)
+		(new-predicate ?waypoint - waypoint ?rover - rover)
 	)
 
 	(:action take-sample

@@ -23,8 +23,8 @@ def pddl_planner(domain_file, problem_file, debug_print=False):
     try:
         res = cut_string_before(res, "ff: found legal plan as follows", complain=True)
     except NameError:
-        print("Planning failed: ")
-        print(res)
+        # print("Planning failed: ")
+        # print(res)
         return False
     try:
         res = cut_string_before(res, "0:", complain=True)

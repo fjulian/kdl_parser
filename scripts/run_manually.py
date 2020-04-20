@@ -59,31 +59,31 @@ def cube_example(sk_grasp, sk_nav, robot, scene, sk_place):
     robot._world.step_seconds(1.0)
     print(robot.get_wrist_force())
 
-    from math import pi as m_pi
+    # from math import pi as m_pi
 
-    robot.transition_cmd_to(
-        np.array([0, -m_pi / 4.0, 0, -3.0 * m_pi / 4.0, 0, m_pi / 4.0, m_pi / 4.0])
-    )
-    print("after tilting back:")
-    robot._world.step_seconds(1.0)
-    print(robot.get_wrist_force())
+    # robot.transition_cmd_to(
+    #     np.array([0, -m_pi / 4.0, 0, -3.0 * m_pi / 4.0, 0, m_pi / 4.0, m_pi / 4.0])
+    # )
+    # print("after tilting back:")
+    # robot._world.step_seconds(1.0)
+    # print(robot.get_wrist_force())
 
-    robot.transition_cmd_to(
-        np.array([0, -m_pi / 4.0, 0, -3.0 * m_pi / 4.0, 0, m_pi, m_pi / 4.0])
-    )
-    print("after tilting forward:")
-    robot._world.step_seconds(1.0)
-    print(robot.get_wrist_force())
+    # robot.transition_cmd_to(
+    #     np.array([0, -m_pi / 4.0, 0, -3.0 * m_pi / 4.0, 0, m_pi, m_pi / 4.0])
+    # )
+    # print("after tilting forward:")
+    # robot._world.step_seconds(1.0)
+    # print(robot.get_wrist_force())
 
-    robot.transition_cmd_to(
-        np.array([0, -m_pi / 4.0, 0, -3.0 * m_pi / 4.0, m_pi / 2.0, m_pi, m_pi / 4.0])
-    )
-    print("after rolling:")
-    robot._world.step_seconds(1.0)
-    print(robot.get_wrist_force())
+    # robot.transition_cmd_to(
+    #     np.array([0, -m_pi / 4.0, 0, -3.0 * m_pi / 4.0, m_pi / 2.0, m_pi, m_pi / 4.0])
+    # )
+    # print("after rolling:")
+    # robot._world.step_seconds(1.0)
+    # print(robot.get_wrist_force())
 
     # Place cube somewhere else
-    sk_place.place_object(scene.objects["cube1"].init_pos + np.array([0.0, 0.2, 0.0]))
+    sk_place.place_object(scene.objects["cube1"].init_pos + np.array([0.0, 0.2, -0.09]))
 
 
 def navigate_with_cube(sk_nav, sk_grasp):
@@ -94,6 +94,20 @@ def navigate_with_cube(sk_nav, sk_grasp):
     sk_grasp.grasp_object("cube1")
 
     sk_nav.move_to_pos(np.array([0.0, 0.0, 0.0]), nav_min_dist=0.3)
+
+
+def navigation_example(sk_nav, world):
+    sk_nav.move_to_object("cube1")
+    world.step_seconds(1.5)
+    sk_nav.move_to_object("lid1")
+    world.step_seconds(1.5)
+    sk_nav.move_to_object("cupboard")
+    world.step_seconds(1.5)
+    sk_nav.move_to_object("container2")
+    world.step_seconds(1.5)
+    sk_nav.move_to_object("cube1")
+    world.step_seconds(1.5)
+    sk_nav.move_to_object("table")
 
 
 def drive_example(robot, world):
@@ -154,7 +168,9 @@ def main():
 
     # predicate_example(scene, robot)
 
-    navigate_with_cube(sk_nav, sk_grasp)
+    # navigate_with_cube(sk_nav, sk_grasp)
+
+    navigation_example(sk_nav, world)
 
     # -----------------------------------
 

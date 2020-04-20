@@ -159,17 +159,25 @@ class SkillPlacing:
             pos_pre_joints = self.robot.ik(pos_pre, orient.as_quat())
             if pos_pre_joints.tolist() is None:
                 raise IKError
-            self.robot.transition_cmd_to(pos_pre_joints)
+            collision_during_pre = False
+            if not self.robot.transition_cmd_to(pos_pre_joints, stop_on_contact=True):
+                collision_during_pre = True
 
             # Go to place pose
-            self.robot.transition_cartesian(pos, orient.as_quat())
+            if not collision_during_pre:
+                self.robot.transition_cartesian(
+                    pos, orient.as_quat(), stop_on_contact=True
+                )
 
             self.robot._world.step_seconds(0.2)
             self.robot.open_gripper()
             self.robot._world.step_seconds(0.4)
 
             # Go back to pre-place-pose
-            self.robot.transition_cartesian(pos_pre, orient.as_quat())
+            if not collision_during_pre:
+                self.robot.transition_cartesian(pos_pre, orient.as_quat())
+            else:
+                self.robot.to_start()
         except IKError:
             if lock is not None:
                 lock.release()

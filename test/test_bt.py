@@ -4,8 +4,6 @@ import py_trees
 import sys
 from os import path
 
-sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), "src"))
-
 from highlevel_planning.execution.custom_chooser import CustomChooser
 
 
