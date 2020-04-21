@@ -26,19 +26,12 @@ bounding_box_inflation_length = 0.2
 
 class Explorer:
     def __init__(
-        self,
-        skill_set,
-        robot_uid,
-        scene_objects,
-        meta_action_handler,
-        pddl_extender,
-        knowledge_base,
+        self, skill_set, robot_uid, scene_objects, pddl_extender, knowledge_base,
     ):
         self.action_list = [act for act in knowledge_base.actions]
         self.skill_set = skill_set
         self.robot_uid_ = robot_uid
         self.scene_objects = scene_objects
-        self.mah = meta_action_handler
         self.pddl_extender = pddl_extender
         self.knowledge_base = knowledge_base
 
@@ -62,88 +55,95 @@ class Explorer:
         # Sample action sequences until a successful one was found
         sequences_tried = set()
         found_plan = False
-        for seq_len in range(1, max_seq_len + 1):
-            print("----- Sequence length: {} ----------".format(seq_len))
-            for sample_idx in range(max_samples_per_seq_len):
-                # Sample sequences until an abstractly feasible one was found
-                (
-                    success,
-                    sequence,
-                    parameter_samples,
-                    sequence_preconds,
-                ) = self._sample_feasible_sequence(seq_len, sequences_tried)
-                if not success:
-                    print("Sampling failed. Abort searching in this sequence length.")
-                    break
-                count_seq_found[seq_len - 1] += 1
-
-                # Found a feasible action sequence. Now test it.
-                # Set up planning problem that takes us to state where all preconditions are met
-                self.knowledge_base.set_temp_goals(sequence_preconds)
-                plan = self.knowledge_base.solve_temp()
-
-                if plan is not False:
-                    count_preplan_plan_success[seq_len - 1] += 1
-
-                    print("============")
-                    print("Preplan:")
-                    print(plan)
-
-                    # Restore initial state
-                    p.restoreState(stateId=current_state_id)
-
-                    # Execute plan to get to start of sequence
-                    success = self._execute_plan(plan)
+        for _ in range(2):
+            for seq_len in range(1, max_seq_len + 1):
+                print("----- Sequence length: {} ----------".format(seq_len))
+                for sample_idx in range(max_samples_per_seq_len):
+                    # Sample sequences until an abstractly feasible one was found
+                    (
+                        success,
+                        sequence,
+                        parameter_samples,
+                        sequence_preconds,
+                    ) = self._sample_feasible_sequence(seq_len, sequences_tried)
                     if not success:
-                        continue
-                    print("Preplan SUCCESS")
-                    count_preplan_run_success[seq_len - 1] += 1
+                        print(
+                            "Sampling failed. Abort searching in this sequence length."
+                        )
+                        break
+                    count_seq_found[seq_len - 1] += 1
 
-                    # Execute sequence
-                    sequence_plan = list()
-                    for idx_action, action in enumerate(sequence):
-                        act_string = str(idx_action) + ": " + action
-                        for parameter in self.knowledge_base.actions[action]["params"]:
-                            act_string += (
-                                " " + parameter_samples[idx_action][parameter[0]]
-                            )
-                        sequence_plan.append(act_string)
+                    # Found a feasible action sequence. Now test it.
+                    # Set up planning problem that takes us to state where all preconditions are met
+                    self.knowledge_base.set_temp_goals(sequence_preconds)
+                    plan = self.knowledge_base.solve_temp()
 
-                    print("----------")
-                    print("Sequence: ")
-                    for act in sequence_plan:
-                        print(act)
+                    if plan is not False:
+                        count_preplan_plan_success[seq_len - 1] += 1
 
-                    # Useful for debugging:
-                    # if (
-                    #     sequence[0] == "place"
-                    #     and parameter_samples[0]["obj"] == "cube1"
-                    # ):
-                    #     print("hey")
+                        print("============")
+                        print("Preplan:")
+                        print(plan)
 
-                    success = self._execute_plan(sequence_plan)
-                    if not success:
-                        continue
+                        # Restore initial state
+                        p.restoreState(stateId=current_state_id)
 
-                    print("Sequence SUCCESS")
-                    count_seq_run_success[seq_len - 1] += 1
+                        # Execute plan to get to start of sequence
+                        success = self._execute_plan(plan)
+                        if not success:
+                            continue
+                        print("Preplan SUCCESS")
+                        count_preplan_run_success[seq_len - 1] += 1
 
-                    # Check if the goal was reached
-                    success = self.knowledge_base.test_goals(predicates)
-                    if not success:
-                        continue
-                    print("GOAL REACHED!!!")
-                    count_goal_reached[seq_len - 1] += 1
+                        # Execute sequence
+                        sequence_plan = list()
+                        for idx_action, action in enumerate(sequence):
+                            act_string = str(idx_action) + ": " + action
+                            for parameter in self.knowledge_base.actions[action][
+                                "params"
+                            ]:
+                                act_string += (
+                                    " " + parameter_samples[idx_action][parameter[0]]
+                                )
+                            sequence_plan.append(act_string)
 
-                    # Save the successful sequence and parameters.
-                    self.pddl_extender.create_new_action(
-                        goals=self.knowledge_base.goals,
-                        sequence=sequence,
-                        parameters=parameter_samples,
-                        sequence_preconds=sequence_preconds,
-                    )
-                    self.knowledge_base.clear_temp()
-                    found_plan = True
+                        print("----------")
+                        print("Sequence: ")
+                        for act in sequence_plan:
+                            print(act)
+
+                        # Useful for debugging:
+                        # if (
+                        #     sequence[0] == "place"
+                        #     and parameter_samples[0]["obj"] == "cube1"
+                        # ):
+                        #     print("hey")
+
+                        success = self._execute_plan(sequence_plan)
+                        if not success:
+                            continue
+
+                        print("Sequence SUCCESS")
+                        count_seq_run_success[seq_len - 1] += 1
+
+                        # Check if the goal was reached
+                        success = self.knowledge_base.test_goals(predicates)
+                        if not success:
+                            continue
+                        print("GOAL REACHED!!!")
+                        count_goal_reached[seq_len - 1] += 1
+
+                        # Save the successful sequence and parameters.
+                        self.pddl_extender.create_new_action(
+                            goals=self.knowledge_base.goals,
+                            sequence=sequence,
+                            parameters=parameter_samples,
+                            sequence_preconds=sequence_preconds,
+                        )
+                        self.knowledge_base.clear_temp()
+                        found_plan = True
+                        break
+                if found_plan:
                     break
             if found_plan:
                 break
@@ -166,9 +166,7 @@ class Explorer:
         return found_plan
 
     def _execute_plan(self, plan):
-        es = SequentialExecution(
-            self.skill_set, plan, self.knowledge_base, meta_action_handler=self.mah
-        )
+        es = SequentialExecution(self.skill_set, plan, self.knowledge_base)
         es.setup()
         while True:
             success, plan_finished = es.step()

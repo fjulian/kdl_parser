@@ -14,13 +14,12 @@ from highlevel_planning.skills.grasping import SkillGrasping
 from highlevel_planning.skills.placing import SkillPlacing
 from highlevel_planning.execution.es_sequential_execution import SequentialExecution
 from highlevel_planning.skills import pddl_descriptions
-from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning.knowledge.predicates import Predicates
-from highlevel_planning.learning.meta_action_handler import MetaActionHandler
-from highlevel_planning.learning.pddl_extender import PDDLExtender
 
 # Learning
+from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning.learning.explorer import Explorer
+from highlevel_planning.learning.pddl_extender import PDDLExtender
 
 # ----------------------------------------------------------------------
 
@@ -67,14 +66,12 @@ def main():
 
     # Add origin
     kb.add_object("origin", "position", np.array([0.0, 0.0, 0.0]))
-
-    # Meta action handler
-    mah = MetaActionHandler(kb)
+    kb.add_object("robot1", "robot")
 
     # -----------------------------------
 
     # Create world
-    world = World(gui_=True, sleep_=False, load_objects=not restore_existing_objects)
+    world = World(gui_=True, sleep_=True, load_objects=not restore_existing_objects)
     scene = ScenePlanning1(world, restored_objects=objects)
 
     # Spawn robot
@@ -83,9 +80,6 @@ def main():
 
     robot.to_start()
     world.step_seconds(0.5)
-
-    # Add robot
-    kb.add_object("robot1", "robot", robot)
 
     # -----------------------------------
 
@@ -108,10 +102,10 @@ def main():
     skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
 
     # PDDL extender
-    pddl_ex = PDDLExtender(kb, preds, mah)
+    pddl_ex = PDDLExtender(kb, preds)
 
     # Set up exploration
-    xplorer = Explorer(skill_set, robot._model.uid, scene.objects, mah, pddl_ex, kb)
+    xplorer = Explorer(skill_set, robot._model.uid, scene.objects, pddl_ex, kb)
 
     # ---------------------------------------------------------------
 
@@ -119,6 +113,7 @@ def main():
     plan = kb.solve()
 
     if plan is False:
+        print("No plan found, start exploration")
         success = xplorer.exploration(preds)
         if not success:
             print("Exploration was not successful")
@@ -129,18 +124,18 @@ def main():
         if plan is False:
             print("Planner failed despite exploration")
             return
-    else:
-        if len(plan) == 0:
-            print("Nothing to do.")
-            return
-        print("Found plan:")
-        print(plan)
-        raw_input("Press enter to run...")
+
+    if len(plan) == 0:
+        print("Nothing to do.")
+        return
+    print("Found plan:")
+    print(plan)
+    raw_input("Press enter to run...")
 
     # -----------------------------------
 
     # Set up execution system
-    es = SequentialExecution(skill_set, plan, kb, meta_action_handler=mah)
+    es = SequentialExecution(skill_set, plan, kb)
 
     # Run
     try:

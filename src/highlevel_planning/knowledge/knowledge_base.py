@@ -26,25 +26,32 @@ class KnowledgeBase(object):
         self.actions = dict()
         self.types = dict()
 
-        self._domain_file = path.join(domain_dir, "_domain.pkl")
-        self.load_domain()
-
         # Problem definition
         self.objects = dict()
         self.initial_predicates = list()
         # self.goals = list()
         # self.goals = [("in-hand", True, ("cube1", "robot1"))]
-        self.goals = [("on", True, ("cupboard", "cube1"))]
+        # self.goals = [("in-reach", True, ("container1", "robot1"))]
+        self.goals = [
+            ("on", True, ("cupboard", "cube1")),
+            ("in-reach", True, ("container1", "robot1")),
+        ]
         # self.goals = [("inside", True, ("container1", "cube1"))]
+
+        # Value lookups (e.g. for positions)
+        self.lookup_table = dict()
+        # Meta action info
+        self.meta_actions = dict()
+
+        # Load previous knkowledge base
+        self._domain_file = path.join(domain_dir, "_domain.pkl")
+        self.load_domain()
 
         # PDDL file interfaces
         self.pddl_if = PDDLFileInterface(domain_dir, problem_dir, domain_name)
         self.pddl_if_temp = PDDLFileInterface(
             temp_domain_dir, temp_problem_dir, domain_name
         )
-
-        # Value lookups (e.g. for positions)
-        self.lookup_table = dict()
 
         # Temporary variables (e.g. for exploration)
         self._temp_goals = list()
@@ -61,12 +68,23 @@ class KnowledgeBase(object):
             self._predicates = load_obj[1]
             self.actions = load_obj[2]
             self.types = load_obj[3]
+            self.objects = load_obj[4]
+            self.lookup_table = load_obj[5]
+            self.meta_actions = load_obj[6]
             print("Trying to load domain file... DONE")
         else:
             print("Trying to load domain file... NOT FOUND --> starting from scratch")
 
     def save_domain(self):
-        save_obj = (self._domain_name, self._predicates, self.actions, self.types)
+        save_obj = (
+            self._domain_name,
+            self._predicates,
+            self.actions,
+            self.types,
+            self.objects,
+            self.lookup_table,
+            self.meta_actions,
+        )
         with open(self._domain_file, "wb") as f:
             pickle.dump(save_obj, f)
         print("Saved domain file")
@@ -153,6 +171,75 @@ class KnowledgeBase(object):
             self.pddl_if._domain_file_pddl, self.pddl_if._problem_file_pddl
         )
 
+    # ----- Meta action handling -----------------------------------------------
+
+    def expand_plan(self, plan):
+        expanded_plan = list()
+
+        current_idx = 0
+
+        for plan_item in plan:
+            plan_item_list = plan_item.split(" ")
+            action_name = plan_item_list[1]
+            if len(plan_item_list) > 2:
+                action_parameters = plan_item_list[2:]
+            else:
+                action_parameters = []
+            if action_name in self.meta_actions:
+                meta_action = self.meta_actions[action_name]
+                parameter_order = [
+                    param[0] for param in meta_action["description"]["params"]
+                ]
+                for idx, sub_action_name in enumerate(meta_action["seq"]):
+                    new_plan_item = str(current_idx) + ": " + sub_action_name + " "
+                    sub_action_parameters = self.actions[sub_action_name]["params"]
+                    for param_spec in sub_action_parameters:
+                        old_param_name = param_spec[0]
+                        if old_param_name in meta_action["hidden_params"][idx]:
+                            new_plan_item += (
+                                meta_action["hidden_params"][idx][old_param_name] + " "
+                            )
+                        elif old_param_name in meta_action["param_translator"][idx]:
+                            new_param_name = meta_action["param_translator"][idx][
+                                old_param_name
+                            ]
+                            parameter_idx = parameter_order.index(new_param_name)
+                            parameter_value = action_parameters[parameter_idx]
+                            new_plan_item += parameter_value + " "
+                        else:
+                            raise RuntimeError(
+                                "Parameter for sub action of meta action undefined"
+                            )
+                    new_plan_item = new_plan_item.strip()
+                    expanded_plan.append(new_plan_item)
+                    current_idx += 1
+            else:
+                new_plan_item = (
+                    str(current_idx) + ": " + plan_item.split(":")[1].strip()
+                )
+                expanded_plan.append(new_plan_item)
+                current_idx += 1
+        return expanded_plan
+
+    def add_meta_action(
+        self,
+        name,
+        sequence,
+        parameters,
+        param_translator,
+        hidden_parameters,
+        description,
+    ):
+        assert type(name) is str
+        assert type(sequence) is list
+        self.meta_actions[name] = {
+            "seq": sequence,
+            "params": parameters,
+            "param_translator": param_translator,
+            "hidden_params": hidden_parameters,
+            "description": description,
+        }
+
     # ----- Utilities ----------------------------------------------------------
 
     def test_goals(self, predicates):
@@ -183,7 +270,7 @@ class KnowledgeBase(object):
     def populate_objects(self, scene):
         # TODO maybe move this into a separate dummy perception module
         for obj in scene.objects:
-            self.objects[obj] = ["item"]
+            self.add_object(obj, "item")
 
     def _type_is_position(self, type_to_check):
         if type_to_check == "position":

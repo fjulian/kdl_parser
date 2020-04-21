@@ -5,9 +5,8 @@ from highlevel_planning.learning.logic_tools import determine_sequence_effects
 
 
 class PDDLExtender(object):
-    def __init__(self, knowledge_base, predicates, meta_action_handler):
+    def __init__(self, knowledge_base, predicates):
         self.predicates = predicates
-        self.meta_action_handler = meta_action_handler
         self.knowledge_base = knowledge_base
 
     def create_new_action(self, goals, sequence, parameters, sequence_preconds):
@@ -68,7 +67,7 @@ class PDDLExtender(object):
                     param_translator[idx][param_name] = param_name
 
         # Save action meta data
-        self.meta_action_handler.add_meta_action(
+        self.knowledge_base.add_meta_action(
             action_name,
             sequence,
             parameters,
