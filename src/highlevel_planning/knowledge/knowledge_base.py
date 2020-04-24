@@ -120,10 +120,10 @@ class KnowledgeBase(object):
     def add_type(self, new_type, parent_type=None):
         assert isinstance(new_type, str)
         if new_type in self.types:
-            if parent_type not in self.types[new_type]:
-                self.types[new_type].append(parent_type)
+            # There can only be one parent per type
+            ValueError("Type already exists")
         else:
-            self.types[new_type] = [parent_type]
+            self.types[new_type] = parent_type
 
     # ----- Adding to the problem description ----------------------------------
 
@@ -272,23 +272,21 @@ class KnowledgeBase(object):
         for obj in scene.objects:
             self.add_object(obj, "item")
 
-    def _type_is_position(self, type_to_check):
-        if type_to_check == "position":
+    def _query_type(self, type_to_check, type_query):
+        parent_type = self.types[type_to_check]
+        if type_to_check == type_query:
             return True
-        elif type_to_check is None or self.types[type_to_check] == [None]:
+        elif parent_type is None:
             return False
-        res = False
-        for parent_type in self.types[type_to_check]:
-            res = res or self._type_is_position(parent_type)
-        return res
+        return self._query_type(parent_type, type_query)
 
-    def obj_is_position(self, object_name):
-        if object_name in self.objects:
-            obj_types = self.objects[object_name]
+    def is_type(self, object_to_check, type_query):
+        if object_to_check in self.objects:
+            obj_types = self.objects[object_to_check]
         else:
-            obj_types = self._temp_objects[object_name]
+            obj_types = self._temp_objects[object_to_check]
         for obj_type in obj_types:
-            if self._type_is_position(obj_type):
+            if self._query_type(obj_type, type_query):
                 return True
         return False
 

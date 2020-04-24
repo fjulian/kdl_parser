@@ -36,7 +36,7 @@ class SequentialExecution(ExecutionSystem):
                         raise SkillExecutionError
                 elif action_name == "nav":
                     target_name = plan_item_list[3]
-                    if self.knowledge_base.obj_is_position(target_name):
+                    if self.knowledge_base.is_type(target_name, type_query="position"):
                         position = self.knowledge_base.lookup_table[target_name]
                         self.skill_set_["nav"].move_to_pos(position, nav_min_dist=0.3)
                     else:
