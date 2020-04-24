@@ -9,7 +9,7 @@ from highlevel_planning.learning.logic_tools import (
     parametrize_predicate,
     determine_sequence_preconds,
     test_abstract_feasibility,
-    get_types_by_parent_type,
+    invert_dict,
 )
 
 # ----- Parameters -------------------------------------
@@ -51,6 +51,8 @@ class Explorer:
             relevant_objects.extend(goal[2])
 
         res = self._explore_generalized_action(relevant_objects, sequences_tried)
+
+        return res
 
         count_seq_found = [0] * 4
         count_preplan_plan_success = [0] * 4
@@ -363,20 +365,8 @@ class Explorer:
         # TODO For now this is just adding all objects in the scene. Instead, just add objects
         # currently in proximity to the robot and the objects of interest.
         objects_of_interest_dict = self.knowledge_base.objects
-
-        # Sort objects of interest by type into a dictionary
-        objects_of_interest = dict()
-        for obj_name, obj_type in objects_of_interest_dict.items():
-            if (
-                obj_type[0] in objects_of_interest
-            ):  # TODO find a better way to record the object type
-                objects_of_interest[obj_type[0]].append(obj_name)
-            else:
-                objects_of_interest[obj_type[0]] = [obj_name]
-
-        types_by_parent = get_types_by_parent_type(self.knowledge_base.types)
-
-        # TODO adjust this function to sample from desired object type and children
+        types_by_parent = invert_dict(self.knowledge_base.types)
+        objects_by_type = invert_dict(objects_of_interest_dict)
 
         for idx_action, action in enumerate(sequence):
             parameter_samples[idx_action] = dict()
@@ -390,34 +380,15 @@ class Explorer:
                     obj_sample = given_params[idx_action][obj_name]
                 else:
                     # Sample a value for this parameter
-                    if obj_type == "position":
+                    if self.knowledge_base.type_x_child_of_y(obj_type, "position"):
                         position = self._sample_position()
                         obj_sample = self.knowledge_base.add_temp_object(
-                            object_type="position", object_value=position
+                            object_type=obj_type, object_value=position
                         )
                     else:
-                        if obj_type in types_by_parent:
-                            objects_to_sample_from = list()
-                            for sub_type in types_by_parent[obj_type]:
-                                if sub_type in objects_of_interest:
-                                    objects_to_sample_from.append(
-                                        objects_of_interest[sub_type]
-                                    )
-                            # TODO: make this recursive and not just one level down in the type hierarchy
-                            try:
-                                objects_to_sample_from.append(
-                                    objects_of_interest[obj_type]
-                                )
-                            except KeyError:
-                                pass
-                            objects_to_sample_from = [
-                                item
-                                for sublist in objects_to_sample_from
-                                for item in sublist
-                            ]
-                        else:
-                            objects_to_sample_from = objects_of_interest[obj_type]
-
+                        objects_to_sample_from = self.knowledge_base.get_objects_by_type(
+                            obj_type, types_by_parent, objects_by_type
+                        )
                         if len(objects_to_sample_from) == 0:
                             # No object of the desired type exists, sample new sequence
                             raise NameError(

@@ -78,6 +78,18 @@ class PDDLExtender(object):
 
         return action_name
 
+    def generalize_action(self, action_name, parameters):
+        assert type(parameters) is dict
+        action_description = self.knowledge_base.actions[action_name]
+        types_of_params = {param[0]: param[1] for param in action_description["params"]}
+        for parameter, object_name in parameters.items():
+            if not object_name in self.knowledge_base.objects:
+                self.knowledge_base.make_permanent(object_name)
+            if not self.knowledge_base.is_type(
+                object_to_check=object_name, type_query=types_of_params[parameter]
+            ):
+                self.knowledge_base.add_object(object_name, types_of_params[parameter])
+
     def _retype_argument(self, arg, action_params, already_retyped, time_string):
         if arg not in already_retyped:
             original_types = None

@@ -114,11 +114,18 @@ def test_abstract_feasibility(knowledge_base, sequence, parameters, preconds):
     return not sequence_invalid
 
 
-def get_types_by_parent_type(types):
-    types_by_parent = dict()
-    for type_name in types:
-        for parent_type_name in types[type_name]:
-            if parent_type_name not in types_by_parent:
-                types_by_parent[parent_type_name] = list()
-            types_by_parent[parent_type_name].append(type_name)
-    return types_by_parent
+def invert_dict(original_dict):
+    inverted_dict = dict()
+    for key in original_dict:
+        if type(original_dict[key]) is list:
+            for val in original_dict[key]:
+                if val not in inverted_dict:
+                    inverted_dict[val] = list()
+                inverted_dict[val].append(key)
+        else:
+            if original_dict[key] not in inverted_dict:
+                inverted_dict[original_dict[key]] = list()
+            inverted_dict[original_dict[key]].append(key)
+    for val in inverted_dict:
+        inverted_dict[val] = list(dict.fromkeys(inverted_dict[val]))
+    return inverted_dict

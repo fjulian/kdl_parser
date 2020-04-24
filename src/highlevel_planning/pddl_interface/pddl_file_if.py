@@ -1,7 +1,7 @@
 from datetime import datetime
 from os import path
 
-from highlevel_planning.learning.logic_tools import get_types_by_parent_type
+from highlevel_planning.learning.logic_tools import invert_dict
 
 
 class PDDLFileInterface:
@@ -24,7 +24,7 @@ class PDDLFileInterface:
         if not all_types_present:
             raise ValueError("Not all types were defined properly")
 
-        types_by_parent = get_types_by_parent_type(types)
+        types_by_parent = invert_dict(types)
 
         pddl_str = ""
         pddl_str += "(define (domain " + self._domain_name + ")\n"

@@ -147,7 +147,7 @@ class KnowledgeBase(object):
         redundant_types = list()
         for i, obj_type in enumerate(object_types):
             for potential_child in (x for j, x in enumerate(object_types) if j != i):
-                if self._type_x_child_of_y(potential_child, obj_type):
+                if self.type_x_child_of_y(potential_child, obj_type):
                     redundant_types.append(obj_type)
                     break
         redundant_types = list(dict.fromkeys(redundant_types))  # Remove duplicates
@@ -288,13 +288,13 @@ class KnowledgeBase(object):
         for obj in scene.objects:
             self.add_object(obj, "item")
 
-    def _type_x_child_of_y(self, x, y):
+    def type_x_child_of_y(self, x, y):
         parent_type = self.types[x]
         if x == y:
             return True
         elif parent_type is None:
             return False
-        return self._type_x_child_of_y(parent_type, y)
+        return self.type_x_child_of_y(parent_type, y)
 
     def is_type(self, object_to_check, type_query):
         if object_to_check in self.objects:
@@ -302,14 +302,25 @@ class KnowledgeBase(object):
         else:
             obj_types = self._temp_objects[object_to_check]
         for obj_type in obj_types:
-            if self._type_x_child_of_y(obj_type, type_query):
+            if self.type_x_child_of_y(obj_type, type_query):
                 return True
         return False
+
+    def get_objects_by_type(
+        self, type_query, types_by_parent, objects_by_type, object_list=[]
+    ):
+        object_list.extend(objects_by_type[type_query])
+        if type_query in types_by_parent:
+            for sub_type in types_by_parent[type_query]:
+                self.get_objects_by_type(
+                    sub_type, types_by_parent, objects_by_type, object_list
+                )
+        return object_list
 
     # ----- Handling temporary goals, e.g. for exploration ---------------------
 
     def set_temp_goals(self, goal_list):
-        self._temp_goals = goal_list
+        self._temp_goals = deepcopy(goal_list)
 
     def add_temp_object(self, object_type, object_name=None, object_value=None):
         assert object_type in self.types
@@ -328,6 +339,9 @@ class KnowledgeBase(object):
         if object_name in self._temp_objects:
             if object_type not in self._temp_objects[object_name]:
                 self._temp_objects[object_name].append(object_type)
+                red_types = self._get_redundant_type(self._temp_objects[object_name])
+                for red_type in red_types:
+                    self._temp_objects[object_name].remove(red_type)
         else:
             self._temp_objects[object_name] = [object_type]
         if object_value is not None:
