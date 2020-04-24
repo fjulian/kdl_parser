@@ -36,6 +36,12 @@ def main():
         action="store_true",
         help="if given, the simulation does not reload objects. Objects must already be present.",
     )
+    parser.add_argument(
+        "-s",
+        "--sleep",
+        action="store_true",
+        help="if given, the simulation will sleep for each update step, to mimic real time execution.",
+    )
     args = parser.parse_args()
 
     # Load existing simulation data if desired
@@ -71,7 +77,9 @@ def main():
     # -----------------------------------
 
     # Create world
-    world = World(gui_=True, sleep_=True, load_objects=not restore_existing_objects)
+    world = World(
+        gui_=True, sleep_=args.sleep, load_objects=not restore_existing_objects
+    )
     scene = ScenePlanning1(world, restored_objects=objects)
 
     # Spawn robot
