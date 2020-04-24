@@ -5,7 +5,7 @@ import numpy as np
 
 
 class Predicates:
-    def __init__(self, scene, robot, knowledge_base, robot_lock=None):
+    def __init__(self, scene, robot, robot_lock=None):
         self.call = {
             "empty-hand": self.empty_hand,
             "in-hand": self.in_hand,
@@ -27,7 +27,6 @@ class Predicates:
         self._robot_uid = robot._model.uid
         self._robot = robot
         self._robot_lock = robot_lock
-        self._knowledge_base = knowledge_base
 
     def empty_hand(self, robot_name):
         robot = self._robot

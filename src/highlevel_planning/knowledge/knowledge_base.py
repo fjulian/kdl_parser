@@ -11,8 +11,8 @@ def check_path_exists(path_to_check):
 
 
 class KnowledgeBase(object):
-    def __init__(self, predicate_funcs, knowledge_dir, domain_name=""):
-        self.predicate_funcs = predicate_funcs
+    def __init__(self, knowledge_dir, domain_name=""):
+        self.predicate_funcs = None
 
         # Folder book keeping
         domain_dir = path.join(knowledge_dir, "main")
@@ -60,6 +60,9 @@ class KnowledgeBase(object):
         # Temporary variables (e.g. for exploration)
         self._temp_goals = list()
         self._temp_objects = dict()
+
+    def set_predicate_funcs(self, preds):
+        self.predicate_funcs = preds
 
     # ----- Loading and saving pickle with domain and problem ---------------------------
 
@@ -132,10 +135,23 @@ class KnowledgeBase(object):
         if object_name in self.objects:
             if object_type not in self.objects[object_name]:
                 self.objects[object_name].append(object_type)
+                red_types = self._get_redundant_type(self.objects[object_name])
+                for red_type in red_types:
+                    self.objects[object_name].remove(red_type)
         else:
             self.objects[object_name] = [object_type]
         if object_value is not None:
             self.lookup_table[object_name] = object_value
+
+    def _get_redundant_type(self, object_types):
+        redundant_types = list()
+        for i, obj_type in enumerate(object_types):
+            for potential_child in (x for j, x in enumerate(object_types) if j != i):
+                if self._type_x_child_of_y(potential_child, obj_type):
+                    redundant_types.append(obj_type)
+                    break
+        redundant_types = list(dict.fromkeys(redundant_types))  # Remove duplicates
+        return redundant_types
 
     def add_objects(self, object_dict):
         for obj, obj_type in object_dict.items():
@@ -272,13 +288,13 @@ class KnowledgeBase(object):
         for obj in scene.objects:
             self.add_object(obj, "item")
 
-    def _query_type(self, type_to_check, type_query):
-        parent_type = self.types[type_to_check]
-        if type_to_check == type_query:
+    def _type_x_child_of_y(self, x, y):
+        parent_type = self.types[x]
+        if x == y:
             return True
         elif parent_type is None:
             return False
-        return self._query_type(parent_type, type_query)
+        return self._type_x_child_of_y(parent_type, y)
 
     def is_type(self, object_to_check, type_query):
         if object_to_check in self.objects:
@@ -286,7 +302,7 @@ class KnowledgeBase(object):
         else:
             obj_types = self._temp_objects[object_to_check]
         for obj_type in obj_types:
-            if self._query_type(obj_type, type_query):
+            if self._type_x_child_of_y(obj_type, type_query):
                 return True
         return False
 

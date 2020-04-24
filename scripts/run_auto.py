@@ -92,7 +92,8 @@ def main():
     # -----------------------------------
 
     # Set up predicates
-    preds = Predicates(scene, robot, kb)
+    preds = Predicates(scene, robot)
+    kb.set_predicate_funcs(preds)
 
     for descr in preds.descriptions.items():
         kb.add_predicate(
@@ -101,7 +102,7 @@ def main():
 
     # Planning problem
     kb.populate_objects(scene)
-    kb.check_predicates(preds)
+    kb.check_predicates()
 
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot)
@@ -122,7 +123,7 @@ def main():
 
     if plan is False:
         print("No plan found, start exploration")
-        success = xplorer.exploration(preds)
+        success = xplorer.exploration()
         if not success:
             print("Exploration was not successful")
             return
