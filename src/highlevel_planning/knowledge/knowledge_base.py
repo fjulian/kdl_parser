@@ -11,7 +11,9 @@ def check_path_exists(path_to_check):
 
 
 class KnowledgeBase(object):
-    def __init__(self, knowledge_dir, domain_name=""):
+    def __init__(self, predicate_funcs, knowledge_dir, domain_name=""):
+        self.predicate_funcs = predicate_funcs
+
         # Folder book keeping
         domain_dir = path.join(knowledge_dir, "main")
         check_path_exists(domain_dir)
@@ -32,10 +34,12 @@ class KnowledgeBase(object):
         # self.goals = list()
         # self.goals = [("in-hand", True, ("cube1", "robot1"))]
         # self.goals = [("in-reach", True, ("container1", "robot1"))]
-        self.goals = [
-            ("on", True, ("cupboard", "cube1")),
-            ("in-reach", True, ("container1", "robot1")),
-        ]
+        # self.goals = [("on", True, ("cupboard", "cube1"))]
+        # self.goals = [
+        #     ("on", True, ("cupboard", "cube1")),
+        #     ("in-reach", True, ("container1", "robot1")),
+        # ]
+        self.goals = [("on", True, ("lid1", "cube1"))]
         # self.goals = [("inside", True, ("container1", "cube1"))]
 
         # Value lookups (e.g. for positions)
@@ -242,28 +246,24 @@ class KnowledgeBase(object):
 
     # ----- Utilities ----------------------------------------------------------
 
-    def test_goals(self, predicates):
+    def test_goals(self):
         for goal in self.goals:
-            if not predicates.call[goal[0]](*goal[2]):
+            if not self.predicate_funcs.call[goal[0]](*goal[2]):
                 return False
         return True
 
-    def check_predicates(self, predicates):
+    def check_predicates(self):
         """
         If predicates need to be initialized when the system is launched, this can be done here.
-        
-        Args:
-            predicates ([type]): [description]
-            robot ([type]): [description]
         """
 
-        if predicates.empty_hand("robot1"):
+        if self.predicate_funcs.empty_hand("robot1"):
             self.initial_predicates.append(("empty-hand", "robot1"))
         self.initial_predicates.append(("in-reach", "origin", "robot1"))
 
         # Check any predicates in relation with the goal
         for goal in self.goals:
-            if predicates.call[goal[0]](*goal[2]):
+            if self.predicate_funcs.call[goal[0]](*goal[2]):
                 pred_tuple = (goal[0],) + goal[2]
                 self.initial_predicates.append(pred_tuple)
 
@@ -300,7 +300,6 @@ class KnowledgeBase(object):
     def add_temp_object(self, object_type, object_name=None, object_value=None):
         assert object_type in self.types
         if object_name is not None:
-            assert object_name not in self._temp_objects
             assert object_name not in self.lookup_table
         else:
             counter = 1
@@ -312,19 +311,36 @@ class KnowledgeBase(object):
                 ):
                     break
                 counter += 1
-        self._temp_objects[object_name] = [object_type]
+        if object_name in self._temp_objects:
+            if object_type not in self._temp_objects[object_name]:
+                self._temp_objects[object_name].append(object_type)
+        else:
+            self._temp_objects[object_name] = [object_type]
         if object_value is not None:
             self.lookup_table[object_name] = object_value
         return object_name
+
+    def generalize_temp_object(self, object_name):
+        assert object_name in self.objects
+        for new_type in self.types:
+            self.add_temp_object(object_type=new_type, object_name=object_name)
 
     def make_permanent(self, obj_name):
         self.objects[obj_name] = self._temp_objects[obj_name]
         del self._temp_objects[obj_name]
 
+    def joined_objects(self):
+        objects = deepcopy(self._temp_objects)
+        for obj in self.objects:
+            if obj in objects:
+                objects[obj] = list(dict.fromkeys(objects[obj] + self.objects[obj]))
+            else:
+                objects[obj] = self.objects[obj]
+        return objects
+
     def solve_temp(self):
         self.pddl_if_temp.write_domain_pddl(self.actions, self._predicates, self.types)
-        objects = deepcopy(self._temp_objects)
-        objects.update(self.objects)
+        objects = self.joined_objects()
         self.pddl_if_temp.write_problem_pddl(
             objects, self.initial_predicates, self._temp_goals
         )
