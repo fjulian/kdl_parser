@@ -93,12 +93,10 @@ class PDDLExtender(object):
     def _retype_argument(self, arg, action_params, already_retyped, time_string):
         if arg not in already_retyped:
             original_types = None
-            if arg in self.knowledge_base.objects:
-                original_types = self.knowledge_base.objects[arg]
-            else:
+            if arg not in self.knowledge_base.objects:
                 # Make arguments we use permanent
                 self.knowledge_base.make_permanent(arg)
-                original_types = self.knowledge_base.objects[arg]
+            original_types = self.knowledge_base.objects[arg]
             if original_types is None:
                 raise RuntimeError("Unknown argument cannot be processed")
             new_type = arg + "-" + time_string

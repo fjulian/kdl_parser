@@ -34,12 +34,12 @@ class KnowledgeBase(object):
         # self.goals = list()
         # self.goals = [("in-hand", True, ("cube1", "robot1"))]
         # self.goals = [("in-reach", True, ("container1", "robot1"))]
-        # self.goals = [("on", True, ("cupboard", "cube1"))]
+        self.goals = [("on", True, ("cupboard", "cube1"))]
         # self.goals = [
         #     ("on", True, ("cupboard", "cube1")),
         #     ("in-reach", True, ("container1", "robot1")),
         # ]
-        self.goals = [("on", True, ("lid1", "cube1"))]
+        # self.goals = [("on", True, ("lid1", "cube1"))]
         # self.goals = [("inside", True, ("container1", "cube1"))]
 
         # Value lookups (e.g. for positions)
@@ -144,14 +144,13 @@ class KnowledgeBase(object):
             self.lookup_table[object_name] = object_value
 
     def _get_redundant_type(self, object_types):
-        redundant_types = list()
+        redundant_types = set()
         for i, obj_type in enumerate(object_types):
             for potential_child in (x for j, x in enumerate(object_types) if j != i):
                 if self.type_x_child_of_y(potential_child, obj_type):
-                    redundant_types.append(obj_type)
+                    redundant_types.add(obj_type)
                     break
-        redundant_types = list(dict.fromkeys(redundant_types))  # Remove duplicates
-        return redundant_types
+        return list(redundant_types)
 
     def add_objects(self, object_dict):
         for obj, obj_type in object_dict.items():

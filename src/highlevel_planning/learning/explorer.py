@@ -67,7 +67,7 @@ class Explorer:
             self.knowledge_base.generalize_temp_object(obj)
         self.knowledge_base.set_temp_goals(self.knowledge_base.goals)
         plan = self.knowledge_base.solve_temp()
-        if plan is None:
+        if not plan:
             return False
 
         # Extract parameters from plan
