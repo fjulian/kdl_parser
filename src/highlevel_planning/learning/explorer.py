@@ -293,7 +293,7 @@ class Explorer:
                 obj_type = parameter[1]
                 obj_name = parameter[0]
 
-                if obj_name in given_params[idx_action]:
+                if given_params is not None and obj_name in given_params[idx_action]:
                     # Copy the given parameter
                     obj_sample = given_params[idx_action][obj_name]
                 else:
@@ -312,7 +312,7 @@ class Explorer:
                             raise NameError(
                                 "No object of desired type among objects of interest"
                             )
-                        obj_sample = np.random.choice(objects_to_sample_from)
+                        obj_sample = np.random.choice(list(objects_to_sample_from))
                 parameter_samples[idx_action][obj_name] = obj_sample
                 parameters_current_action.append(obj_sample)
             parameter_samples_tuples[idx_action] = tuple(parameters_current_action)

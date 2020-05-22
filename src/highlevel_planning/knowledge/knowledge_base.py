@@ -306,15 +306,19 @@ class KnowledgeBase(object):
         return False
 
     def get_objects_by_type(
-        self, type_query, types_by_parent, objects_by_type, object_list=[]
+        self, type_query, types_by_parent, objects_by_type, object_set=None
     ):
-        object_list.extend(objects_by_type[type_query])
+        if object_set is None:
+            object_set = set()
+        if type_query in objects_by_type:
+            for obj in objects_by_type[type_query]:
+                object_set.add(obj)
         if type_query in types_by_parent:
             for sub_type in types_by_parent[type_query]:
-                self.get_objects_by_type(
-                    sub_type, types_by_parent, objects_by_type, object_list
+                object_set = self.get_objects_by_type(
+                    sub_type, types_by_parent, objects_by_type, object_set
                 )
-        return object_list
+        return object_set
 
     # ----- Handling temporary goals, e.g. for exploration ---------------------
 
