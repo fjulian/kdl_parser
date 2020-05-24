@@ -30,6 +30,7 @@ class KnowledgeBase(object):
 
         # Problem definition
         self.objects = dict()
+        self.visible_objects = set()
         self.initial_predicates = list()
         # self.goals = list()
         # self.goals = [("in-hand", True, ("cube1", "robot1"))]
@@ -142,6 +143,7 @@ class KnowledgeBase(object):
             self.objects[object_name] = [object_type]
         if object_value is not None:
             self.lookup_table[object_name] = object_value
+        self.visible_objects.add(object_name)
 
     def _get_redundant_type(self, object_types):
         redundant_types = set()
@@ -282,10 +284,17 @@ class KnowledgeBase(object):
                 pred_tuple = (goal[0],) + goal[2]
                 self.initial_predicates.append(pred_tuple)
 
-    def populate_objects(self, scene):
+    def populate_visible_objects(self, scene):
         # TODO maybe move this into a separate dummy perception module
         for obj in scene.objects:
             self.add_object(obj, "item")
+
+        # Add "objects" that are always visible
+        for object_name in self.objects:
+            for object_type in self.objects[object_name]:
+                if self.type_x_child_of_y(object_type, "position"):
+                    self.add_object(object_name, "position")
+                    break
 
     def type_x_child_of_y(self, x, y):
         parent_type = self.types[x]
@@ -306,17 +315,27 @@ class KnowledgeBase(object):
         return False
 
     def get_objects_by_type(
-        self, type_query, types_by_parent, objects_by_type, object_set=None
+        self,
+        type_query,
+        types_by_parent,
+        objects_by_type,
+        object_set=None,
+        visible_only=False,
     ):
         if object_set is None:
             object_set = set()
         if type_query in objects_by_type:
             for obj in objects_by_type[type_query]:
-                object_set.add(obj)
+                if not visible_only or obj in self.visible_objects:
+                    object_set.add(obj)
         if type_query in types_by_parent:
             for sub_type in types_by_parent[type_query]:
                 object_set = self.get_objects_by_type(
-                    sub_type, types_by_parent, objects_by_type, object_set
+                    sub_type,
+                    types_by_parent,
+                    objects_by_type,
+                    object_set,
+                    visible_only=visible_only,
                 )
         return object_set
 

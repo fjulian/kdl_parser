@@ -101,7 +101,7 @@ def main():
         )
 
     # Planning problem
-    kb.populate_objects(scene)
+    kb.populate_visible_objects(scene)
     kb.check_predicates()
 
     # Set up skills

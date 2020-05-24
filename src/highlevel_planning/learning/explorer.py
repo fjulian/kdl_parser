@@ -305,7 +305,10 @@ class Explorer:
                         )
                     else:
                         objects_to_sample_from = self.knowledge_base.get_objects_by_type(
-                            obj_type, types_by_parent, objects_by_type
+                            obj_type,
+                            types_by_parent,
+                            objects_by_type,
+                            visible_only=True,
                         )
                         if len(objects_to_sample_from) == 0:
                             # No object of the desired type exists, sample new sequence
