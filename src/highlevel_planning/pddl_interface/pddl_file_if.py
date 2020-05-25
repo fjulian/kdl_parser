@@ -1,7 +1,25 @@
 from datetime import datetime
 from os import path
+from copy import deepcopy
 
 from highlevel_planning.learning.logic_tools import invert_dict
+
+
+def add_type(type_dict, new_type, parent_type=None):
+    assert isinstance(new_type, str)
+    if new_type in type_dict:
+        # There can only be one parent per type
+        ValueError("Type already exists")
+    else:
+        type_dict[new_type] = parent_type
+
+
+def add_object(object_dict, object_name, object_type, object_value=None):
+    if object_name in object_dict:
+        if object_type not in object_dict[object_name]:
+            object_dict[object_name].append(object_type)
+    else:
+        object_dict[object_name] = [object_type]
 
 
 class PDDLFileInterface:
@@ -18,6 +36,76 @@ class PDDLFileInterface:
         self._time_now_str = time_now.strftime("%y%m%d-%H%M%S")
 
     # ----- Loading and saving PDDL files --------------------------------------
+
+    def write_pddl(self, knowledge_base):
+        # Preprocess
+        (
+            actions,
+            predicates,
+            types,
+            objects,
+            initial_predicates,
+            goals,
+        ) = self._preprocess_knowledge(knowledge_base)
+
+        # Write files
+        self.write_domain_pddl(actions, predicates, types)
+        self.write_domain_pddl(objects, initial_predicates, goals)
+
+    def _preprocess_knowledge(self, knowledge_base):
+        actions_pddl = dict()
+        predicates_pddl = dict()
+        types_pddl = deepcopy(knowledge_base.types)
+        objects_pddl = deepcopy(knowledge_base.objects)
+        initial_predicates_pddl = deepcopy(knowledge_base.initial_predicates)
+        goals_pddl = deepcopy(knowledge_base.goals)
+
+        for action_name in knowledge_base.actions:
+            action_descr = knowledge_base.actions[action_name]
+            action_suffix = 1
+            if action_name in knowledge_base.parameterizations:
+                type_suffix = 1
+                for object_param_set in knowledge_base.parameterizations[action_name]:
+                    param_type_translator = dict()
+                    for object_param in object_param_set:
+                        new_type = "".join((object_param[1], "_", type_suffix))
+                        type_suffix += 1
+                        add_type(types_pddl, new_type, object_param[1])
+                        add_object(objects_pddl, object_param[2], new_type)
+                        param_type_translator[object_param[1]] = new_type
+                    for hidden_param_name in knowledge_base.parameterizations[
+                        action_name
+                    ][object_param_set]:
+                        new_type = "".join((hidden_param_name, "_", type_suffix))
+                        type_suffix += 1
+                        add_type(types_pddl, new_type, hidden_param_name)
+                        param_type_translator[hidden_param_name] = new_type
+                        for hidden_param_value in knowledge_base.parameterizations[
+                            action_name
+                        ][object_param_set][hidden_param_name]:
+                            add_object(objects_pddl, hidden_param_value, new_type)
+                    new_params = [
+                        [old_param_spec[0], param_type_translator[old_param_spec[1]]]
+                        for old_param_spec in action_descr["params"]
+                    ]
+                    new_action_name = "".join((action_name, "_", action_suffix))
+                    action_suffix += 1
+                    actions_pddl[new_action_name] = {
+                        "params": new_params,
+                        "preconds": action_descr["preconds"],
+                        "effects": action_descr["effects"],
+                    }
+            else:
+                actions_pddl[action_name] = deepcopy(action_descr)
+
+        return (
+            actions_pddl,
+            predicates_pddl,
+            types_pddl,
+            objects_pddl,
+            initial_predicates_pddl,
+            goals_pddl,
+        )
 
     def write_domain_pddl(self, actions, predicates, types):
         all_types_present = self.check_types(actions, types, predicates)

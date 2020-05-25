@@ -45,6 +45,7 @@ class KnowledgeBase(object):
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()
+        self.parameterizations = dict()
         # Meta action info
         self.meta_actions = dict()
 

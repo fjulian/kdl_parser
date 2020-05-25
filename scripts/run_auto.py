@@ -153,6 +153,10 @@ def main():
             print("------------- Iteration {} ---------------".format(index))
             es.print_status()
             success, plan_finished = es.step()
+            if not success:
+                raise RuntimeError(
+                    "Error during execution of current action. Aborting."
+                )
             index += 1
             if plan_finished:
                 print("Plan finished. Exiting.")
