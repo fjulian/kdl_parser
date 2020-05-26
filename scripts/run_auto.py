@@ -2,6 +2,8 @@ import argparse
 import pickle
 import time
 import numpy as np
+import os
+import pybullet as p
 
 # Simulation
 from highlevel_planning.sim.world import World
@@ -88,6 +90,15 @@ def main():
 
     robot.to_start()
     world.step_seconds(0.5)
+
+    # Save world
+    if not restore_existing_objects:
+        savedir = os.path.join(os.getcwd(), "data", "sim")
+        if not os.path.isdir(savedir):
+            os.makedirs(savedir)
+        with open(os.path.join(savedir, "objects.pkl"), "wb") as output:
+            pickle.dump((scene.objects, robot._model), output)
+        p.saveBullet(os.path.join(savedir, "state.bullet"))
 
     # -----------------------------------
 
