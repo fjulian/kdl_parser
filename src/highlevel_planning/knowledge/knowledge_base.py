@@ -79,7 +79,8 @@ class KnowledgeBase(object):
             self.types = load_obj[3]
             self.objects = load_obj[4]
             self.lookup_table = load_obj[5]
-            self.meta_actions = load_obj[6]
+            self.parameterizations = load_obj[6]
+            self.meta_actions = load_obj[7]
             print("Trying to load domain file... DONE")
         else:
             print("Trying to load domain file... NOT FOUND --> starting from scratch")
@@ -92,6 +93,7 @@ class KnowledgeBase(object):
             self.types,
             self.objects,
             self.lookup_table,
+            self.parameterizations,
             self.meta_actions,
         )
         with open(self._domain_file, "wb") as f:
@@ -185,10 +187,7 @@ class KnowledgeBase(object):
 
     def solve(self):
         self.save_domain()
-        self.pddl_if.write_domain_pddl(self.actions, self._predicates, self.types)
-        self.pddl_if.write_problem_pddl(
-            self.objects, self.initial_predicates, self.goals
-        )
+        self.pddl_if.write_pddl(self)
         return planner_interface.pddl_planner(
             self.pddl_if._domain_file_pddl, self.pddl_if._problem_file_pddl
         )
@@ -203,6 +202,7 @@ class KnowledgeBase(object):
         for plan_item in plan:
             plan_item_list = plan_item.split(" ")
             action_name = plan_item_list[1]
+            action_name = action_name.split("_")[0]
             if len(plan_item_list) > 2:
                 action_parameters = plan_item_list[2:]
             else:

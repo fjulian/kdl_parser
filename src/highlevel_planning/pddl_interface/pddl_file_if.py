@@ -50,11 +50,11 @@ class PDDLFileInterface:
 
         # Write files
         self.write_domain_pddl(actions, predicates, types)
-        self.write_domain_pddl(objects, initial_predicates, goals)
+        self.write_problem_pddl(objects, initial_predicates, goals)
 
     def _preprocess_knowledge(self, knowledge_base):
         actions_pddl = dict()
-        predicates_pddl = dict()
+        predicates_pddl = deepcopy(knowledge_base._predicates)
         types_pddl = deepcopy(knowledge_base.types)
         objects_pddl = deepcopy(knowledge_base.objects)
         initial_predicates_pddl = deepcopy(knowledge_base.initial_predicates)
@@ -62,13 +62,14 @@ class PDDLFileInterface:
 
         for action_name in knowledge_base.actions:
             action_descr = knowledge_base.actions[action_name]
-            action_suffix = 1
+            param_type_dict = {param[0]: param[1] for param in action_descr["params"]}
             if action_name in knowledge_base.parameterizations:
+                action_suffix = 1
                 type_suffix = 1
                 for object_param_set in knowledge_base.parameterizations[action_name]:
                     param_type_translator = dict()
                     for object_param in object_param_set:
-                        new_type = "".join((object_param[1], "_", type_suffix))
+                        new_type = "".join((object_param[1], "_", str(type_suffix)))
                         type_suffix += 1
                         add_type(types_pddl, new_type, object_param[1])
                         add_object(objects_pddl, object_param[2], new_type)
@@ -76,10 +77,12 @@ class PDDLFileInterface:
                     for hidden_param_name in knowledge_base.parameterizations[
                         action_name
                     ][object_param_set]:
-                        new_type = "".join((hidden_param_name, "_", type_suffix))
+                        new_type = "".join((hidden_param_name, "_", str(type_suffix)))
                         type_suffix += 1
                         add_type(types_pddl, new_type, hidden_param_name)
-                        param_type_translator[hidden_param_name] = new_type
+                        param_type_translator[
+                            param_type_dict[hidden_param_name]
+                        ] = new_type
                         for hidden_param_value in knowledge_base.parameterizations[
                             action_name
                         ][object_param_set][hidden_param_name]:
@@ -88,7 +91,7 @@ class PDDLFileInterface:
                         [old_param_spec[0], param_type_translator[old_param_spec[1]]]
                         for old_param_spec in action_descr["params"]
                     ]
-                    new_action_name = "".join((action_name, "_", action_suffix))
+                    new_action_name = "".join((action_name, "_", str(action_suffix)))
                     action_suffix += 1
                     actions_pddl[new_action_name] = {
                         "params": new_params,
