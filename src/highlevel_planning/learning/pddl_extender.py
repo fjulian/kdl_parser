@@ -89,16 +89,18 @@ class PDDLExtender(object):
     def generalize_action(self, action_name, parameters):
         assert type(parameters) is dict
         action_description = self.knowledge_base.actions[action_name]
-        types_of_params = {param[0]: param[1] for param in action_description["params"]}
         param_list = list()
-        for parameter, object_name in parameters.items():
-            if not object_name in self.knowledge_base.objects:
-                self.knowledge_base.make_permanent(object_name)
+        for parameter_spec in action_description["params"]:
+            parameter_name = parameter_spec[0]
+            parameter_type = parameter_spec[1]
+            parameter_value = parameters[parameter_name]
+            if not parameter_value in self.knowledge_base.objects:
+                self.knowledge_base.make_permanent(parameter_value)
             if not self.knowledge_base.is_type(
-                object_to_check=object_name, type_query=types_of_params[parameter]
+                object_to_check=parameter_value, type_query=parameter_type
             ):
-                self.knowledge_base.add_object(object_name, types_of_params[parameter])
-            param_list.append([object_name, types_of_params[parameter]])
+                self.knowledge_base.add_object(parameter_value, parameter_type)
+            param_list.append((parameter_name, parameter_type, parameter_value))
         self._process_parameterizations(param_list, action_name)
 
     def _retype_argument(self, arg, action_params, already_retyped, time_string):
