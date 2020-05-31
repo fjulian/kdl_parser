@@ -35,13 +35,13 @@ class KnowledgeBase(object):
         # self.goals = list()
         # self.goals = [("in-hand", True, ("cube1", "robot1"))]
         # self.goals = [("in-reach", True, ("container1", "robot1"))]
-        self.goals = [("on", True, ("cupboard", "cube1"))]
+        # self.goals = [("on", True, ("cupboard", "cube1"))]
         # self.goals = [
         #     ("on", True, ("cupboard", "cube1")),
         #     ("in-reach", True, ("container1", "robot1")),
         # ]
-        # self.goals = [("on", True, ("lid1", "cube1"))]
-        # self.goals = [("inside", True, ("container1", "cube1"))]
+        # self.goals = [("on", True, ("container2", "cube1"))]
+        self.goals = [("inside", True, ("container1", "cube1"))]
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()
