@@ -5,9 +5,8 @@ from highlevel_planning.learning.logic_tools import determine_sequence_effects
 
 
 class PDDLExtender(object):
-    def __init__(self, knowledge_base, predicates, meta_action_handler):
+    def __init__(self, knowledge_base, predicates):
         self.predicates = predicates
-        self.meta_action_handler = meta_action_handler
         self.knowledge_base = knowledge_base
 
     def create_new_action(self, goals, sequence, parameters, sequence_preconds):
@@ -67,8 +66,16 @@ class PDDLExtender(object):
                 else:
                     param_translator[idx][param_name] = param_name
 
+        # Full action parameters: list of tuples (name, type, value)
+        full_action_params = list()
+        for param_spec in action_params:
+            full_action_params.append((param_spec[0], param_spec[1], param_spec[0]))
+
+        # Add non-generalizable parameterization
+        self._process_parameterizations(full_action_params, action_name)
+
         # Save action meta data
-        self.meta_action_handler.add_meta_action(
+        self.knowledge_base.add_meta_action(
             action_name,
             sequence,
             parameters,
@@ -79,46 +86,74 @@ class PDDLExtender(object):
 
         return action_name
 
+    def generalize_action(self, action_name, parameters):
+        assert type(parameters) is dict
+        action_description = self.knowledge_base.actions[action_name]
+        param_list = list()
+        for parameter_spec in action_description["params"]:
+            parameter_name = parameter_spec[0]
+            parameter_type = parameter_spec[1]
+            parameter_value = parameters[parameter_name]
+            if not parameter_value in self.knowledge_base.objects:
+                self.knowledge_base.make_permanent(parameter_value)
+            if not self.knowledge_base.is_type(
+                object_to_check=parameter_value, type_query=parameter_type
+            ):
+                self.knowledge_base.add_object(parameter_value, parameter_type)
+            param_list.append((parameter_name, parameter_type, parameter_value))
+        self._process_parameterizations(param_list, action_name)
+
     def _retype_argument(self, arg, action_params, already_retyped, time_string):
         if arg not in already_retyped:
-            original_types = None
-            if arg in self.knowledge_base.objects:
-                original_types = self.knowledge_base.objects[arg]
-            else:
+            if arg not in self.knowledge_base.objects:
                 # Make arguments we use permanent
                 self.knowledge_base.make_permanent(arg)
+            if self.knowledge_base.is_type(arg, "position"):
+                action_params.append([arg, "position"])
+            else:
                 original_types = self.knowledge_base.objects[arg]
-            if original_types is None:
-                raise RuntimeError("Unknown argument cannot be processed")
-            new_type = arg + "-" + time_string
-            action_params.append([arg, new_type])
-            self.knowledge_base.add_type(new_type, original_types[0])
-            self.knowledge_base.add_object(arg, new_type)
+                new_type = arg + "-" + time_string
+                action_params.append([arg, new_type])
+                self.knowledge_base.add_type(new_type, original_types[0])
+                self.knowledge_base.add_object(arg, new_type)
             already_retyped.append(arg)
 
-    def _get_unique_param_names(self, sequence):
-        # Not used right now. Remove if still not used in the future.
-        substitute_param_names = list()
-        used_param_names = list()
-        for action_name in sequence:
-            substitutes = dict()
-            params = self.knowledge_base.actions[action_name]["params"]
-            for param in params:
-                if param[0] not in used_param_names:
-                    used_param_names.append(param[0])
-                    substitutes[param[0]] = param[0]
-                else:
-                    counter = 1
-                    while param[0] + str(counter) in used_param_names:
-                        counter += 1
-                    assert (
-                        counter < 10
-                    ), "This implementation assumes that there are max 9 clashing parameters."
-                    new_param_name = param[0] + str(counter)
-                    used_param_names.append(new_param_name)
-                    substitutes[param[0]] = new_param_name
-            substitute_param_names.append(substitutes)
-        return substitute_param_names
+    def _process_parameterizations(self, param_list, action_name):
+        """
+        [summary]
+
+        Args:
+            param_list (list): List, where each element is a tuple (name, type, value)
+            action_name (string): name of the action
+        """
+        object_params = list()
+        for param in param_list:
+            if param[1] != "position":
+                object_params.append(param)
+        object_params = tuple(object_params)
+        for param in param_list:
+            if param[1] == "position":
+                if action_name not in self.knowledge_base.parameterizations:
+                    self.knowledge_base.parameterizations[action_name] = dict()
+                if (
+                    object_params
+                    not in self.knowledge_base.parameterizations[action_name]
+                ):
+                    self.knowledge_base.parameterizations[action_name][
+                        object_params
+                    ] = dict()
+                if (
+                    param[0]
+                    not in self.knowledge_base.parameterizations[action_name][
+                        object_params
+                    ]
+                ):
+                    self.knowledge_base.parameterizations[action_name][object_params][
+                        param[0]
+                    ] = set()
+                self.knowledge_base.parameterizations[action_name][object_params][
+                    param[0]
+                ].add(param[2])
 
     def create_new_predicates(self):
         pass

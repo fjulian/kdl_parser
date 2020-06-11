@@ -1,11 +1,11 @@
 from highlevel_planning.skills.grasping import SkillGrasping
-from highlevel_planning.tools.util import get_combined_aabb
+from highlevel_planning.tools.util import get_combined_aabb, SkillExecutionError
 import pybullet as p
 import numpy as np
 
 
 class Predicates:
-    def __init__(self, scene, robot, knowledge_base, robot_lock=None):
+    def __init__(self, scene, robot, robot_lock=None):
         self.call = {
             "empty-hand": self.empty_hand,
             "in-hand": self.in_hand,
@@ -25,11 +25,11 @@ class Predicates:
         self.sk_grasping = SkillGrasping(scene, robot)
         self._scene = scene
         self._robot_uid = robot._model.uid
+        self._robot = robot
         self._robot_lock = robot_lock
-        self._knowledge_base = knowledge_base
 
     def empty_hand(self, robot_name):
-        robot = self._knowledge_base.lookup_table[robot_name]
+        robot = self._robot
         if self._robot_lock:
             self._robot_lock.acquire()
         grasped_sth = robot.check_grasp()
@@ -38,7 +38,7 @@ class Predicates:
         return not grasped_sth
 
     def in_hand(self, target_object, robot_name):
-        robot = self._knowledge_base.lookup_table[robot_name]
+        robot = self._robot
         empty_hand_res = self.empty_hand(robot_name)
         temp = p.getClosestPoints(
             self._robot_uid, self._scene.objects[target_object].model.uid, distance=0.01
@@ -55,15 +55,15 @@ class Predicates:
         )
         return (not empty_hand_res) and desired_object_in_hand
 
-    def in_reach(self, target_item, robot):
+    def in_reach(self, target_item, robot_name):
         if type(target_item) is str:
-            return self.in_reach_obj(target_item, robot)
+            return self.in_reach_obj(target_item, robot_name)
         elif type(target_item) is list:
-            return self.in_reach_pos(target_item, robot)
+            return self.in_reach_pos(target_item, robot_name)
         else:
             raise ValueError
 
-    def in_reach_obj(self, target_object, robot):
+    def in_reach_obj(self, target_object, robot_name):
         """
         Check if an object in the scene is in reach of the robot arm.
         
@@ -77,8 +77,11 @@ class Predicates:
         """
         if self._robot_lock:
             self._robot_lock.acquire()
-        pos, orient = self.sk_grasping.compute_grasp(target_object, None, 0)
-        cmd = robot.ik(pos, orient)
+        try:
+            pos, orient = self.sk_grasping.compute_grasp(target_object, None, 0)
+        except SkillExecutionError:
+            return False
+        cmd = self._robot.ik(pos, orient)
         if self._robot_lock:
             self._robot_lock.release()
         if cmd.tolist() is None or cmd is None:
@@ -86,7 +89,7 @@ class Predicates:
         else:
             return True
 
-    def in_reach_pos(self, target_pos, robot):
+    def in_reach_pos(self, target_pos, robot_name):
         """
         Similar to function "in_reach", but takes position instead of object name.
         
@@ -99,7 +102,7 @@ class Predicates:
         """
         if self._robot_lock:
             self._robot_lock.acquire()
-        cmd = robot.ik(target_pos, robot.start_orient)
+        cmd = self._robot.ik(target_pos, self._robot.start_orient)
         if self._robot_lock:
             self._robot_lock.release()
         if cmd.tolist() is None or cmd is None:

@@ -2,6 +2,8 @@ import argparse
 import pickle
 import time
 import numpy as np
+import os
+import pybullet as p
 
 # Simulation
 from highlevel_planning.sim.world import World
@@ -14,13 +16,12 @@ from highlevel_planning.skills.grasping import SkillGrasping
 from highlevel_planning.skills.placing import SkillPlacing
 from highlevel_planning.execution.es_sequential_execution import SequentialExecution
 from highlevel_planning.skills import pddl_descriptions
-from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning.knowledge.predicates import Predicates
-from highlevel_planning.learning.meta_action_handler import MetaActionHandler
-from highlevel_planning.learning.pddl_extender import PDDLExtender
 
 # Learning
+from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning.learning.explorer import Explorer
+from highlevel_planning.learning.pddl_extender import PDDLExtender
 
 # ----------------------------------------------------------------------
 
@@ -36,6 +37,12 @@ def main():
         "--reuse-objects",
         action="store_true",
         help="if given, the simulation does not reload objects. Objects must already be present.",
+    )
+    parser.add_argument(
+        "-s",
+        "--sleep",
+        action="store_true",
+        help="if given, the simulation will sleep for each update step, to mimic real time execution.",
     )
     args = parser.parse_args()
 
@@ -67,14 +74,14 @@ def main():
 
     # Add origin
     kb.add_object("origin", "position", np.array([0.0, 0.0, 0.0]))
-
-    # Meta action handler
-    mah = MetaActionHandler(kb)
+    kb.add_object("robot1", "robot")
 
     # -----------------------------------
 
     # Create world
-    world = World(gui_=True, sleep_=False, load_objects=not restore_existing_objects)
+    world = World(
+        gui_=True, sleep_=args.sleep, load_objects=not restore_existing_objects
+    )
     scene = ScenePlanning1(world, restored_objects=objects)
 
     # Spawn robot
@@ -84,13 +91,20 @@ def main():
     robot.to_start()
     world.step_seconds(0.5)
 
-    # Add robot
-    kb.add_object("robot1", "robot", robot)
+    # Save world
+    if not restore_existing_objects:
+        savedir = os.path.join(os.getcwd(), "data", "sim")
+        if not os.path.isdir(savedir):
+            os.makedirs(savedir)
+        with open(os.path.join(savedir, "objects.pkl"), "wb") as output:
+            pickle.dump((scene.objects, robot._model), output)
+        p.saveBullet(os.path.join(savedir, "state.bullet"))
 
     # -----------------------------------
 
     # Set up predicates
-    preds = Predicates(scene, robot, kb)
+    preds = Predicates(scene, robot)
+    kb.set_predicate_funcs(preds)
 
     for descr in preds.descriptions.items():
         kb.add_predicate(
@@ -98,8 +112,8 @@ def main():
         )
 
     # Planning problem
-    kb.populate_objects(scene)
-    kb.check_predicates(preds)
+    kb.populate_visible_objects(scene)
+    kb.check_predicates()
 
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot)
@@ -108,10 +122,10 @@ def main():
     skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
 
     # PDDL extender
-    pddl_ex = PDDLExtender(kb, preds, mah)
+    pddl_ex = PDDLExtender(kb, preds)
 
     # Set up exploration
-    xplorer = Explorer(skill_set, robot._model.uid, scene.objects, mah, pddl_ex, kb)
+    xplorer = Explorer(skill_set, robot._model.uid, scene.objects, pddl_ex, kb)
 
     # ---------------------------------------------------------------
 
@@ -119,7 +133,8 @@ def main():
     plan = kb.solve()
 
     if plan is False:
-        success = xplorer.exploration(preds)
+        print("No plan found, start exploration")
+        success = xplorer.exploration()
         if not success:
             print("Exploration was not successful")
             return
@@ -129,18 +144,18 @@ def main():
         if plan is False:
             print("Planner failed despite exploration")
             return
-    else:
-        if len(plan) == 0:
-            print("Nothing to do.")
-            return
-        print("Found plan:")
-        print(plan)
-        raw_input("Press enter to run...")
+
+    if len(plan) == 0:
+        print("Nothing to do.")
+        return
+    print("Found plan:")
+    print(plan)
+    raw_input("Press enter to run...")
 
     # -----------------------------------
 
     # Set up execution system
-    es = SequentialExecution(skill_set, plan, kb, meta_action_handler=mah)
+    es = SequentialExecution(skill_set, plan, kb)
 
     # Run
     try:
@@ -149,6 +164,10 @@ def main():
             print("------------- Iteration {} ---------------".format(index))
             es.print_status()
             success, plan_finished = es.step()
+            if not success:
+                raise RuntimeError(
+                    "Error during execution of current action. Aborting."
+                )
             index += 1
             if plan_finished:
                 print("Plan finished. Exiting.")
