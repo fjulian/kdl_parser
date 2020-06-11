@@ -146,6 +146,16 @@ The variable `<true/false>` is true if the predicate must hold before the action
 ]
 ```
 
+### Internal Representations
+
+**Objects**
+
+```python
+knowledge_base.objects = {
+    "<object_label1>": ["<base_type1>", "<type2>"],
+    "<object_label2>": ["<base_type2>", "<type3>"],
+}
+```
 
 
 ### Interface to External Planner
