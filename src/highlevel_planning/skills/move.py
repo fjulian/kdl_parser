@@ -9,95 +9,56 @@ import atexit
 
 from highlevel_planning.tools.util import IKError
 
-
-# class ActionPlacing(py_trees.behaviour.Behaviour):
-#     """
-#     Based on the example https://py-trees.readthedocs.io/en/release-0.6.x/_modules/py_trees/demos/action.html#Action
-#     """
-#     def __init__(self, process_pipe, target_pos, name="placing_action"):
-#         super(ActionPlacing, self).__init__(name)
-#         self.logger.debug("%s.__init__()" % (self.__class__.__name__))
-#         self._target_pos = target_pos
-#         self._process_pipe = process_pipe
-
-#     def initialise(self):
-#         self.logger.debug("%s.initialise()->sending new goal" % (self.__class__.__name__))
-#         self._process_pipe.send([self._target_pos])
-
-#     def update(self):
-#         new_status = py_trees.common.Status.RUNNING
-#         self.feedback_message = "Grasping in progress"
-#         if self._process_pipe.poll():
-#             res = self._process_pipe.recv().pop()
-#             if res==0:
-#                 new_status = py_trees.common.Status.SUCCESS
-#                 self.feedback_message = "Grasping successful"
-#             elif res==1:
-#                 # Grasping in progress, but this is already set above
-#                 pass
-#             elif res==2:
-#                 new_status = py_trees.common.Status.FAILURE
-#                 self.feedback_message = "Grasping failed"
-#             else:
-#                 assert(False, "Unexpected response")
-#         self.logger.debug("%s.update()[%s->%s][%s]" % (self.__class__.__name__, self.status, new_status, self.feedback_message))
-#         return new_status
-
-#     def terminate(self, new_status):
-#         self._process_pipe.send([])
-#         self.logger.debug("%s.terminate()[%s->%s]" % (self.__class__.__name__, self.status, new_status))
+EPS = 1e-6
 
 
-# class ProcessPlacing:
-#     def __init__(self, scene, robot, robot_lock):
-#         self.parent_connection, self.child_connection = multiprocessing.Pipe()
-#         self.placing = multiprocessing.Process(target=placing_process, args=(self.child_connection, scene, robot, robot_lock))
-#         atexit.register(self.placing.terminate)
-#         self.placing.start()
-#         print("Placing process initiated")
-
-#     def get_pipe(self):
-#         return self.parent_connection
-
-
-# def placing_process(pipe_connection, scene, robot, lock):
-#     sk_placing = SkillPlacing(scene, robot)
-
-#     while True:
-#         if pipe_connection.poll():
-#             cmd = pipe_connection.recv()
-#             if len(cmd)==1:
-#                 # Start the process
-#                 res = sk_placing.place_object(cmd[0], lock)
-#                 if res:
-#                     pipe_connection.send([0])
-#                 else:
-#                     pipe_connection.send([2])
-
-#                 # Clear commands that came in while running this
-#                 while pipe_connection.poll():
-#                     cmd = pipe_connection.recv()
-#                     if len(cmd) > 0:
-#                         print("WARNING! Received multiple place commands simultaneously.")
-#         time.sleep(0.5)
+def ortho_projection(direction):
+    assert np.linalg.norm(direction) - 1.0 < EPS
+    projection = np.matmul(direction, direction.T)
+    return np.eye(3) - projection
 
 
 class SkillMove:
-    def __init__(self, scene_, robot_):
+    def __init__(self, scene_, robot_, desired_velocity):
         self.scene = scene_
         self.robot = robot_
+        self.desired_velocity = desired_velocity
+
+        self.gamma = 0.2
+
+        self.f_desired = np.zeros((3, 1))
+        self.alpha_f = 0.2
+        self.beta_f = 0.2
+
+        self.dt = 0.01
 
     def move_object(self, desired_distance, direction_initial_guess, lock=None):
 
         travelled_distance = 0.0
+        direction = np.copy(direction_initial_guess)
+        force_integral = np.zeros((3, 1))
+        if direction.shape == (3,):
+            direction = direction.reshape(3, 1)
+
         while travelled_distance < desired_distance:
-            # Measure current state
+            # Measure force
+            f_wristframe = self.robot.get_wrist_force()
 
-            # Update belief of constraint using past positions and forces
+            # Compute force reaction (PI controller)
+            force_error = f_wristframe - self.f_desired
+            projection_matrix = ortho_projection(direction)
+            force_integral += self.dt * np.matmul(projection_matrix, force_error)
+            v_f = self.alpha_f * force_error + self.beta_f * force_integral
 
-            # Run MPC step to compute next control inputs
+            # Compute new velocity reference
+            v_ref = self.desired_velocity * direction - np.matmul(
+                projection_matrix, v_f
+            )
 
-            # Apply first input to base and arm
+            # Update direction estimate
+            direction += (
+                -self.gamma * self.desired_velocity * np.matmul(projection_matrix, v_f)
+            )
 
             # Wait for next step
             time.sleep(0.5)
@@ -109,7 +70,7 @@ class SkillMove:
 
 
 # def get_move_description():
-#     action_name = "place"
+#     action_name = "move"
 #     action_params = [
 #         ["obj", "item"],
 #         ["pos", "position"],
