@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 import pybullet as p
 import numpy as np
 from math import pi as m_pi
@@ -19,6 +20,16 @@ from pykdl_utils.kdl_kinematics import KDLKinematics
 max_force_magnitude = 150
 
 # --------------------
+
+
+def getMotorJointStates(robot):
+    joint_states = p.getJointStates(robot, range(p.getNumJoints(robot)))
+    joint_infos = [p.getJointInfo(robot, i) for i in range(p.getNumJoints(robot))]
+    joint_states = [j for j, i in zip(joint_states, joint_infos) if i[3] > -1]
+    joint_positions = [state[0] for state in joint_states]
+    joint_velocities = [state[1] for state in joint_states]
+    joint_torques = [state[3] for state in joint_states]
+    return joint_positions, joint_velocities, joint_torques
 
 
 class RobotArm:
@@ -198,6 +209,56 @@ class RobotArm:
         pos, orient = fcn(t_fin)
         cmd = self.ik(pos, orient, current_cmd)
         self.set_joints(cmd.tolist())
+
+    def task_space_velocity_control(
+        self, velocity_translation, velocity_rotation, num_steps
+    ):
+        """
+        Takes a desired end-effector velocity, computes necessary joint velocities and applies them.
+        Needs to be called at every time step.
+
+        Args:
+            velocity ([type]): [description]
+        """
+        desired_velocities = np.vstack(
+            (velocity_translation.reshape((3, 1)), velocity_rotation.reshape((3, 1)))
+        )
+        assert desired_velocities.shape == (6, 1)
+
+        for _ in range(num_steps):
+            mpos, mvel, _ = getMotorJointStates(self._model.uid)
+
+            local_position = [0.0, 0.0, 0.0]
+            desired_accelerations = [0.0] * len(mpos)
+            mvel = desired_accelerations
+            jacobian_t, jacobian_r = p.calculateJacobian(
+                self._model.uid,
+                self.link_name_to_index["panda_default_EE"],
+                local_position,
+                mpos,
+                mvel,
+                desired_accelerations,
+            )
+            jacobian = np.vstack((np.array(jacobian_t), np.array(jacobian_r)))
+            inverse_jacobian = np.linalg.pinv(jacobian)
+
+            # Compute desired joint speeds
+            desired_joint_speeds = np.matmul(inverse_jacobian, desired_velocities)
+            desired_joint_speeds = desired_joint_speeds[6:-2]
+            # desired_joint_speeds = [0.0] * 7
+            # desired_joint_speeds[2] = 0.5
+
+            # Apply them
+            p.setJointMotorControlArray(
+                self._model.uid,
+                self.joint_idx_arm,
+                p.VELOCITY_CONTROL,
+                # targetVelocities=desired_joint_speeds,
+                targetVelocities=desired_joint_speeds.flatten().tolist(),
+            )
+
+            self._world.step_one()
+            self._world.sleep(self._world.T_s)
 
     def check_max_contact_force_ok(self):
         force = self.get_wrist_force()

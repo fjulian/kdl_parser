@@ -15,6 +15,7 @@ import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import pickle
+import os
 
 import argparse
 
@@ -23,7 +24,7 @@ def drawer_example(sk_grasp, sk_nav, robot, scene, world):
     # Run move skill
     sk_nav.move_to_object("cupboard")
 
-    # robot.get_wrist_force()
+    print(robot.get_wrist_force())
 
     # Grasp the cupboard handle
     res = sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
@@ -34,13 +35,34 @@ def drawer_example(sk_grasp, sk_nav, robot, scene, world):
     # Drive back
     robot.update_velocity([-0.1, 0.0, 0.0], 0.0)
     world.step_seconds(2)
-    # robot.get_wrist_force()
+    print(robot.get_wrist_force())
     world.step_seconds(2)
     robot.stop_driving()
 
     # Release
     sk_grasp.release_object()
     robot.to_start()
+
+
+def drawer_example_auto(sk_grasp, sk_nav, robot, scene, world):
+    vel_trans = np.array([0.0, 0.25, 0.0])
+    vel_rot = np.array([0.0, 0.0, 0.0])
+    robot.task_space_velocity_control(vel_trans, vel_rot, 500)
+
+    # # Run move skill
+    # sk_nav.move_to_object("cupboard")
+
+    # # Grasp the cupboard handle
+    # res = sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
+    # if not res:
+    #     print("Grasping the handle failed.")
+    #     return
+
+    # # Run the move skill
+
+    # # Release
+    # sk_grasp.release_object()
+    # robot.to_start()
 
 
 def cube_example(sk_grasp, sk_nav, robot, scene, sk_place):
@@ -158,9 +180,20 @@ def main():
     robot.to_start()
     world.step_seconds(0.5)
 
+    # Save world
+    if not restore_existing_objects:
+        savedir = os.path.join(os.getcwd(), "data", "sim")
+        if not os.path.isdir(savedir):
+            os.makedirs(savedir)
+        with open(os.path.join(savedir, "objects.pkl"), "wb") as output:
+            pickle.dump((scene.objects, robot._model), output)
+        p.saveBullet(os.path.join(savedir, "state.bullet"))
+
     # ---------- Run examples -----------
 
     # drawer_example(sk_grasp, sk_nav, robot, scene, world)
+
+    drawer_example_auto(sk_grasp, sk_nav, robot, scene, world)
 
     # cube_example(sk_grasp, sk_nav, robot, scene, sk_place)
 
@@ -170,7 +203,7 @@ def main():
 
     # navigate_with_cube(sk_nav, sk_grasp)
 
-    navigation_example(sk_nav, world)
+    # navigation_example(sk_nav, world)
 
     # -----------------------------------
 
