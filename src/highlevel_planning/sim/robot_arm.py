@@ -13,6 +13,8 @@ from scipy.spatial.transform import Rotation as R
 from urdf_parser_py.urdf import URDF as urdf_parser
 from pykdl_utils.kdl_kinematics import KDLKinematics
 
+from rc.controllers import CartesianVelocityControllerKDL
+
 
 # ------- Parameters ------------------
 # TODO move to config file
@@ -259,6 +261,50 @@ class RobotArm:
 
             self._world.step_one()
             self._world.sleep(self._world.T_s)
+
+    def task_space_velocity_control_kdl(
+        self, velocity_translation, velocity_rotation, num_steps
+    ):
+        """
+        Takes a desired end-effector velocity, computes necessary joint velocities and applies them.
+        Needs to be called at every time step.
+
+        Args:
+            velocity ([type]): [description]
+        """
+
+        ctrl = CartesianVelocityControllerKDL(
+            self.urdf_path, "panda_link0", "panda_hand"
+        )
+        print("Controller initialized! Num joints: {}".format(ctrl.get_num_joints()))
+
+        for _ in range(num_steps):
+            mpos, _, _ = getMotorJointStates(self._model.uid)
+
+            cmd = ctrl.compute_command(
+                velocity_translation, velocity_rotation, mpos[0:7]
+            )
+
+            # Apply them
+            p.setJointMotorControlArray(
+                self._model.uid,
+                self.joint_idx_arm,
+                p.VELOCITY_CONTROL,
+                # targetVelocities=desired_joint_speeds,
+                targetVelocities=list(cmd),
+            )
+
+            self._world.step_one()
+            self._world.sleep(self._world.T_s)
+
+        # Stop the arm
+        p.setJointMotorControlArray(
+            self._model.uid,
+            self.joint_idx_arm,
+            p.VELOCITY_CONTROL,
+            # targetVelocities=desired_joint_speeds,
+            targetVelocities=[0.0] * len(cmd),
+        )
 
     def check_max_contact_force_ok(self):
         force = self.get_wrist_force()
