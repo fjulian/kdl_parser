@@ -40,7 +40,7 @@ Python version 2 is used because trac IK does not work with python 3 yet.
 Some ROS packages need to be installed:
 
 ```
-sudo apt-get install ros-melodic-trac-ik ros-melodic-franka-description ros-melodic-ridgeback-description
+sudo apt-get install ros-melodic-trac-ik ros-melodic-franka-description ros-melodic-ridgeback-description ros-melodic-joint-state-publisher-gui
 ```
 
 In addition, the library `pykdl_utils` - included as submodule - needs to be installed. This can be done using the following commands:
