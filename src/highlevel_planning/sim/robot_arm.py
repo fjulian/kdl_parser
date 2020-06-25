@@ -281,8 +281,26 @@ class RobotArm:
         for _ in range(num_steps):
             mpos, _, _ = getMotorJointStates(self._model.uid)
 
+            # Convert velocity from hand frame to base frame
+            link_poses = p.getLinkStates(
+                self._model.uid,
+                linkIndices=[
+                    self.arm_base_link_idx,
+                    self.link_name_to_index["panda_hand"],
+                ],
+            )
+            base_r = R.from_quat(link_poses[0][1])
+            ee_r = R.from_quat(link_poses[1][1])
+
+            velocity_translation_baseframe = base_r.inv().apply(
+                ee_r.apply(velocity_translation)
+            )
+            velocity_rotation_baseframe = base_r.inv().apply(
+                ee_r.apply(velocity_rotation)
+            )
+
             cmd = ctrl.compute_command(
-                velocity_translation, velocity_rotation, mpos[0:7]
+                velocity_translation_baseframe, velocity_rotation_baseframe, mpos[0:7]
             )
 
             # Apply them
@@ -290,7 +308,6 @@ class RobotArm:
                 self._model.uid,
                 self.joint_idx_arm,
                 p.VELOCITY_CONTROL,
-                # targetVelocities=desired_joint_speeds,
                 targetVelocities=list(cmd),
             )
 
@@ -302,7 +319,6 @@ class RobotArm:
             self._model.uid,
             self.joint_idx_arm,
             p.VELOCITY_CONTROL,
-            # targetVelocities=desired_joint_speeds,
             targetVelocities=[0.0] * len(cmd),
         )
 

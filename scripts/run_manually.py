@@ -45,16 +45,17 @@ def drawer_example(sk_grasp, sk_nav, robot, scene, world):
 
 
 def drawer_example_auto(sk_grasp, sk_nav, robot, scene, world):
-    vel_trans = np.array([0.0, 0.0, -0.1])
+    vel_trans = np.array([0.1, 0.0, 0.0])
     vel_rot = np.array([0.0, 0.0, 0.0])
 
     from copy import deepcopy
 
     cmd = deepcopy(robot.start_cmd)
-    cmd[5] += 0.8
+    # cmd[5] += 0.8
+    # cmd[0] += 2.0
     robot.transition_cmd_to(cmd)
 
-    robot.task_space_velocity_control_kdl(vel_trans, vel_rot, 100)
+    robot.task_space_velocity_control_kdl(vel_trans, vel_rot, 200)
 
     # # Run move skill
     # sk_nav.move_to_object("cupboard")
@@ -214,7 +215,7 @@ def main():
 
     # -----------------------------------
 
-    world.step_seconds(10)
+    world.step_seconds(2)
 
 
 if __name__ == "__main__":
