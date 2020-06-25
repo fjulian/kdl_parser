@@ -46,7 +46,7 @@ class RobotArm:
         self.arm_ee_link_idx = -100
 
         # Set up IK solver
-        self.urdf_path = os.path.join(os.getcwd(), "data/models/box_panda_hand.urdf")
+        self.urdf_path = os.path.join(os.getcwd(), "data/models/box_panda_hand_pb.urdf")
         with open(self.urdf_path) as f:
             if f.mode == "r":
                 urdf_string = f.read()
@@ -111,6 +111,30 @@ class RobotArm:
 
         p.enableJointForceTorqueSensor(
             self._model.uid, self.joint_idx_hand, enableSensor=1
+        )
+
+        self.apply_colors()
+
+    def apply_colors(self):
+        rgba_white = [0.9, 0.9, 0.9, 1.0]
+        rgba_light_gray = [0.4, 0.4, 0.4, 1.0]
+        rgba_black = [0.15, 0.15, 0.15, 1.0]
+
+        use_white = True
+        for i in range(1, 8):
+            self.apply_color(
+                "panda_link{}".format(i), rgba_white if use_white else rgba_light_gray,
+            )
+            use_white = not use_white
+
+        self.apply_color("panda_hand", rgba_white)
+        self.apply_color("panda_rightfinger", rgba_black)
+        self.apply_color("panda_leftfinger", rgba_black)
+
+    def apply_color(self, link_name, rgba):
+        link_idx = self.link_name_to_index[link_name]
+        p.changeVisualShape(
+            self._model.uid, linkIndex=link_idx, rgbaColor=rgba,
         )
 
     def set_joints(self, desired):
