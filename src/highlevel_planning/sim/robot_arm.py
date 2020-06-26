@@ -246,61 +246,9 @@ class RobotArm:
         Args:
             velocity ([type]): [description]
         """
-        desired_velocities = np.vstack(
-            (velocity_translation.reshape((3, 1)), velocity_rotation.reshape((3, 1)))
-        )
-        assert desired_velocities.shape == (6, 1)
 
-        for _ in range(num_steps):
-            mpos, mvel, _ = getMotorJointStates(self._model.uid)
-
-            local_position = [0.0, 0.0, 0.0]
-            desired_accelerations = [0.0] * len(mpos)
-            mvel = desired_accelerations
-            jacobian_t, jacobian_r = p.calculateJacobian(
-                self._model.uid,
-                self.link_name_to_index["panda_default_EE"],
-                local_position,
-                mpos,
-                mvel,
-                desired_accelerations,
-            )
-            jacobian = np.vstack((np.array(jacobian_t), np.array(jacobian_r)))
-            inverse_jacobian = np.linalg.pinv(jacobian)
-
-            # Compute desired joint speeds
-            desired_joint_speeds = np.matmul(inverse_jacobian, desired_velocities)
-            desired_joint_speeds = desired_joint_speeds[6:-2]
-            # desired_joint_speeds = [0.0] * 7
-            # desired_joint_speeds[2] = 0.5
-
-            # Apply them
-            p.setJointMotorControlArray(
-                self._model.uid,
-                self.joint_idx_arm,
-                p.VELOCITY_CONTROL,
-                # targetVelocities=desired_joint_speeds,
-                targetVelocities=desired_joint_speeds.flatten().tolist(),
-            )
-
-            self._world.step_one()
-            self._world.sleep(self._world.T_s)
-
-    def task_space_velocity_control_kdl(
-        self, velocity_translation, velocity_rotation, num_steps
-    ):
-        """
-        Takes a desired end-effector velocity, computes necessary joint velocities and applies them.
-        Needs to be called at every time step.
-
-        Args:
-            velocity ([type]): [description]
-        """
-
-        ctrl = CartesianVelocityControllerKDL(
-            self.urdf_path, "panda_link0", "panda_hand"
-        )
-        print("Controller initialized! Num joints: {}".format(ctrl.get_num_joints()))
+        ctrl = CartesianVelocityControllerKDL()
+        ctrl.init_from_urdf_file(self.urdf_path, "panda_link0", "panda_hand")
 
         for _ in range(num_steps):
             mpos, _, _ = getMotorJointStates(self._model.uid)
