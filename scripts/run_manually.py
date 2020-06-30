@@ -8,6 +8,7 @@ from highlevel_planning.sim.scene_move_skill import SceneMoveSkill
 from highlevel_planning.skills.navigate import SkillNavigate
 from highlevel_planning.skills.grasping import SkillGrasping
 from highlevel_planning.skills.placing import SkillPlacing
+from highlevel_planning.skills.move import SkillMove
 
 from highlevel_planning.knowledge.predicates import Predicates
 
@@ -44,21 +45,22 @@ def drawer_example(sk_grasp, sk_nav, robot, scene, world):
     robot.to_start()
 
 
-def drawer_example_auto(sk_grasp, sk_nav, robot, scene, world):
-    # # Run move skill
-    # sk_nav.move_to_object("cupboard")
+def drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene):
+    # Run move skill
+    sk_nav.move_to_object("cupboard")
 
-    # # Grasp the cupboard handle
-    # res = sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
-    # if not res:
-    #     print("Grasping the handle failed.")
-    #     return
+    # Grasp the cupboard handle
+    res = sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
+    if not res:
+        print("Grasping the handle failed.")
+        return
 
-    # # Run the move skill
+    # Run the move skill
+    sk_move.move_object(0.3, np.array([0.5, 0.5, 0.5]))
 
-    # # Release
-    # sk_grasp.release_object()
-    # robot.to_start()
+    # Release
+    sk_grasp.release_object()
+    robot.to_start()
 
 
 def cube_example(sk_grasp, sk_nav, robot, scene, sk_place):
@@ -67,7 +69,7 @@ def cube_example(sk_grasp, sk_nav, robot, scene, sk_place):
 
     print("empty hand:")
     robot._world.step_seconds(1.0)
-    print(robot.get_wrist_force())
+    print(robot.get_wrist_force_torque())
 
     # Grasp the cube
     sk_grasp.grasp_object("cube1")
@@ -75,7 +77,7 @@ def cube_example(sk_grasp, sk_nav, robot, scene, sk_place):
     robot.to_start()
     print("after homing:")
     robot._world.step_seconds(1.0)
-    print(robot.get_wrist_force())
+    print(robot.get_wrist_force_torque())
 
     # from math import pi as m_pi
 
@@ -160,7 +162,7 @@ def main():
             objects, robot_mdl = pickle.load(pkl_file)
 
     # Create world
-    world = World(gui_=True, sleep_=True, load_objects=not restore_existing_objects)
+    world = World(gui_=True, sleep_=False, load_objects=not restore_existing_objects)
     scene = ScenePlanning1(world, restored_objects=objects)
     # scene = SceneMoveSkill(world, restored_objects=objects)
 
@@ -172,6 +174,7 @@ def main():
     sk_grasp = SkillGrasping(scene, robot)
     sk_place = SkillPlacing(scene, robot)
     sk_nav = SkillNavigate(scene, robot)
+    sk_move = SkillMove(scene, robot, 0.05, world.T_s)
 
     robot.to_start()
     world.step_seconds(0.5)
@@ -189,7 +192,7 @@ def main():
 
     # drawer_example(sk_grasp, sk_nav, robot, scene, world)
 
-    drawer_example_auto(sk_grasp, sk_nav, robot, scene, world)
+    drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
 
     # cube_example(sk_grasp, sk_nav, robot, scene, sk_place)
 

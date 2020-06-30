@@ -295,8 +295,7 @@ class RobotArm:
         )
 
     def check_max_contact_force_ok(self):
-        force = self.get_wrist_force()
-        force = np.array(force[:3])
+        force, _ = self.get_wrist_force_torque()
         magnitude = np.linalg.norm(force)
         if magnitude > max_force_magnitude:
             return False
@@ -403,7 +402,8 @@ class RobotArm:
             self._model.uid, vel_trans_world.tolist(), [0.0, 0.0, self.velocity_turn]
         )
 
-    def get_wrist_force(self):
-        _, _, forces, _ = p.getJointState(self._model.uid, self.joint_idx_hand)
-
-        return forces
+    def get_wrist_force_torque(self):
+        _, _, f_t, _ = p.getJointState(self._model.uid, self.joint_idx_hand)
+        forces = np.array(f_t[:3])
+        torques = np.array(f_t[3:])
+        return forces, torques
