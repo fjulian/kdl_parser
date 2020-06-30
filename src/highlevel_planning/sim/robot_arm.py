@@ -13,6 +13,8 @@ from scipy.spatial.transform import Rotation as R
 from urdf_parser_py.urdf import URDF as urdf_parser
 from pykdl_utils.kdl_kinematics import KDLKinematics
 
+from rc.controllers import CartesianVelocityControllerKDL
+
 
 # ------- Parameters ------------------
 # TODO move to config file
@@ -44,7 +46,7 @@ class RobotArm:
         self.arm_ee_link_idx = -100
 
         # Set up IK solver
-        self.urdf_path = os.path.join(os.getcwd(), "data/models/box_panda_hand.urdf")
+        self.urdf_path = os.path.join(os.getcwd(), "data/models/box_panda_hand_pb.urdf")
         with open(self.urdf_path) as f:
             if f.mode == "r":
                 urdf_string = f.read()
@@ -109,6 +111,30 @@ class RobotArm:
 
         p.enableJointForceTorqueSensor(
             self._model.uid, self.joint_idx_hand, enableSensor=1
+        )
+
+        self.apply_colors()
+
+    def apply_colors(self):
+        rgba_white = [0.9, 0.9, 0.9, 1.0]
+        rgba_light_gray = [0.4, 0.4, 0.4, 1.0]
+        rgba_black = [0.15, 0.15, 0.15, 1.0]
+
+        use_white = True
+        for i in range(1, 8):
+            self.apply_color(
+                "panda_link{}".format(i), rgba_white if use_white else rgba_light_gray,
+            )
+            use_white = not use_white
+
+        self.apply_color("panda_hand", rgba_white)
+        self.apply_color("panda_rightfinger", rgba_black)
+        self.apply_color("panda_leftfinger", rgba_black)
+
+    def apply_color(self, link_name, rgba):
+        link_idx = self.link_name_to_index[link_name]
+        p.changeVisualShape(
+            self._model.uid, linkIndex=link_idx, rgbaColor=rgba,
         )
 
     def set_joints(self, desired):
@@ -220,49 +246,56 @@ class RobotArm:
         Args:
             velocity ([type]): [description]
         """
-        desired_velocities = np.vstack(
-            (velocity_translation.reshape((3, 1)), velocity_rotation.reshape((3, 1)))
-        )
-        assert desired_velocities.shape == (6, 1)
+
+        ctrl = CartesianVelocityControllerKDL()
+        ctrl.init_from_urdf_file(self.urdf_path, "panda_link0", "panda_hand")
 
         for _ in range(num_steps):
-            mpos, mvel, _ = getMotorJointStates(self._model.uid)
+            mpos, _, _ = getMotorJointStates(self._model.uid)
 
-            local_position = [0.0, 0.0, 0.0]
-            desired_accelerations = [0.0] * len(mpos)
-            mvel = desired_accelerations
-            jacobian_t, jacobian_r = p.calculateJacobian(
+            # Convert velocity from hand frame to base frame
+            link_poses = p.getLinkStates(
                 self._model.uid,
-                self.link_name_to_index["panda_default_EE"],
-                local_position,
-                mpos,
-                mvel,
-                desired_accelerations,
+                linkIndices=[
+                    self.arm_base_link_idx,
+                    self.link_name_to_index["panda_hand"],
+                ],
             )
-            jacobian = np.vstack((np.array(jacobian_t), np.array(jacobian_r)))
-            inverse_jacobian = np.linalg.pinv(jacobian)
+            base_r = R.from_quat(link_poses[0][1])
+            ee_r = R.from_quat(link_poses[1][1])
 
-            # Compute desired joint speeds
-            desired_joint_speeds = np.matmul(inverse_jacobian, desired_velocities)
-            desired_joint_speeds = desired_joint_speeds[6:-2]
-            # desired_joint_speeds = [0.0] * 7
-            # desired_joint_speeds[2] = 0.5
+            velocity_translation_baseframe = base_r.inv().apply(
+                ee_r.apply(velocity_translation)
+            )
+            velocity_rotation_baseframe = base_r.inv().apply(
+                ee_r.apply(velocity_rotation)
+            )
+
+            cmd = ctrl.compute_command(
+                velocity_translation_baseframe, velocity_rotation_baseframe, mpos[0:7]
+            )
 
             # Apply them
             p.setJointMotorControlArray(
                 self._model.uid,
                 self.joint_idx_arm,
                 p.VELOCITY_CONTROL,
-                # targetVelocities=desired_joint_speeds,
-                targetVelocities=desired_joint_speeds.flatten().tolist(),
+                targetVelocities=list(cmd),
             )
 
             self._world.step_one()
             self._world.sleep(self._world.T_s)
 
+        # Stop the arm
+        p.setJointMotorControlArray(
+            self._model.uid,
+            self.joint_idx_arm,
+            p.VELOCITY_CONTROL,
+            targetVelocities=[0.0] * len(cmd),
+        )
+
     def check_max_contact_force_ok(self):
-        force = self.get_wrist_force()
-        force = np.array(force[:3])
+        force, _ = self.get_wrist_force_torque()
         magnitude = np.linalg.norm(force)
         if magnitude > max_force_magnitude:
             return False
@@ -369,7 +402,8 @@ class RobotArm:
             self._model.uid, vel_trans_world.tolist(), [0.0, 0.0, self.velocity_turn]
         )
 
-    def get_wrist_force(self):
-        _, _, forces, _ = p.getJointState(self._model.uid, self.joint_idx_hand)
-
-        return forces
+    def get_wrist_force_torque(self):
+        _, _, f_t, _ = p.getJointState(self._model.uid, self.joint_idx_hand)
+        forces = np.array(f_t[:3])
+        torques = np.array(f_t[3:])
+        return forces, torques
