@@ -21,6 +21,7 @@ class World:
             p.resetSimulation(self.physics_client)
         else:
             p.restoreState(fileName=os.path.join(os.getcwd(), "data/sim/state.bullet"))
+            p.removeAllUserDebugItems()
 
         p.setGravity(0, 0, -9.81, self.physics_client)
 
@@ -32,6 +33,13 @@ class World:
         self.cross_uid = ()
 
         self.forces = []
+
+        self.colors = {
+            "green": (0.0, 1.0, 0.0),
+            "red": (1.0, 0.0, 0.0),
+            "blue": (0.0, 0.0, 1.0),
+            "yellow": (1.0, 1.0, 0.0),
+        }
 
         self.velocity_setter = None
 
@@ -75,6 +83,27 @@ class World:
             start3.tolist(), end3, color.tolist(), width, lifetime
         )
         self.cross_uid = (uid1, uid2, uid3)
+
+    def draw_arrow(self, point, direction, color, length=0.2, replace_id=None):
+        """ Accepts a point and a direction in world frame and draws it in the simulation """
+        tip = point + direction / np.linalg.norm(direction) * length
+        color = self.colors[color]
+        width = 2.5
+        lifetime = 0
+        if replace_id is not None:
+            arrow_id = p.addUserDebugLine(
+                point.tolist(),
+                tip.tolist(),
+                color,
+                width,
+                lifetime,
+                replaceItemUniqueId=replace_id,
+            )
+        else:
+            arrow_id = p.addUserDebugLine(
+                point.tolist(), tip.tolist(), color, width, lifetime,
+            )
+        return arrow_id
 
     def step_one(self):
         for frc in self.forces:

@@ -47,7 +47,7 @@
   <joint name="joint_link8_default_ee" type="fixed">
     <parent link="panda_link8"/>
     <child link="panda_default_EE"/>
-    <origin rpy="0.000 0.000 -0.785" xyz="0.000 0.000 0.103"/>
+    <origin rpy="0.000 0.000 ${-pi/4}" xyz="0.000 0.000 0.103"/>
   </joint>
 
 </robot>
