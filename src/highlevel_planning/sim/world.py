@@ -35,9 +35,9 @@ class World:
         self.forces = []
 
         self.colors = {
-            "green": (0.0, 1.0, 0.0),
-            "red": (1.0, 0.0, 0.0),
-            "blue": (0.0, 0.0, 1.0),
+            "green": (123.0 / 255.0, 159.0 / 255.0, 53.0 / 255.0),
+            "red": (170.0 / 255.0, 57.0 / 255.0, 57.0 / 255.0),
+            "blue": (34.0 / 255.0, 102.0 / 255.0, 102.0 / 255.0),
             "yellow": (1.0, 1.0, 0.0),
         }
 
@@ -88,7 +88,7 @@ class World:
         """ Accepts a point and a direction in world frame and draws it in the simulation """
         tip = point + direction / np.linalg.norm(direction) * length
         color = self.colors[color]
-        width = 2.5
+        width = 4.5
         lifetime = 0
         if replace_id is not None:
             arrow_id = p.addUserDebugLine(

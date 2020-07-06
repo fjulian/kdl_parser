@@ -47,7 +47,7 @@ def drawer_example(sk_grasp, sk_nav, robot, scene, world):
 
 def drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene):
     # Run move skill
-    sk_nav.move_to_object("cupboard")
+    sk_nav.move_to_object("cupboard", nav_min_dist=1.0)
 
     # Grasp the cupboard handle
     res = sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
@@ -56,7 +56,8 @@ def drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene):
         return
 
     # Run the move skill
-    sk_move.move_object(0.3, np.array([-0.5, 0.5, 0.0]))
+    sk_move.move_object(0.3, np.array([-1.0, 0.5, 0.0]))
+    # sk_move.move_object(0.3, np.array([-0.5, 0.0, -0.5]))     # GT
 
     # Release
     sk_grasp.release_object()
@@ -162,7 +163,7 @@ def main():
             objects, robot_mdl = pickle.load(pkl_file)
 
     # Create world
-    world = World(gui_=True, sleep_=True, load_objects=not restore_existing_objects)
+    world = World(gui_=True, sleep_=False, load_objects=not restore_existing_objects)
     scene = ScenePlanning1(world, restored_objects=objects)
     # scene = SceneMoveSkill(world, restored_objects=objects)
 

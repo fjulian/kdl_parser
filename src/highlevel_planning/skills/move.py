@@ -6,6 +6,7 @@ import py_trees.common
 import multiprocessing
 import time
 import atexit
+from matplotlib import pyplot as plt
 
 from highlevel_planning.tools.util import IKError
 
@@ -41,11 +42,11 @@ class SkillMove:
         self.robot = robot_
         self.desired_velocity = desired_velocity
 
-        self.gamma_direction = 2.0
+        self.gamma_direction = 1.0
         self.gamma_hinge = 0.2
 
         self.f_desired = np.zeros((3, 1))
-        self.k_p_f = 1.0
+        self.k_p_f = 0.8
         self.k_i_f = 0.0
 
         self.t_desired = np.zeros((3, 1))
@@ -71,14 +72,26 @@ class SkillMove:
 
         arrow_1_id = draw_arrow(direction, self.robot, "green")
         arrow_2_id = draw_arrow(np.array([0.1, 0.0, 0.0]), self.robot, "red")
-        arrow_3_id = draw_arrow(np.array([0.1, 0.0, 0.0]), self.robot, "yellow")
+        # arrow_3_id = draw_arrow(np.array([0.1, 0.0, 0.0]), self.robot, "yellow")
 
-        while travelled_distance < desired_distance:
+        # plt.ion()
+        plot_time = np.array([0.0])
+        plot_force_data = np.zeros((3, 1))
+        plot_direction_data = np.copy(direction)
+
+        current_time = 0.0
+
+        # while travelled_distance < desired_distance:
+        for _ in range(3500):
+            plot_time = np.append(plot_time, current_time)
+            current_time += self.robot._world.T_s
+
             # Measure force and torque
             f_wristframe, t_wristframe = self.robot.get_wrist_force_torque()
             f_wristframe = f_wristframe.reshape(3, 1)
             t_wristframe = t_wristframe.reshape(3, 1)
             draw_arrow(f_wristframe, self.robot, "red", arrow_id=arrow_2_id)
+            plot_force_data = np.append(plot_force_data, f_wristframe, axis=1)
 
             # ---- Translation -----
 
@@ -87,22 +100,25 @@ class SkillMove:
             projection_matrix = ortho_projection(direction)
             force_integral += self.dt * np.matmul(projection_matrix, force_error)
             v_f = self.k_p_f * force_error + self.k_i_f * force_integral
-            draw_arrow(
-                np.matmul(projection_matrix, v_f),
-                self.robot,
-                "yellow",
-                arrow_id=arrow_3_id,
-            )
+            # draw_arrow(
+            #     # np.matmul(projection_matrix, v_f),
+            #     v_f,
+            #     self.robot,
+            #     "yellow",
+            #     arrow_id=arrow_3_id,
+            # )
 
             # Update direction estimate
             direction -= (
                 self.dt
                 * self.gamma_direction
                 * self.desired_velocity
-                * np.matmul(projection_matrix, v_f)
+                * v_f
+                # * np.matmul(projection_matrix, v_f)
             )
             direction /= np.linalg.norm(direction)
             draw_arrow(direction, self.robot, "green", arrow_id=arrow_1_id)
+            plot_direction_data = np.append(plot_direction_data, direction, axis=1)
 
             # Compute new translation velocity reference
             velocity_translation = self.desired_velocity * direction  # - np.matmul(
@@ -126,6 +142,54 @@ class SkillMove:
             self.robot.task_space_velocity_control(
                 np.squeeze(velocity_translation), np.squeeze(velocity_rotation), 1
             )
+
+        plot_force_color = self.robot._world.colors["red"]
+        plot_dir_color = self.robot._world.colors["green"]
+        _, axs_dir = plt.subplots(3, 1, figsize=(9, 7))
+        axs_force = []
+        plot_data = {"ylabel": ["x", "y", "z"]}
+        for i in range(3):
+            axs_dir[i].set_xlim(0.0, current_time)
+            axs_dir[i].plot(
+                plot_time,
+                plot_direction_data[i, :],
+                label="Direction",
+                color=plot_dir_color,
+            )
+            axs_dir[i].set_ylabel(plot_data["ylabel"][i], color=plot_dir_color)
+            axs_dir[i].tick_params(axis="y", labelcolor=plot_dir_color)
+
+            axs_force.append(axs_dir[i].twinx())
+            axs_force[i].plot(
+                plot_time, plot_force_data[i, :], label="Force", color=plot_force_color,
+            )
+            axs_force[i].set_ylabel(plot_data["ylabel"][i], color=plot_force_color)
+            axs_force[i].tick_params(axis="y", labelcolor=plot_force_color)
+        axs_dir[0].plot(
+            plot_time,
+            -0.7071 * np.ones(plot_time.shape),
+            color=plot_dir_color,
+            linestyle="--",
+            label="Direction GT",
+        )
+        axs_dir[1].plot(
+            plot_time,
+            0.0 * np.ones(plot_time.shape),
+            color=plot_dir_color,
+            linestyle="--",
+        )
+        axs_dir[2].plot(
+            plot_time,
+            -0.7071 * np.ones(plot_time.shape),
+            color=plot_dir_color,
+            linestyle="--",
+        )
+        axs_dir[0].tick_params(labelbottom=False)
+        axs_dir[1].tick_params(labelbottom=False)
+        axs_dir[2].set_xlabel("Time [s]")
+        axs_dir[0].legend(loc=2)
+        axs_force[0].legend(loc=4)
+        # plt.show()
 
         return True
 

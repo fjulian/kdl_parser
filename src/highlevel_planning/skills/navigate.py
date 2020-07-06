@@ -104,7 +104,7 @@ class SkillNavigate:
             self.robot_uid_, pos.tolist(), orient.tolist()
         )
 
-    def move_to_object(self, target_name):
+    def move_to_object(self, target_name, nav_min_dist=None):
         target_id = self.scene_.objects[target_name].model.uid
 
         # Get the object position
@@ -113,7 +113,8 @@ class SkillNavigate:
 
         # Get valid nav angles
         nav_angle = self.scene_.objects[target_name].nav_angle
-        nav_min_dist = self.scene_.objects[target_name].nav_min_dist
+        if nav_min_dist is None:
+            nav_min_dist = self.scene_.objects[target_name].nav_min_dist
 
         # Move there
         return self.move_to_pos(target_pos, nav_angle, nav_min_dist)
