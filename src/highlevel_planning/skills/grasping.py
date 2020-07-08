@@ -225,8 +225,14 @@ class SkillGrasping:
         return True
 
     def release_object(self):
+        pos_current, orient_current = self.robot.fk(np.array(self.robot.get_joints()))
+        pos_retract = pos_current - np.matmul(
+            R.from_quat(orient_current).as_dcm(), np.array([0.0, 0.0, 0.07])
+        )
+
         self.robot.open_gripper()
-        self.robot.transition_cartesian(self.last_pre_pos, self.last_pre_orient)
+        self.robot._world.step_seconds(0.2)
+        self.robot.transition_cartesian(pos_retract, orient_current)
 
 
 def get_grasping_description():

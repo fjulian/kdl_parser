@@ -407,3 +407,9 @@ class RobotArm:
         forces = np.array(f_t[:3])
         torques = np.array(f_t[3:])
         return forces, torques
+
+    def get_link_pose(self, link_name):
+        ret = p.getLinkState(self._model.uid, self.link_name_to_index[link_name])
+        pos = np.array(ret[0])
+        orient = np.array(ret[1])
+        return pos, orient

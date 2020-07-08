@@ -20,7 +20,7 @@ def ortho_projection(direction):
     return np.eye(3) - projection
 
 
-def draw_arrow(vec_wristframe, robot, color, arrow_id=None):
+def draw_arrow(vec_wristframe, robot, color, arrow_id=None, length=0.2):
     if DEBUG:
         link_state = p.getLinkState(
             robot._model.uid, robot.link_name_to_index["panda_default_EE"],
@@ -29,10 +29,10 @@ def draw_arrow(vec_wristframe, robot, color, arrow_id=None):
         orient = R.from_quat(link_state[1])
         vec_worldframe = orient.apply(np.squeeze(vec_wristframe))
         if arrow_id is None:
-            return robot._world.draw_arrow(pos, vec_worldframe, color)
+            return robot._world.draw_arrow(pos, vec_worldframe, color, length=length)
         else:
             return robot._world.draw_arrow(
-                pos, vec_worldframe, color, replace_id=arrow_id
+                pos, vec_worldframe, color, length=length, replace_id=arrow_id
             )
 
 
@@ -44,6 +44,8 @@ class SkillMove:
 
         self.gamma_direction = 1.0
         self.gamma_hinge = 0.2
+
+        self.orthogonal_correction = False
 
         self.f_desired = np.zeros((3, 1))
         self.k_p_f = 0.8
@@ -60,6 +62,7 @@ class SkillMove:
     def move_object(self, desired_distance, direction_initial_guess):
 
         travelled_distance = 0.0
+        last_position, _ = self.robot.get_link_pose("panda_default_EE")
 
         direction = np.copy(direction_initial_guess)
         direction /= np.linalg.norm(direction_initial_guess)
@@ -72,17 +75,16 @@ class SkillMove:
 
         arrow_1_id = draw_arrow(direction, self.robot, "green")
         arrow_2_id = draw_arrow(np.array([0.1, 0.0, 0.0]), self.robot, "red")
-        # arrow_3_id = draw_arrow(np.array([0.1, 0.0, 0.0]), self.robot, "yellow")
+        if self.orthogonal_correction:
+            arrow_3_id = draw_arrow(np.array([0.1, 0.0, 0.0]), self.robot, "yellow")
 
-        # plt.ion()
         plot_time = np.array([0.0])
         plot_force_data = np.zeros((3, 1))
         plot_direction_data = np.copy(direction)
 
         current_time = 0.0
 
-        # while travelled_distance < desired_distance:
-        for _ in range(3500):
+        while travelled_distance < desired_distance:
             plot_time = np.append(plot_time, current_time)
             current_time += self.robot._world.T_s
 
@@ -90,7 +92,13 @@ class SkillMove:
             f_wristframe, t_wristframe = self.robot.get_wrist_force_torque()
             f_wristframe = f_wristframe.reshape(3, 1)
             t_wristframe = t_wristframe.reshape(3, 1)
-            draw_arrow(f_wristframe, self.robot, "red", arrow_id=arrow_2_id)
+            draw_arrow(
+                f_wristframe,
+                self.robot,
+                "red",
+                arrow_id=arrow_2_id,
+                length=np.linalg.norm(f_wristframe) / 22.0,
+            )
             plot_force_data = np.append(plot_force_data, f_wristframe, axis=1)
 
             # ---- Translation -----
@@ -100,21 +108,24 @@ class SkillMove:
             projection_matrix = ortho_projection(direction)
             force_integral += self.dt * np.matmul(projection_matrix, force_error)
             v_f = self.k_p_f * force_error + self.k_i_f * force_integral
-            # draw_arrow(
-            #     # np.matmul(projection_matrix, v_f),
-            #     v_f,
-            #     self.robot,
-            #     "yellow",
-            #     arrow_id=arrow_3_id,
-            # )
+            if self.orthogonal_correction:
+                draw_arrow(
+                    np.matmul(projection_matrix, v_f),
+                    self.robot,
+                    "yellow",
+                    arrow_id=arrow_3_id,
+                )
 
             # Update direction estimate
+            if self.orthogonal_correction:
+                correction_vector = np.matmul(projection_matrix, v_f)
+            else:
+                correction_vector = v_f
             direction -= (
                 self.dt
                 * self.gamma_direction
                 * self.desired_velocity
-                * v_f
-                # * np.matmul(projection_matrix, v_f)
+                * correction_vector
             )
             direction /= np.linalg.norm(direction)
             draw_arrow(direction, self.robot, "green", arrow_id=arrow_1_id)
@@ -138,18 +149,32 @@ class SkillMove:
             # Compute new rotation velocity reference
             velocity_rotation = self.desired_velocity * hinge_vector - w_t
 
-            # Apply for one step
+            # ---- Apply for one step --------
+
             self.robot.task_space_velocity_control(
                 np.squeeze(velocity_translation), np.squeeze(velocity_rotation), 1
             )
 
+            # Update travelled distance
+            new_position, _ = self.robot.get_link_pose("panda_default_EE")
+            travelled_distance += np.linalg.norm(new_position - last_position)
+            last_position = new_position
+
+        if DEBUG:
+            self.plot_data(plot_time, plot_direction_data, plot_force_data)
+
+        return True
+
+    def plot_data(
+        self, plot_time, plot_direction_data, plot_force_data, filename=None,
+    ):
         plot_force_color = self.robot._world.colors["red"]
         plot_dir_color = self.robot._world.colors["green"]
         _, axs_dir = plt.subplots(3, 1, figsize=(9, 7))
         axs_force = []
         plot_data = {"ylabel": ["x", "y", "z"]}
         for i in range(3):
-            axs_dir[i].set_xlim(0.0, current_time)
+            axs_dir[i].set_xlim(0.0, plot_time[-1])
             axs_dir[i].plot(
                 plot_time,
                 plot_direction_data[i, :],
@@ -189,9 +214,11 @@ class SkillMove:
         axs_dir[2].set_xlabel("Time [s]")
         axs_dir[0].legend(loc=2)
         axs_force[0].legend(loc=4)
-        # plt.show()
 
-        return True
+        if filename is None:
+            plt.show()
+        else:
+            plt.savefig(filename)
 
 
 # def get_move_description():
