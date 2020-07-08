@@ -56,7 +56,7 @@ def drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene):
         return
 
     # Run the move skill
-    sk_move.move_object(0.2, np.array([-1.0, 0.5, 0.0]))
+    sk_move.move_object(0.3, np.array([-1.0, 0.5, 0.0]))
     # sk_move.move_object(0.3, np.array([-0.5, 0.0, -0.5]))     # GT
 
     # Release

@@ -42,7 +42,7 @@ class SkillMove:
         self.robot = robot_
         self.desired_velocity = desired_velocity
 
-        self.gamma_direction = 1.0
+        self.gamma_direction = 2.0
         self.gamma_hinge = 0.2
 
         self.orthogonal_correction = False
@@ -161,7 +161,9 @@ class SkillMove:
             last_position = new_position
 
         if DEBUG:
-            self.plot_data(plot_time, plot_direction_data, plot_force_data)
+            # filename = "/home/fjulian/Desktop/drawer2.pdf"
+            filename = None
+            self.plot_data(plot_time, plot_direction_data, plot_force_data, filename)
 
         return True
 
