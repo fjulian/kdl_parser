@@ -22,6 +22,8 @@ max_failed_samples = 50
 
 bounding_box_inflation_length = 0.2
 
+action_blacklist = ["nav"]
+
 # ------------------------------------------------------
 
 
@@ -30,6 +32,9 @@ class Explorer:
         self, skill_set, robot_uid, scene_objects, pddl_extender, knowledge_base,
     ):
         self.action_list = [act for act in knowledge_base.actions]
+        for rm_action in action_blacklist:
+            self.action_list.remove(rm_action)
+
         self.skill_set = skill_set
         self.robot_uid_ = robot_uid
         self.scene_objects = scene_objects
