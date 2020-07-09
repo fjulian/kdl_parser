@@ -40,7 +40,7 @@ Python version 2 is used because trac IK does not work with python 3 yet.
 Some ROS packages need to be installed:
 
 ```
-sudo apt-get install ros-melodic-trac-ik ros-melodic-franka-description ros-melodic-ridgeback-description
+sudo apt-get install ros-melodic-trac-ik ros-melodic-franka-description ros-melodic-ridgeback-description ros-melodic-joint-state-publisher-gui
 ```
 
 In addition, the library `pykdl_utils` - included as submodule - needs to be installed. This can be done using the following commands:
@@ -146,6 +146,16 @@ The variable `<true/false>` is true if the predicate must hold before the action
 ]
 ```
 
+### Internal Representations
+
+**Objects**
+
+```python
+knowledge_base.objects = {
+    "<object_label1>": ["<base_type1>", "<type2>"],
+    "<object_label2>": ["<base_type2>", "<type3>"],
+}
+```
 
 
 ### Interface to External Planner

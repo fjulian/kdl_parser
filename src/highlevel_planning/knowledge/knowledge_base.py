@@ -40,8 +40,8 @@ class KnowledgeBase(object):
         #     ("on", True, ("cupboard", "cube1")),
         #     ("in-reach", True, ("container1", "robot1")),
         # ]
-        # self.goals = [("on", True, ("container2", "cube1"))]
-        self.goals = [("inside", True, ("container1", "cube1"))]
+        self.goals = [("on", True, ("container2", "cube1"))]
+        # self.goals = [("inside", True, ("container1", "cube1"))]
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()
@@ -130,6 +130,8 @@ class KnowledgeBase(object):
             # There can only be one parent per type
             ValueError("Type already exists")
         else:
+            if parent_type is not None:
+                assert parent_type in self.types
             self.types[new_type] = parent_type
 
     # ----- Adding to the problem description ----------------------------------
@@ -141,7 +143,8 @@ class KnowledgeBase(object):
                 self.objects[object_name].append(object_type)
                 red_types = self._get_redundant_type(self.objects[object_name])
                 for red_type in red_types:
-                    self.objects[object_name].remove(red_type)
+                    if self.objects[object_name].index(red_type) != 0:
+                        self.objects[object_name].remove(red_type)
         else:
             self.objects[object_name] = [object_type]
         if object_value is not None:
@@ -364,7 +367,8 @@ class KnowledgeBase(object):
                 self._temp_objects[object_name].append(object_type)
                 red_types = self._get_redundant_type(self._temp_objects[object_name])
                 for red_type in red_types:
-                    self._temp_objects[object_name].remove(red_type)
+                    if self._temp_objects[object_name].index(red_type) != 0:
+                        self._temp_objects[object_name].remove(red_type)
         else:
             self._temp_objects[object_name] = [object_type]
         if object_value is not None:

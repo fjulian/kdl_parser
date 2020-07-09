@@ -112,7 +112,7 @@ class PDDLExtender(object):
                 action_params.append([arg, "position"])
             else:
                 original_types = self.knowledge_base.objects[arg]
-                new_type = arg + "-" + time_string
+                new_type = "".join((original_types[0], "-", arg, "-", time_string))
                 action_params.append([arg, new_type])
                 self.knowledge_base.add_type(new_type, original_types[0])
                 self.knowledge_base.add_object(arg, new_type)
