@@ -103,7 +103,7 @@ def main():
     # -----------------------------------
 
     # Set up predicates
-    preds = Predicates(scene, robot)
+    preds = Predicates(scene, robot, kb)
     kb.set_predicate_funcs(preds)
 
     for descr in preds.descriptions.items():
@@ -163,10 +163,13 @@ def main():
         while True:
             print("------------- Iteration {} ---------------".format(index))
             es.print_status()
-            success, plan_finished = es.step()
+            success, plan_finished, error_messages = es.step()
             if not success:
+                print("Error messages:")
+                for msg in error_messages:
+                    print(msg)
                 raise RuntimeError(
-                    "Error during execution of current action. Aborting."
+                    "Error during execution of current step. Aborting."
                 )
             index += 1
             if plan_finished:

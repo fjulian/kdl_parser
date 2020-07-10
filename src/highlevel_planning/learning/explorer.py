@@ -22,7 +22,7 @@ max_failed_samples = 50
 
 bounding_box_inflation_length = 0.2
 
-action_blacklist = ["nav"]
+action_blacklist = ["nav-in-reach", "nav-at"]
 
 # ------------------------------------------------------
 
