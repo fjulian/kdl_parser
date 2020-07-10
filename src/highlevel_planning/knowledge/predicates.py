@@ -5,11 +5,12 @@ import numpy as np
 
 
 class Predicates:
-    def __init__(self, scene, robot, robot_lock=None):
+    def __init__(self, scene, robot, knowledge_base):
         self.call = {
             "empty-hand": self.empty_hand,
             "in-hand": self.in_hand,
             "in-reach": self.in_reach,
+            "at": self.at,
             "inside": self.inside,
             "on": self.on,
         }
@@ -18,6 +19,7 @@ class Predicates:
             "empty-hand": [["rob", "robot"]],
             "in-hand": [["obj", "item"], ["rob", "robot"]],
             "in-reach": [["target", "navgoal"], ["rob", "robot"]],
+            "at": [["target", "position"], ["rob", "robot"]],
             "inside": [["container", "item"], ["contained", "item"]],
             "on": [["supporting", "item"], ["supported", "item"]],
         }
@@ -26,15 +28,11 @@ class Predicates:
         self._scene = scene
         self._robot_uid = robot._model.uid
         self._robot = robot
-        self._robot_lock = robot_lock
+        self._kb = knowledge_base
 
     def empty_hand(self, robot_name):
         robot = self._robot
-        if self._robot_lock:
-            self._robot_lock.acquire()
         grasped_sth = robot.check_grasp()
-        if self._robot_lock:
-            self._robot_lock.release()
         return not grasped_sth
 
     def in_hand(self, target_object, robot_name):
@@ -46,20 +44,24 @@ class Predicates:
         dist_finger1 = 100
         dist_finger2 = 100
         for contact in temp:
-            if contact[3] == robot.joint_idx_hand[0]:
+            if contact[3] == robot.joint_idx_fingers[0]:
                 dist_finger1 = contact[8]
-            elif contact[3] == robot.joint_idx_hand[1]:
+            elif contact[3] == robot.joint_idx_fingers[1]:
                 dist_finger2 = contact[8]
         desired_object_in_hand = (abs(dist_finger1) < 0.001) and (
-            abs(dist_finger2) < 0.001
+                abs(dist_finger2) < 0.001
         )
         return (not empty_hand_res) and desired_object_in_hand
 
     def in_reach(self, target_item, robot_name):
-        if type(target_item) is str:
-            return self.in_reach_obj(target_item, robot_name)
+        if self._kb.is_type(target_item, "position"):
+            return self.in_reach_pos(self._kb.lookup_table[target_item], robot_name)
         elif type(target_item) is list:
+            print(
+                "wooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")  # Want to see if this ever happens
             return self.in_reach_pos(target_item, robot_name)
+        elif type(target_item) is str:
+            return self.in_reach_obj(target_item, robot_name)
         else:
             raise ValueError
 
@@ -75,15 +77,11 @@ class Predicates:
         Returns:
             bool: Whether the object can be grasped from the robot's current position.
         """
-        if self._robot_lock:
-            self._robot_lock.acquire()
         try:
             pos, orient = self.sk_grasping.compute_grasp(target_object, None, 0)
         except SkillExecutionError:
             return False
         cmd = self._robot.ik(pos, orient)
-        if self._robot_lock:
-            self._robot_lock.release()
         if cmd.tolist() is None or cmd is None:
             return False
         else:
@@ -100,15 +98,16 @@ class Predicates:
         Returns:
             [type]: [description]
         """
-        if self._robot_lock:
-            self._robot_lock.acquire()
         cmd = self._robot.ik(target_pos, self._robot.start_orient)
-        if self._robot_lock:
-            self._robot_lock.release()
         if cmd.tolist() is None or cmd is None:
             return False
         else:
             return True
+
+    def at(self, target_pos, robot_name):
+        pos, _ = self._robot.get_link_pose("base_box")
+        distance = np.linalg.norm(pos[:2] - target_pos)
+        return distance < 0.2
 
     def inside(self, container_object, contained_object):
         """
