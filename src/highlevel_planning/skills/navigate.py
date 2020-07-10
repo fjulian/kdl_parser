@@ -252,8 +252,8 @@ def get_nav_in_reach_description():
 def get_nav_at_description():
     action_name = "nav-at"
     action_params = [
-        ["current_pos", "position"],
-        ["goal_pos", "position"],
+        ["current_pos", "navgoal"],
+        ["goal_pos", "navgoal"],
         ["rob", "robot"],
     ]
     action_preconditions = [("at", True, ["current_pos", "rob"])]

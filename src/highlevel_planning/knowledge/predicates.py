@@ -19,7 +19,7 @@ class Predicates:
             "empty-hand": [["rob", "robot"]],
             "in-hand": [["obj", "item"], ["rob", "robot"]],
             "in-reach": [["target", "navgoal"], ["rob", "robot"]],
-            "at": [["target", "position"], ["rob", "robot"]],
+            "at": [["target", "navgoal"], ["rob", "robot"]],
             "inside": [["container", "item"], ["contained", "item"]],
             "on": [["supporting", "item"], ["supported", "item"]],
         }
@@ -104,10 +104,17 @@ class Predicates:
         else:
             return True
 
-    def at(self, target_pos, robot_name):
-        pos, _ = self._robot.get_link_pose("base_box")
-        distance = np.linalg.norm(pos[:2] - target_pos)
-        return distance < 0.2
+    def at(self, target_object, robot_name):
+        if self._kb.is_type(target_object, "position"):
+            pos_object = self._kb.lookup_table[target_object]
+        else:
+            obj_info = self._scene.objects[target_object]
+            target_id = obj_info.model.uid
+            temp = p.getBasePositionAndOrientation(target_id)
+            pos_object = temp[0]
+        pos_robot, _ = self._robot.get_link_pose("ridgeback_dummy")
+        distance = np.linalg.norm(pos_robot[:2] - pos_object[:2])
+        return distance < 1.0
 
     def inside(self, container_object, contained_object):
         """

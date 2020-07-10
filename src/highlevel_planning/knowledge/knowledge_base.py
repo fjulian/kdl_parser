@@ -33,9 +33,9 @@ class KnowledgeBase(object):
         self.visible_objects = set()
         self.initial_predicates = list()
         # self.goals = list()
-        self.goals = [("in-hand", True, ("cube1", "robot1"))]
-        # self.goals = [("in-reach", True, ("container1", "robot1"))]
-        # self.goals = [("on", True, ("cupboard", "cube1"))]
+        # self.goals = [("in-hand", True, ("cube1", "robot1"))]
+        # self.goals = [("at", True, ("container1", "robot1"))]
+        self.goals = [("on", True, ("cupboard", "cube1"))]
         # self.goals = [
         #     ("on", True, ("cupboard", "cube1")),
         #     ("in-reach", True, ("container1", "robot1")),
@@ -263,6 +263,7 @@ class KnowledgeBase(object):
         if self.predicate_funcs.empty_hand("robot1"):
             self.initial_predicates.append(("empty-hand", "robot1"))
         self.initial_predicates.append(("in-reach", "origin", "robot1"))
+        self.initial_predicates.append(("at", "origin", "robot1"))
 
         # Check any predicates in relation with the goal
         for goal in self.goals:

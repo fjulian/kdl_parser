@@ -23,6 +23,7 @@ from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning.learning.explorer import Explorer
 from highlevel_planning.learning.pddl_extender import PDDLExtender
 
+
 # ----------------------------------------------------------------------
 
 
