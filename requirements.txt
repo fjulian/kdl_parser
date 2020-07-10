@@ -1,7 +1,7 @@
-pybullet==2.7.3
+pybullet==2.7.9
 numpy==1.16.5
 scipy==1.2.2
 urdf-parser-py==0.0.3
-py-trees==0.8.3
+py-trees==0.6.8
 cython
 ipython
