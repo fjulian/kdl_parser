@@ -126,7 +126,7 @@ def main():
     pddl_ex = PDDLExtender(kb, preds)
 
     # Set up exploration
-    xplorer = Explorer(skill_set, robot._model.uid, scene.objects, pddl_ex, kb)
+    xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb)
 
     # ---------------------------------------------------------------
 

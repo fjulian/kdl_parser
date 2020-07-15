@@ -29,14 +29,15 @@ action_blacklist = ["nav-in-reach", "nav-at"]
 
 class Explorer:
     def __init__(
-        self, skill_set, robot_uid, scene_objects, pddl_extender, knowledge_base,
+        self, skill_set, robot, scene_objects, pddl_extender, knowledge_base,
     ):
         self.action_list = [act for act in knowledge_base.actions]
         for rm_action in action_blacklist:
             self.action_list.remove(rm_action)
 
         self.skill_set = skill_set
-        self.robot_uid_ = robot_uid
+        self.robot = robot
+        self.robot_uid_ = robot._model.uid
         self.scene_objects = scene_objects
         self.pddl_extender = pddl_extender
         self.knowledge_base = knowledge_base
@@ -170,6 +171,9 @@ class Explorer:
     ):
         found_plan = False
         for sample_idx in range(max_samples_per_seq_len):
+            # Restore initial state
+            p.restoreState(stateId=self.current_state_id)
+
             # Sample sequences until an abstractly feasible one was found
             (
                 success,
@@ -332,6 +336,9 @@ class Explorer:
         obj_sample = np.random.choice(objects_goal)
         uid = self.scene_objects[obj_sample].model.uid
 
+        # Get robot base position
+        arm_base_pos, _ = self.robot.get_link_pose("panda_link0")
+
         # Get AABB
         bounding_box = get_combined_aabb(uid)
 
@@ -340,7 +347,9 @@ class Explorer:
         max_coords = bounding_box[1]
         max_coords += bounding_box_inflation_length
         min_coords -= bounding_box_inflation_length
-        min_coords[2] = np.max([min_coords[2], 0.0])
+        min_coords[2] = np.max([min_coords[2], arm_base_pos[2]-0.1])
+
+        assert min_coords[2] < max_coords[2]
 
         # Sample
         sample = np.random.uniform(low=min_coords, high=max_coords)
@@ -356,9 +365,6 @@ class Explorer:
         if plan is False:
             return False
         else:
-            # Restore initial state
-            p.restoreState(stateId=self.current_state_id)
-
             # Execute plan to get to start of sequence
             success = self._execute_plan(plan)
             return success
@@ -383,7 +389,7 @@ class Explorer:
         es = SequentialExecution(self.skill_set, plan, self.knowledge_base)
         es.setup()
         while True:
-            success, plan_finished = es.step()
+            success, plan_finished, msgs = es.step()
             # TODO if we run into a failure, check why this failure happened and adapt the PDDL if necessary
             if plan_finished or not success:
                 break

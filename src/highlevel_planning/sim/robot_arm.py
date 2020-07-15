@@ -261,8 +261,8 @@ class RobotArm:
                     self.link_name_to_index["panda_hand"],
                 ],
             )
-            base_r = R.from_quat(link_poses[0][1])
-            ee_r = R.from_quat(link_poses[1][1])
+            base_r = R.from_quat(link_poses[0][5])
+            ee_r = R.from_quat(link_poses[1][5])
 
             velocity_translation_baseframe = base_r.inv().apply(
                 ee_r.apply(velocity_translation)
@@ -410,6 +410,6 @@ class RobotArm:
 
     def get_link_pose(self, link_name):
         ret = p.getLinkState(self._model.uid, self.link_name_to_index[link_name])
-        pos = np.array(ret[0])
-        orient = np.array(ret[1])
+        pos = np.array(ret[4])
+        orient = np.array(ret[5])
         return pos, orient

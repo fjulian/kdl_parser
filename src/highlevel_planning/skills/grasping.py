@@ -173,14 +173,14 @@ class SkillGrasping:
         C_obj_grasp = R.from_quat(obj_info.grasp_orient[grasp_id])
         C_rob_ee = R.from_quat(self.robot.start_orient)
         C_ee_grasp = (
-            R.from_dcm(
-                np.matmul(
-                    C_O_obj.as_dcm(),
-                    np.matmul(C_obj_grasp.as_dcm(), C_O_obj.inv().as_dcm()),
+                R.from_dcm(
+                    np.matmul(
+                        C_O_obj.as_dcm(),
+                        np.matmul(C_obj_grasp.as_dcm(), C_O_obj.inv().as_dcm()),
+                    )
                 )
-            )
-            * C_O_obj
-            * C_O_rob.inv()
+                * C_O_obj
+                * C_O_rob.inv()
         )
         C_rob_grasp = C_ee_grasp * C_rob_ee
 

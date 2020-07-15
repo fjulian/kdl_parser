@@ -19,7 +19,8 @@ class SequentialExecution(ExecutionSystem):
             self.finished_plan = False
 
         # Define ignore effects
-        self.ignore_effects = {"nav-in-reach": [("in-reach", False, ["current_pos", "rob"])]}
+        self.ignore_effects = {"nav-in-reach": [("in-reach", False, ["current_pos", "rob"])],
+                               "nav-at": [("at", False, ["current_pos", "rob"])]}
 
     def step(self):
         success = True

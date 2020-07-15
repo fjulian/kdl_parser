@@ -25,8 +25,8 @@ def draw_arrow(vec_wristframe, robot, color, arrow_id=None, length=0.2):
         link_state = p.getLinkState(
             robot._model.uid, robot.link_name_to_index["panda_default_EE"],
         )
-        pos = np.array(link_state[0])
-        orient = R.from_quat(link_state[1])
+        pos = np.array(link_state[4])
+        orient = R.from_quat(link_state[5])
         vec_worldframe = orient.apply(np.squeeze(vec_wristframe))
         if arrow_id is None:
             return robot._world.draw_arrow(pos, vec_worldframe, color, length=length)
