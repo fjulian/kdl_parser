@@ -4,7 +4,7 @@ import pybullet as p
 import numpy as np
 from math import pi as m_pi
 import math
-from highlevel_planning.tools.util import IKError, quat_from_mat
+from highlevel_planning.tools.util import IKError, quat_from_mat, homogenous_trafo, invert_hom_trafo
 
 from trac_ik_python.trac_ik import IK
 
@@ -15,11 +15,11 @@ from pykdl_utils.kdl_kinematics import KDLKinematics
 
 from rc.controllers import CartesianVelocityControllerKDL
 
-
 # ------- Parameters ------------------
 # TODO move to config file
 
 max_force_magnitude = 150
+
 
 # --------------------
 
@@ -172,7 +172,7 @@ class RobotArm:
         return True
 
     def transition_cartesian(
-        self, pos_des, orient_des, duration=None, stop_on_contact=False
+            self, pos_des, orient_des, duration=None, stop_on_contact=False
     ):
         orient_des_rot = R.from_quat(orient_des)
         pos_ee = pos_des - np.matmul(
@@ -237,7 +237,7 @@ class RobotArm:
         self.set_joints(cmd.tolist())
 
     def task_space_velocity_control(
-        self, velocity_translation, velocity_rotation, num_steps
+            self, velocity_translation, velocity_rotation, num_steps
     ):
         """
         Takes a desired end-effector velocity, computes necessary joint velocities and applies them.
@@ -413,3 +413,11 @@ class RobotArm:
         pos = np.array(ret[4])
         orient = np.array(ret[5])
         return pos, orient
+
+    def convert_pos_to_robot_frame(self, r_O_O_traget):
+        r_O_O_rob, C_O_rob = self.get_link_pose("panda_link0")
+        C_O_rob = R.from_quat(C_O_rob)
+        T_O_rob = homogenous_trafo(r_O_O_rob, C_O_rob)
+        T_rob_O = invert_hom_trafo(T_O_rob)
+        r_R_R_target = np.matmul(T_rob_O, np.reshape(np.append(r_O_O_traget, 1.0), (-1, 1))).squeeze()
+        return r_R_R_target

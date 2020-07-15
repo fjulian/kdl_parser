@@ -1,8 +1,7 @@
 from highlevel_planning.skills.grasping import SkillGrasping
-from highlevel_planning.tools.util import get_combined_aabb, SkillExecutionError, homogenous_trafo, invert_hom_trafo
+from highlevel_planning.tools.util import get_combined_aabb, SkillExecutionError
 import pybullet as p
 import numpy as np
-from scipy.spatial.transform import Rotation as R
 
 
 class Predicates:
@@ -101,11 +100,7 @@ class Predicates:
         """
         # Convert position into robot base frame
         r_O_O_pos = target_pos
-        r_O_O_rob, C_O_rob = self._robot.get_link_pose("panda_link0")
-        C_O_rob = R.from_quat(C_O_rob)
-        T_O_rob = homogenous_trafo(r_O_O_rob, C_O_rob)
-        T_rob_O = invert_hom_trafo(T_O_rob)
-        r_R_R_grasp = np.matmul(T_rob_O, np.reshape(np.append(r_O_O_pos, 1.0), (-1, 1))).squeeze()
+        r_R_R_grasp = self._robot.convert_pos_to_robot_frame(r_O_O_pos)
 
         cmd = self._robot.ik(r_R_R_grasp, self._robot.start_orient)
         if cmd.tolist() is None or cmd is None:

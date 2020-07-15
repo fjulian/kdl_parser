@@ -73,7 +73,7 @@ def cube_example(sk_grasp, sk_nav, robot, scene, sk_place):
     print(robot.get_wrist_force_torque())
 
     # Grasp the cube
-    sk_grasp.grasp_object("cube1")
+    sk_grasp.grasp_object("cube1", grasp_id=0)
 
     robot.to_start()
     print("after homing:")
@@ -152,6 +152,12 @@ def main():
         action="store_true",
         help="if given, the simulation does not reload objects. Objects must already be present.",
     )
+    parser.add_argument(
+        "-s",
+        "--sleep",
+        action="store_true",
+        help="if given, the simulation will sleep for each update step, to mimic real time execution.",
+    )
     args = parser.parse_args()
 
     # Load existing simulation data if desired
@@ -163,7 +169,7 @@ def main():
             objects, robot_mdl = pickle.load(pkl_file)
 
     # Create world
-    world = World(gui_=True, sleep_=False, load_objects=not restore_existing_objects)
+    world = World(gui_=True, sleep_=args.sleep, load_objects=not restore_existing_objects)
     scene = ScenePlanning1(world, restored_objects=objects)
     # scene = SceneMoveSkill(world, restored_objects=objects)
 
@@ -193,9 +199,9 @@ def main():
 
     # drawer_example(sk_grasp, sk_nav, robot, scene, world)
 
-    drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
+    # drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
 
-    # cube_example(sk_grasp, sk_nav, robot, scene, sk_place)
+    cube_example(sk_grasp, sk_nav, robot, scene, sk_place)
 
     # drive_example(robot, world)
 
