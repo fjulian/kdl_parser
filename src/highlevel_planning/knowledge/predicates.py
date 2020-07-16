@@ -108,17 +108,28 @@ class Predicates:
         else:
             return True
 
-    def at(self, target_object, robot_name):
+    def at(self, target_object, robot_name, use_closest_points=True):
         if self._kb.is_type(target_object, "position"):
             pos_object = self._kb.lookup_table[target_object]
-        else:
+            pos_robot, _ = self._robot.get_link_pose("ridgeback_dummy")
+            distance = np.linalg.norm(pos_robot[:2] - pos_object[:2])
+            return distance < 1.0   # TODO move magic number to config file
+        elif not use_closest_points:
             obj_info = self._scene.objects[target_object]
             target_id = obj_info.model.uid
             temp = p.getBasePositionAndOrientation(target_id)
             pos_object = temp[0]
-        pos_robot, _ = self._robot.get_link_pose("ridgeback_dummy")
-        distance = np.linalg.norm(pos_robot[:2] - pos_object[:2])
-        return distance < 1.0
+            pos_robot, _ = self._robot.get_link_pose("ridgeback_dummy")
+            distance = np.linalg.norm(pos_robot[:2] - pos_object[:2])
+            return distance < 1.0
+        else:
+            temp = p.getClosestPoints(
+                self._robot_uid, self._scene.objects[target_object].model.uid, distance=1.1
+            )
+            for point in temp:
+                if point[8] < 1.0:
+                    return True
+            return False
 
     def inside(self, container_object, contained_object):
         """
