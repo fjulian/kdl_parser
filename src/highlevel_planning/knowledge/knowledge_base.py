@@ -35,12 +35,13 @@ class KnowledgeBase(object):
         # self.goals = list()
         # self.goals = [("in-hand", True, ("cube1", "robot1"))]
         # self.goals = [("at", True, ("container1", "robot1"))]
-        self.goals = [("on", True, ("cupboard", "cube1"))]
+        # self.goals = [("at", True, ("cupboard", "robot1"))]
+        # self.goals = [("on", True, ("cupboard", "cube1"))]
         # self.goals = [
         #     ("on", True, ("cupboard", "cube1")),
-        #     ("in-reach", True, ("container1", "robot1")),
+        #     ("at", True, ("container1", "robot1")),
         # ]
-        # self.goals = [("on", True, ("container2", "cube1"))]
+        self.goals = [("on", True, ("container2", "cube1"))]
         # self.goals = [("inside", True, ("container1", "cube1"))]
 
         # Value lookups (e.g. for positions)
@@ -62,6 +63,7 @@ class KnowledgeBase(object):
         # Temporary variables (e.g. for exploration)
         self._temp_goals = list()
         self._temp_objects = dict()
+        self._temp_initial_predicates = list()
 
     def set_predicate_funcs(self, preds):
         self.predicate_funcs = preds
@@ -275,12 +277,15 @@ class KnowledgeBase(object):
         # TODO maybe move this into a separate dummy perception module
         for obj in scene.objects:
             self.add_object(obj, "item")
+            if self.predicate_funcs.call["has-grasp"](obj):
+                self.initial_predicates.append(("has-grasp", obj))
 
         # Add "objects" that are always visible
         for object_name in self.objects:
             for object_type in self.objects[object_name]:
                 if self.type_x_child_of_y(object_type, "position"):
                     self.add_object(object_name, "position")
+                    self.initial_predicates.append(("has-grasp", object_name))
                     break
 
     def type_x_child_of_y(self, x, y):
@@ -354,6 +359,8 @@ class KnowledgeBase(object):
                         self._temp_objects[object_name].remove(red_type)
         else:
             self._temp_objects[object_name] = [object_type]
+            if self.is_type(object_name, "position"):
+                self._temp_initial_predicates.append(("has-grasp", object_name))
         if object_value is not None:
             self.lookup_table[object_name] = object_value
         return object_name
@@ -366,6 +373,9 @@ class KnowledgeBase(object):
     def make_permanent(self, obj_name):
         self.objects[obj_name] = self._temp_objects[obj_name]
         del self._temp_objects[obj_name]
+        for pred in self._temp_initial_predicates:
+            if obj_name in pred:
+                self.initial_predicates.append(pred)
 
     def joined_objects(self):
         objects = deepcopy(self._temp_objects)
@@ -380,7 +390,7 @@ class KnowledgeBase(object):
         self.pddl_if_temp.write_domain_pddl(self.actions, self._predicates, self.types)
         objects = self.joined_objects()
         self.pddl_if_temp.write_problem_pddl(
-            objects, self.initial_predicates, self._temp_goals
+            objects, self.initial_predicates + self._temp_initial_predicates, self._temp_goals
         )
         return planner_interface.pddl_planner(
             self.pddl_if_temp._domain_file_pddl, self.pddl_if_temp._problem_file_pddl
@@ -392,3 +402,4 @@ class KnowledgeBase(object):
                 del self.lookup_table[obj]
         self._temp_objects.clear()
         del self._temp_goals[:]
+        del self._temp_initial_predicates[:]

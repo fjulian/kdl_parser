@@ -13,6 +13,7 @@ class Predicates:
             "at": self.at,
             "inside": self.inside,
             "on": self.on,
+            "has-grasp": self.has_grasp
         }
 
         self.descriptions = {
@@ -22,6 +23,7 @@ class Predicates:
             "at": [["target", "navgoal"], ["rob", "robot"]],
             "inside": [["container", "item"], ["contained", "item"]],
             "on": [["supporting", "item"], ["supported", "item"]],
+            "has-grasp": [["obj", "navgoal"]]
         }
 
         self.sk_grasping = SkillGrasping(scene, robot)
@@ -186,3 +188,6 @@ class Predicates:
         ) and np.all(np.less_equal(pos_supported[:2], upper_supporting[:2]))
 
         return above and within
+
+    def has_grasp(self, obj):
+        return len(self._scene.objects[obj].grasp_pos) > 0

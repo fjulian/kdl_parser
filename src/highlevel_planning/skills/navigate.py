@@ -234,10 +234,12 @@ def get_nav_in_reach_description():
         ["goal_pos", "navgoal"],
         ["rob", "robot"],
     ]
-    action_preconditions = [("in-reach", True, ["current_pos", "rob"])]
+    action_preconditions = [("at", True, ["current_pos", "rob"]), ("has-grasp", True, ["goal_pos"])]
     action_effects = [
         ("in-reach", True, ["goal_pos", "rob"]),
         ("in-reach", False, ["current_pos", "rob"]),
+        ("at", True, ["goal_pos", "rob"]),
+        ("at", False, ["current_pos", "rob"]),
     ]
     return (
         action_name,
@@ -260,6 +262,7 @@ def get_nav_at_description():
     action_effects = [
         ("at", True, ["goal_pos", "rob"]),
         ("at", False, ["current_pos", "rob"]),
+        ("in-reach", False, ["current_pos", "rob"])
     ]
     return (
         action_name,
