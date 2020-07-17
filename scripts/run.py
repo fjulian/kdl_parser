@@ -56,7 +56,7 @@ def main():
     # sk_grasp.grasp_object("cube1")
 
     # Grasp the cupboard handle
-    sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
+    sk_grasp.grasp_object("cupboard", link_idx=3)
 
     # Drive back
     robot.update_velocity([0.0, -0.1, 0.0], 0.0)

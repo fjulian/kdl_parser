@@ -28,7 +28,7 @@ def drawer_example(sk_grasp, sk_nav, robot, scene, world):
     print(robot.get_wrist_force_torque())
 
     # Grasp the cupboard handle
-    res = sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
+    res = sk_grasp.grasp_object("cupboard", link_idx=3)
     if not res:
         print("Grasping the handle failed.")
         return
@@ -50,7 +50,7 @@ def drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene):
     sk_nav.move_to_object("cupboard", nav_min_dist=1.0)
 
     # Grasp the cupboard handle
-    res = sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
+    res = sk_grasp.grasp_object("cupboard", link_idx=3)
     if not res:
         print("Grasping the handle failed.")
         return
@@ -64,16 +64,18 @@ def drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene):
     robot.to_start()
 
 
-def cube_example(sk_grasp, sk_nav, robot, scene, sk_place):
+def grasp_example(
+    sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1", link_idx=0
+):
     # Run move skill
-    sk_nav.move_to_object("cube1")
+    sk_nav.move_to_object(object_name)
 
     print("empty hand:")
     robot._world.step_seconds(1.0)
     print(robot.get_wrist_force_torque())
 
-    # Grasp the cube
-    sk_grasp.grasp_object("cube1", grasp_id=0)
+    # Grasp the object
+    sk_grasp.grasp_object(object_name, link_idx=link_idx, grasp_id=0)
 
     robot.to_start()
     print("after homing:")
@@ -104,7 +106,9 @@ def cube_example(sk_grasp, sk_nav, robot, scene, sk_place):
     # print(robot.get_wrist_force())
 
     # Place cube somewhere else
-    sk_place.place_object(scene.objects["cube1"].init_pos + np.array([0.0, 0.2, -0.09]))
+    sk_place.place_object(
+        scene.objects[object_name].init_pos + np.array([0.0, 0.2, -0.09])
+    )
 
 
 def navigate_with_cube(sk_nav, sk_grasp):
@@ -169,7 +173,9 @@ def main():
             objects, robot_mdl = pickle.load(pkl_file)
 
     # Create world
-    world = World(gui_=True, sleep_=args.sleep, load_objects=not restore_existing_objects)
+    world = World(
+        gui_=True, sleep_=args.sleep, load_objects=not restore_existing_objects
+    )
     scene = ScenePlanning1(world, restored_objects=objects)
     # scene = SceneMoveSkill(world, restored_objects=objects)
 
@@ -201,7 +207,8 @@ def main():
 
     # drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
 
-    cube_example(sk_grasp, sk_nav, robot, scene, sk_place)
+    # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1")
+    grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lid1")
 
     # drive_example(robot, world)
 

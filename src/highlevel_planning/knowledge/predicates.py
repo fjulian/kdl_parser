@@ -13,7 +13,7 @@ class Predicates:
             "at": self.at,
             "inside": self.inside,
             "on": self.on,
-            "has-grasp": self.has_grasp
+            "has-grasp": self.has_grasp,
         }
 
         self.descriptions = {
@@ -23,7 +23,7 @@ class Predicates:
             "at": [["target", "navgoal"], ["rob", "robot"]],
             "inside": [["container", "item"], ["contained", "item"]],
             "on": [["supporting", "item"], ["supported", "item"]],
-            "has-grasp": [["obj", "navgoal"]]
+            "has-grasp": [["obj", "navgoal"]],
         }
 
         self.sk_grasping = SkillGrasping(scene, robot)
@@ -51,7 +51,7 @@ class Predicates:
             elif contact[3] == robot.joint_idx_fingers[1]:
                 dist_finger2 = contact[8]
         desired_object_in_hand = (abs(dist_finger1) < 0.001) and (
-                abs(dist_finger2) < 0.001
+            abs(dist_finger2) < 0.001
         )
         return (not empty_hand_res) and desired_object_in_hand
 
@@ -60,7 +60,8 @@ class Predicates:
             return self.in_reach_pos(self._kb.lookup_table[target_item], robot_name)
         elif type(target_item) is list:
             print(
-                "wooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")  # Want to see if this ever happens
+                "wooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
+            )  # Want to see if this ever happens
             return self.in_reach_pos(target_item, robot_name)
         elif type(target_item) is str:
             return self.in_reach_obj(target_item, robot_name)
@@ -80,7 +81,7 @@ class Predicates:
             bool: Whether the object can be grasped from the robot's current position.
         """
         try:
-            pos, orient = self.sk_grasping.compute_grasp(target_object, None, 0)
+            pos, orient = self.sk_grasping.compute_grasp(target_object, 0, 0)
         except SkillExecutionError:
             return False
         cmd = self._robot.ik(pos, orient)
@@ -115,7 +116,7 @@ class Predicates:
             pos_object = self._kb.lookup_table[target_object]
             pos_robot, _ = self._robot.get_link_pose("ridgeback_dummy")
             distance = np.linalg.norm(pos_robot[:2] - pos_object[:2])
-            return distance < 1.0   # TODO move magic number to config file
+            return distance < 1.0  # TODO move magic number to config file
         elif not use_closest_points:
             obj_info = self._scene.objects[target_object]
             target_id = obj_info.model.uid
@@ -126,7 +127,9 @@ class Predicates:
             return distance < 1.0
         else:
             temp = p.getClosestPoints(
-                self._robot_uid, self._scene.objects[target_object].model.uid, distance=1.1
+                self._robot_uid,
+                self._scene.objects[target_object].model.uid,
+                distance=1.1,
             )
             for point in temp:
                 if point[8] < 1.0:

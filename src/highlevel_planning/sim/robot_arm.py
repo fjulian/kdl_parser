@@ -245,6 +245,9 @@ class RobotArm:
 
         Args:
             velocity ([type]): [description]
+            :param num_steps:
+            :param velocity_rotation:
+            :param velocity_translation:
         """
 
         ctrl = CartesianVelocityControllerKDL()

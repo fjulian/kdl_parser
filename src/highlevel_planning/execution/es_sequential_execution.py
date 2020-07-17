@@ -20,8 +20,15 @@ class SequentialExecution(ExecutionSystem):
 
         # Define ignore effects
         self.ignore_effects = {
-            "nav-in-reach": [("in-reach", False, ["current_pos", "rob"]), ("at", False, ["current_pos", "rob"])],
-            "nav-at": [("at", False, ["current_pos", "rob"]), ("in-reach", False, ["current_pos", "rob"])]}
+            "nav-in-reach": [
+                ("in-reach", False, ["current_pos", "rob"]),
+                ("at", False, ["current_pos", "rob"]),
+            ],
+            "nav-at": [
+                ("at", False, ["current_pos", "rob"]),
+                ("in-reach", False, ["current_pos", "rob"]),
+            ],
+        }
 
     def step(self):
         success = True
@@ -56,7 +63,7 @@ class SequentialExecution(ExecutionSystem):
             try:
                 if action_name == "grasp":
                     target_name = action_parameters[0]
-                    target_link_id = None
+                    target_link_id = -1
                     target_grasp_id = 0
                     res = self.skill_set_["grasp"].grasp_object(
                         target_name, target_link_id, target_grasp_id
@@ -87,8 +94,10 @@ class SequentialExecution(ExecutionSystem):
 
         # Check if the effects were reached successfully
         action_description = self.knowledge_base.actions[action_name]
-        action_parameters_dict = {param[0]: action_parameters[idx] for idx, param in
-                                  enumerate(action_description["params"])}
+        action_parameters_dict = {
+            param[0]: action_parameters[idx]
+            for idx, param in enumerate(action_description["params"])
+        }
         for effect in action_description["effects"]:
             if action_name in self.ignore_effects:
                 skip_effect = False
@@ -98,10 +107,16 @@ class SequentialExecution(ExecutionSystem):
                 if skip_effect:
                     continue
             parameterized_effect = parametrize_predicate(effect, action_parameters_dict)
-            res = self.knowledge_base.predicate_funcs.call[effect[0]](*parameterized_effect[2])
+            res = self.knowledge_base.predicate_funcs.call[effect[0]](
+                *parameterized_effect[2]
+            )
             if not res == effect[1]:
                 success = False
-                msgs.append("Failed to reach effect {} during action {}".format(effect[0], action_name))
+                msgs.append(
+                    "Failed to reach effect {} during action {}".format(
+                        effect[0], action_name
+                    )
+                )
 
         return success, msgs
 

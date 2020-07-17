@@ -23,11 +23,14 @@ class ScenePlanning1:
                 init_pos_=np.array([2.5, 0.0, 0.7]),
                 # init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
                 init_orient_=rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "z", -20.0),
-                grasp_pos_=[np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0])],
-                grasp_orient_=[
-                    np.array([0.0, 0.0, 0.0, 1.0]),
-                    rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "y", -25.0),
-                ],
+                grasp_links_=[-1],
+                grasp_pos_={-1: [np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0])]},
+                grasp_orient_={
+                    -1: [
+                        np.array([0.0, 0.0, 0.0, 1.0]),
+                        rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "y", -25.0),
+                    ]
+                },
             )
             self.objects["container1"] = ObjectInfo(
                 urdf_path_=os.path.join(
@@ -40,6 +43,11 @@ class ScenePlanning1:
                 urdf_path_=os.path.join(os.getcwd(), "data/models/container/lid.urdf"),
                 init_pos_=np.array([3.5, -0.25, 0.625]),
                 init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
+                grasp_pos_={5: [np.array([0.0, 0.0, 0.0])]},
+                grasp_orient_={
+                    5: [rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "y", 90)]
+                },
+                grasp_links_=[5],
             )
             self.objects["container2"] = ObjectInfo(
                 urdf_path_=os.path.join(
