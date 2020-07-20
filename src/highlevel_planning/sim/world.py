@@ -132,6 +132,7 @@ class _Model:
         self._physics_client = physics_client
         self.uid = 0
         self.name = ""
+        self.link_name_to_index = dict()
 
     def load(self, path, position, orientation, scale):
         model_path = os.path.expanduser(path)
@@ -143,6 +144,10 @@ class _Model:
             physicsClientId=self._physics_client,
         )
         self.name = p.getBodyInfo(self.uid)
+
+        for i in range(p.getNumJoints(self.uid)):
+            info = p.getJointInfo(self.uid, i)
+            self.link_name_to_index[info[12]] = i
 
     def remove(self):
         p.removeBody(self.uid)

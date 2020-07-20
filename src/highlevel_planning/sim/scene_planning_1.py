@@ -1,8 +1,8 @@
 import numpy as np
-from scipy.spatial.transform import Rotation as R
 import os
 from highlevel_planning.tools.util import rotate_orient, ObjectInfo
 from highlevel_planning.sim.cupboard import Cupboard
+import pybullet as p
 
 
 class ScenePlanning1:
@@ -74,6 +74,14 @@ class ScenePlanning1:
                     obj.urdf_path, obj.init_pos, obj.init_orient, scale=obj.scale
                 )
             print("Added object " + key + ". ID: " + str(obj.model.uid))
+
+        # Set object-specific properties
+        p.changeDynamics(
+            self.objects["lid1"].model.uid,
+            self.objects["lid1"].model.link_name_to_index["handle"],
+            lateralFriction=1.0,
+        )
+
         print("---------------------------")
 
     def reset(self):

@@ -107,9 +107,9 @@ class KnowledgeBase(object):
     def add_action(self, action_name, action_definition, overwrite=False):
         if not overwrite and action_name in self.actions:
             print(
-                    "Action "
-                    + action_name
-                    + " already exists and no overwrite was requested. Ignoring request."
+                "Action "
+                + action_name
+                + " already exists and no overwrite was requested. Ignoring request."
             )
         else:
             assert isinstance(action_name, str)
@@ -118,9 +118,9 @@ class KnowledgeBase(object):
     def add_predicate(self, predicate_name, predicate_definition, overwrite=False):
         if not overwrite and predicate_name in self._predicates:
             print(
-                    "Predicate "
-                    + predicate_name
-                    + " already exists and no overwrite was requested. Ignoring request."
+                "Predicate "
+                + predicate_name
+                + " already exists and no overwrite was requested. Ignoring request."
             )
         else:
             assert isinstance(predicate_name, str)
@@ -212,7 +212,9 @@ class KnowledgeBase(object):
                 for param_spec in sub_action_parameters:
                     old_param_name = param_spec[0]
                     if old_param_name in meta_action["hidden_params"][idx]:
-                        new_plan_item[1].append(meta_action["hidden_params"][idx][old_param_name])
+                        new_plan_item[1].append(
+                            meta_action["hidden_params"][idx][old_param_name]
+                        )
                     elif old_param_name in meta_action["param_translator"][idx]:
                         new_param_name = meta_action["param_translator"][idx][
                             old_param_name
@@ -231,13 +233,13 @@ class KnowledgeBase(object):
         return expanded_step
 
     def add_meta_action(
-            self,
-            name,
-            sequence,
-            parameters,
-            param_translator,
-            hidden_parameters,
-            description,
+        self,
+        name,
+        sequence,
+        parameters,
+        param_translator,
+        hidden_parameters,
+        description,
     ):
         assert type(name) is str
         assert type(sequence) is list
@@ -307,12 +309,12 @@ class KnowledgeBase(object):
         return False
 
     def get_objects_by_type(
-            self,
-            type_query,
-            types_by_parent,
-            objects_by_type,
-            object_set=None,
-            visible_only=False,
+        self,
+        type_query,
+        types_by_parent,
+        objects_by_type,
+        object_set=None,
+        visible_only=False,
     ):
         if object_set is None:
             object_set = set()
@@ -345,8 +347,8 @@ class KnowledgeBase(object):
             while True:
                 object_name = "{}_sample_{}".format(object_type, counter)
                 if (
-                        object_name not in self.objects
-                        and object_name not in self._temp_objects
+                    object_name not in self.objects
+                    and object_name not in self._temp_objects
                 ):
                     break
                 counter += 1
@@ -390,7 +392,9 @@ class KnowledgeBase(object):
         self.pddl_if_temp.write_domain_pddl(self.actions, self._predicates, self.types)
         objects = self.joined_objects()
         self.pddl_if_temp.write_problem_pddl(
-            objects, self.initial_predicates + self._temp_initial_predicates, self._temp_goals
+            objects,
+            self.initial_predicates + self._temp_initial_predicates,
+            self._temp_goals,
         )
         return planner_interface.pddl_planner(
             self.pddl_if_temp._domain_file_pddl, self.pddl_if_temp._problem_file_pddl
