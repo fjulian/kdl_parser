@@ -44,7 +44,7 @@ class Cupboard:
                 link: [np.array([0.0, 0.0, 0.0])] for link in self.handle_link_idx
             },
             grasp_orient_={
-                link: grasp_orient.as_quat() for link in self.handle_link_idx
+                link: [grasp_orient.as_quat()] for link in self.handle_link_idx
             },
             model_=self.model,
             nav_angle_=self.nav_angle,

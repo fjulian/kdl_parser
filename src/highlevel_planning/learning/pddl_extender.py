@@ -71,7 +71,7 @@ class PDDLExtender(object):
         for param_spec in action_params:
             full_action_params.append((param_spec[0], param_spec[1], param_spec[0]))
 
-        # Add non-generalizable parameterization
+        # Add non-generalizable parametrization
         self._process_parameterizations(full_action_params, action_name)
 
         # Save action meta data

@@ -31,7 +31,11 @@ class Explorer:
     def __init__(
         self, skill_set, robot, scene_objects, pddl_extender, knowledge_base,
     ):
-        self.action_list = [act for act in knowledge_base.actions]
+        self.action_list = [
+            act
+            for act in knowledge_base.actions
+            if act not in knowledge_base.meta_actions
+        ]
         for rm_action in action_blacklist:
             self.action_list.remove(rm_action)
 
@@ -347,7 +351,7 @@ class Explorer:
         max_coords = bounding_box[1]
         max_coords += bounding_box_inflation_length
         min_coords -= bounding_box_inflation_length
-        min_coords[2] = np.max([min_coords[2], arm_base_pos[2]-0.1])
+        min_coords[2] = np.max([min_coords[2], arm_base_pos[2] - 0.1])
 
         assert min_coords[2] < max_coords[2]
 
