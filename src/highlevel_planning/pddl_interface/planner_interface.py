@@ -1,9 +1,6 @@
 import subprocess
 
 
-# TODO add a debug flag for print statements
-
-
 def pddl_planner(domain_file, problem_file, debug_print=False):
     try:
         res = subprocess.check_output(

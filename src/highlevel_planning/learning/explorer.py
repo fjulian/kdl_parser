@@ -56,15 +56,16 @@ class Explorer:
         self.current_state_id = p.saveState()
 
         # Identify objects that are involved in reaching the goal
-        relevant_objects = list()
-        for goal in self.knowledge_base.goals:
-            relevant_objects.extend(goal[2])
+        goal_objects = self._get_items_goal()
+        radii = [0.1, 1.5, 10.0]
 
-        res = self._explore_generalized_action(relevant_objects, sequences_tried)
-        if not res:
-            res = self._explore_goal_objects(relevant_objects, sequences_tried)
-        if not res:
-            res = self._explore_all(sequences_tried)
+        res = self._explore_generalized_action(goal_objects, sequences_tried)
+        for radius in radii:
+            if not res:
+                closeby_objects = self._get_items_closeby(goal_objects, radius=radius)
+                res = self._explore_goal_objects(
+                    sequences_tried, goal_objects + closeby_objects
+                )
         return res
 
     # ----- Different sampling strategies ------------------------------------
@@ -130,7 +131,10 @@ class Explorer:
         self.knowledge_base.clear_temp()
         for _ in range(max_sample_repetitions):
             found_plan = self._sampling_loops(
-                sequences_tried, given_seq=sequence, given_params=fixed_parameters
+                sequences_tried,
+                given_seq=sequence,
+                given_params=fixed_parameters,
+                relevant_objects=relevant_objects,  # TODO check if it actually makes sense that we only sample goal actions here
             )
             if found_plan:
                 break
@@ -138,28 +142,14 @@ class Explorer:
         p.restoreState(stateId=self.current_state_id)
         return found_plan
 
-    def _explore_goal_objects(self, relevant_objects, sequences_tried):
-        # TODO adapt this to only sample from relevant objects
-
+    def _explore_goal_objects(self, sequences_tried, relevant_objects=None):
         found_plan = False
         self.knowledge_base.clear_temp()
         for _ in range(max_sample_repetitions):
             for seq_len in range(1, max_seq_len + 1):
-                found_plan = self._sampling_loops(sequences_tried, seq_len=seq_len)
-                if found_plan:
-                    break
-            if found_plan:
-                break
-        # Restore initial state
-        p.restoreState(stateId=self.current_state_id)
-        return found_plan
-
-    def _explore_all(self, sequences_tried):
-        found_plan = False
-        self.knowledge_base.clear_temp()
-        for _ in range(max_sample_repetitions):
-            for seq_len in range(1, max_seq_len + 1):
-                found_plan = self._sampling_loops(sequences_tried, seq_len=seq_len)
+                found_plan = self._sampling_loops(
+                    sequences_tried, seq_len=seq_len, relevant_objects=relevant_objects
+                )
                 if found_plan:
                     break
             if found_plan:
@@ -171,7 +161,12 @@ class Explorer:
     # ----- Tools for sampling ------------------------------------
 
     def _sampling_loops(
-        self, sequences_tried, given_seq=None, given_params=None, seq_len=None
+        self,
+        sequences_tried,
+        given_seq=None,
+        given_params=None,
+        seq_len=None,
+        relevant_objects=None,
     ):
         found_plan = False
         for sample_idx in range(max_samples_per_seq_len):
@@ -189,6 +184,7 @@ class Explorer:
                 given_seq=given_seq,
                 given_params=given_params,
                 sequence_length=seq_len,
+                relevant_objects=relevant_objects,
             )
             if not success:
                 print("Sampling failed. Abort searching in this sequence length.")
@@ -235,7 +231,12 @@ class Explorer:
         return found_plan
 
     def _sample_feasible_sequence(
-        self, sequences_tried, sequence_length=None, given_seq=None, given_params=None
+        self,
+        sequences_tried,
+        sequence_length=None,
+        given_seq=None,
+        given_params=None,
+        relevant_objects=None,
     ):
         # Sample sequences until an abstractly feasible one was found
         if given_seq is None:
@@ -258,7 +259,9 @@ class Explorer:
             if flag_sample_sequences:
                 seq = self._sample_sequence(sequence_length)
             try:
-                params, params_tuple = self._sample_parameters(seq, given_params)
+                params, params_tuple = self._sample_parameters(
+                    seq, given_params, relevant_objects
+                )
             except NameError:
                 continue
             if (tuple(seq), tuple(params_tuple),) in sequences_tried:
@@ -288,14 +291,15 @@ class Explorer:
                     break
         return sequence
 
-    def _sample_parameters(self, sequence, given_params=None):
+    def _sample_parameters(self, sequence, given_params=None, relevant_objects=None):
         parameter_samples = [None] * len(sequence)
         parameter_samples_tuples = [None] * len(sequence)
 
         # Create list of relevant items in the scene
-        # TODO For now this is just adding all objects in the scene. Instead, just add objects
-        # currently in proximity to the robot and the objects of interest.
-        objects_of_interest_dict = self.knowledge_base.objects
+        objects_of_interest_dict = dict()
+        for obj in relevant_objects:
+            objects_of_interest_dict[obj] = self.knowledge_base.objects[obj]
+        objects_of_interest_dict["robot1"] = self.knowledge_base.objects["robot1"]
         types_by_parent = invert_dict(self.knowledge_base.types)
         objects_by_type = invert_dict(objects_of_interest_dict)
 
@@ -312,7 +316,7 @@ class Explorer:
                 else:
                     # Sample a value for this parameter
                     if self.knowledge_base.type_x_child_of_y(obj_type, "position"):
-                        position = self._sample_position()
+                        position = self._sample_position(relevant_objects)
                         obj_sample = self.knowledge_base.add_temp_object(
                             object_type=obj_type, object_value=position
                         )
@@ -334,10 +338,9 @@ class Explorer:
             parameter_samples_tuples[idx_action] = tuple(parameters_current_action)
         return parameter_samples, parameter_samples_tuples
 
-    def _sample_position(self):
+    def _sample_position(self, relevant_objects):
         # Choose one goal object next to which to sample
-        objects_goal = self._get_items_goal(objects_only=True)
-        obj_sample = np.random.choice(objects_goal)
+        obj_sample = np.random.choice(relevant_objects)
         uid = self.scene_objects[obj_sample].model.uid
 
         # Get robot base position
@@ -399,33 +402,9 @@ class Explorer:
                 break
         return success
 
-    # def _get_objects_of_interest(self):
-    #     # TODO finish and use this function
-    #     interest_locations = list()
-
-    #     # Get robot position
-    #     temp = p.getBasePositionAndOrientation(self.robot_uid_)
-    #     robot_pos = np.array(temp[0])
-    #     interest_locations.append(robot_pos)
-
-    #     # Get positions of objects that are in the goal description
-    #     for goal in self.knowledge_base.goals:
-    #         for arg in goal[2]:
-    #             if arg in self.scene_objects:
-    #                 pos = p.getBasePositionAndOrientation(
-    #                     self.scene_objects[arg].model.uid
-    #                 )
-    #                 interest_locations.append(np.array(pos))
-    #             elif arg in self.knowledge_lookups["position"].data:
-    #                 interest_locations.append(
-    #                     self.knowledge_lookups["position"].get(arg)
-    #                 )
-
-    #     # Add scene objects that are close to interest locations
-
     def _get_items_goal(self, objects_only=False):
         """
-        Get objects that involved in the goal description
+        Get objects that are involved in the goal description
         """
         item_list = list()
         for goal in self.knowledge_base.goals:
@@ -436,3 +415,38 @@ class Explorer:
                 else:
                     item_list.append(arg)
         return item_list
+
+    def _get_items_closeby(self, goal_objects, radius=0.5):
+
+        # Get robot position
+        temp = p.getBasePositionAndOrientation(self.robot_uid_)
+        robot_pos = np.array(temp[0])
+        interest_locations = np.array([robot_pos])
+
+        # Get positions of objects that are in the goal description
+        for obj in goal_objects:
+            interest_locations = np.vstack(
+                (interest_locations, self._get_object_position(obj))
+            )
+
+        # Add scene objects that are close to interest locations
+        closeby_objects = list()
+        for obj in self.scene_objects:
+            if obj in goal_objects:
+                continue
+            obj_pos = self._get_object_position(obj)
+            distances = np.linalg.norm(interest_locations - obj_pos, axis=1)
+            if np.any(distances < radius):
+                closeby_objects.append(obj)
+        return closeby_objects
+
+    def _get_object_position(self, object_name):
+        if object_name in self.scene_objects:
+            pos, _ = p.getBasePositionAndOrientation(
+                self.scene_objects[object_name].model.uid
+            )
+            return np.array(pos)
+        elif object_name in self.knowledge_base.lookup_table:
+            return self.knowledge_base.lookup_table[object_name]
+        else:
+            raise ValueError("Invalid object")
