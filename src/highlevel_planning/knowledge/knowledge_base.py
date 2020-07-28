@@ -62,7 +62,6 @@ class KnowledgeBase(object):
         )
 
         # Temporary variables (e.g. for exploration)
-        self._temp_goals = list()
         self._temp_objects = dict()
         self._temp_object_predicates = list()
 
@@ -325,9 +324,6 @@ class KnowledgeBase(object):
 
     # ----- Handling temporary goals, e.g. for exploration ---------------------
 
-    def set_temp_goals(self, goal_list):
-        self._temp_goals = deepcopy(goal_list)
-
     def add_temp_object(self, object_type, object_name=None, object_value=None):
         assert object_type in self.types
         if object_name is not None:
@@ -378,15 +374,15 @@ class KnowledgeBase(object):
                 objects[obj] = self.objects[obj]
         return objects
 
-    def solve_temp(self):
+    def solve_temp(self, goals, initial_predicates=None):
         objects = self.joined_objects()
+        if initial_predicates is None:
+            initial_predicates = self.initial_state_predicates
         self.pddl_if_temp.write_pddl(
             self,
             objects,
-            self.object_predicates
-            + self._temp_object_predicates
-            + self.initial_state_predicates,
-            self._temp_goals,
+            self.object_predicates + self._temp_object_predicates + initial_predicates,
+            goals,
         )
         return planner_interface.pddl_planner(
             self.pddl_if_temp.domain_file_pddl, self.pddl_if_temp.problem_file_pddl
@@ -397,5 +393,4 @@ class KnowledgeBase(object):
             if obj in self.lookup_table:
                 del self.lookup_table[obj]
         self._temp_objects.clear()
-        del self._temp_goals[:]
         del self._temp_object_predicates[:]

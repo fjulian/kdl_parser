@@ -95,7 +95,7 @@ class PDDLFileInterface:
             knowledge_base.actions,
             objects,
             knowledge_base.types,
-            knowledge_base.parameterization,
+            knowledge_base.parameterizations,
         )
 
         # Write files

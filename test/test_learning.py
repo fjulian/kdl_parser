@@ -1,61 +1,91 @@
 import unittest
-from highlevel_planning.pddl_interface.pddl_file_if import PDDLFileInterface
-from highlevel_planning.learning import logic_tools
+import numpy as np
+
+# Simulation
+from highlevel_planning.sim.world import World
+from highlevel_planning.sim.robot_arm import RobotArm
+from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
+
+# Skills
+from highlevel_planning.skills.navigate import SkillNavigate
+from highlevel_planning.skills.grasping import SkillGrasping
+from highlevel_planning.skills.placing import SkillPlacing
+from highlevel_planning.skills import pddl_descriptions
+from highlevel_planning.knowledge.predicates import Predicates
+
+# Learning
+from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
+from highlevel_planning.learning.explorer import Explorer
 from highlevel_planning.learning.pddl_extender import PDDLExtender
-from highlevel_planning.learning.meta_action_handler import MetaActionHandler
-from support.fake_problem import FakePlanningProblem
-from support.fake_predicates import FakePredicates
-
-# from highlevel_planning.learning.explorer import Explorer
 
 
-class TestLearning(unittest.TestCase):
+class TestExplorer(unittest.TestCase):
     def setUp(self):
-        self.fif_domain_dir = "test/data"
-        self.fif_init_domain_name = "test_domain.pddl"
-        self.fif = PDDLFileInterface(
-            self.fif_domain_dir, initial_domain_pddl=self.fif_init_domain_name
+
+        # Set up planner interface and domain representation
+        kb = KnowledgeBase(
+            "test/knowledge_test/chimera", domain_name="chimera-test-domain"
         )
 
-        self.planning_problem = FakePlanningProblem()
-        self.fif.add_planning_problem(self.planning_problem)
-        # self.explorer = Explorer(
-        #     self.fif, self.planning_problem, None, None, None, None
-        # )
+        # Add basic skill descriptions
+        skill_descriptions = pddl_descriptions.get_action_descriptions()
+        for skill_name, description in skill_descriptions.items():
+            kb.add_action(
+                action_name=skill_name, action_definition=description, overwrite=True,
+            )
 
-        self.sequence = ["move", "drop-sample"]
-        self.parameters = [
-            {"from-waypoint": "p1", "rover": "r1", "to-waypoint": "p2"},
-            {"rover": "r1", "sample": "s1", "waypoint": "p1"},
+        # Add required types
+        kb.add_type("robot")
+        kb.add_type("navgoal")  # Anything we can navigate to
+        kb.add_type("position", "navgoal")  # Pure positions
+        kb.add_type("item", "navgoal")  # Anything we can grasp
+
+        # Add origin
+        kb.add_object("origin", "position", np.array([0.0, 0.0, 0.0]))
+        kb.add_object("robot1", "robot")
+
+        # -----------------------------------
+
+        # Create world
+        world = World(gui_=False, sleep_=False, load_objects=True)
+        scene = ScenePlanning1(world, restored_objects=None)
+        robot = RobotArm(world)
+        robot.reset()
+        robot.to_start()
+        world.step_seconds(0.5)
+
+        # -----------------------------------
+
+        # Set up predicates
+        preds = Predicates(scene, robot, kb)
+        kb.set_predicate_funcs(preds)
+
+        for descr in preds.descriptions.items():
+            kb.add_predicate(
+                predicate_name=descr[0], predicate_definition=descr[1], overwrite=True
+            )
+
+        # Planning problem
+        kb.populate_visible_objects(scene)
+        kb.check_predicates()
+
+        sk_grasp = SkillGrasping(scene, robot)
+        sk_place = SkillPlacing(scene, robot)
+        sk_nav = SkillNavigate(scene, robot)
+        skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
+
+        pddl_ex = PDDLExtender(kb, preds)
+
+        self.xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb)
+
+    def test_sequence_completion(self):
+        sequence = ["grasp", "place"]
+        parameters = [
+            {"obj": "lid1", "rob": "robot1"},
+            {"obj": "cube1", "pos": "origin", "rob": "robot1"},
         ]
-        self.sequence_preconds = logic_tools.determine_sequence_preconds(
-            self.fif, self.sequence, self.parameters
-        )
-
-        self.predicates = FakePredicates()
-
-        self.meta_action_handler = MetaActionHandler(self.fif)
-
-        self.pddl_extender = PDDLExtender(
-            self.fif, self.predicates, self.meta_action_handler
-        )
-
-    def test_new_action(self):
-        new_action_name = self.pddl_extender.create_new_action(
-            self.planning_problem.goals,
-            self.sequence,
-            self.parameters,
-            self.sequence_preconds,
-        )
-
-        plan = ["0: take-sample r1 s1 p1", "1: " + new_action_name + " p2 r1 p1 s1"]
-        expanded_plan = self.meta_action_handler.expand_plan(plan)
-        gt_expanded_plan = [
-            "0: take-sample r1 s1 p1",
-            "1: move r1 p1 p2",
-            "2: drop-sample r1 s1 p1",
-        ]
-        self.assertEqual(expanded_plan, gt_expanded_plan)
+        self.xplorer.complete_sequence(sequence, parameters)
+        self.assertEqual(1, 1)
 
 
 if __name__ == "__main__":

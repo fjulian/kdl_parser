@@ -9,6 +9,7 @@ from highlevel_planning.learning.logic_tools import (
     determine_sequence_preconds,
     test_abstract_feasibility,
     invert_dict,
+    parametrize_predicate,
 )
 
 # ----- Parameters -------------------------------------
@@ -75,8 +76,7 @@ class Explorer:
         self.knowledge_base.clear_temp()
         for obj in relevant_objects:
             self.knowledge_base.generalize_temp_object(obj)
-        self.knowledge_base.set_temp_goals(self.knowledge_base.goals)
-        plan = self.knowledge_base.solve_temp()
+        plan = self.knowledge_base.solve_temp(self.knowledge_base.goals)
         if not plan:
             return False
 
@@ -377,8 +377,7 @@ class Explorer:
 
     def _fulfill_preconditions(self, sequence_preconds):
         # Set up planning problem that takes us to state where all preconditions are met
-        self.knowledge_base.set_temp_goals(sequence_preconds)
-        plan = self.knowledge_base.solve_temp()
+        plan = self.knowledge_base.solve_temp(sequence_preconds)
 
         if plan is False:
             return False
@@ -461,3 +460,31 @@ class Explorer:
             return self.knowledge_base.lookup_table[object_name]
         else:
             raise ValueError("Invalid object")
+
+    def complete_sequence(self, sequence, parameters):
+        # Only need to run for sequences with a length of at least 2
+        if len(sequence) < 2:
+            return
+
+        # Determine initial state
+        state = list()
+        action_description = self.knowledge_base.actions[sequence[0]]
+        for precondition in action_description["preconds"]:
+            parameterized_precond = parametrize_predicate(precondition, parameters[0])
+            state.append(parameterized_precond)
+
+        for action_idx, action_name in enumerate(sequence):
+            action_description = self.knowledge_base.actions[action_name]
+            goals = action_description["preconds"]
+            parameterized_goals = list()
+            for goal in goals:
+                parameterized_goal = parametrize_predicate(goal, parameters[action_idx])
+
+                parameterized_goals.append(parameterized_goal)
+
+            # Try to plan towards this goal
+            self.knowledge_base.clear_temp()
+            self.knowledge_base.solve_temp(
+                parameterized_goals, initial_predicates=state
+            )
+            print("bla")
