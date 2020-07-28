@@ -31,7 +31,8 @@ class KnowledgeBase(object):
         # Problem definition
         self.objects = dict()
         self.visible_objects = set()
-        self.initial_predicates = list()
+        self.object_predicates = list()
+        self.initial_state_predicates = list()
         # self.goals = list()
         # self.goals = [("in-hand", True, ("cube1", "robot1"))]
         # self.goals = [("at", True, ("container1", "robot1"))]
@@ -63,7 +64,7 @@ class KnowledgeBase(object):
         # Temporary variables (e.g. for exploration)
         self._temp_goals = list()
         self._temp_objects = dict()
-        self._temp_initial_predicates = list()
+        self._temp_object_predicates = list()
 
     def set_predicate_funcs(self, preds):
         self.predicate_funcs = preds
@@ -166,35 +167,24 @@ class KnowledgeBase(object):
         for obj, obj_type in object_dict.items():
             self.add_object(obj, obj_type)
 
-    def add_inital_predicates(self, pred_list):
-        self.initial_predicates += pred_list
-
-        # Remove duplicates
-        self.initial_predicates = list(dict.fromkeys(self.initial_predicates))
-
     def add_goal(self, goal_list):
         self.goals += goal_list
 
         # Remove duplicates
         self.goals = list(dict.fromkeys(self.goals))
 
-    def add_planning_problem(self, planning_problem):
-        self.add_objects(planning_problem.objects)
-        self.add_inital_predicates(planning_problem.initial_predicates)
-        self.add_goal(planning_problem.goals)
-
-    def clear_planning_problem(self):
-        self.objects.clear()
-        del self.initial_predicates[:]
-        del self.goals[:]
-
     # ----- Solving ------------------------------------------------------------
 
     def solve(self):
         self.save_domain()
-        self.pddl_if.write_pddl(self)
+        self.pddl_if.write_pddl(
+            self,
+            self.objects,
+            self.object_predicates + self.initial_state_predicates,
+            self.goals,
+        )
         return planner_interface.pddl_planner(
-            self.pddl_if._domain_file_pddl, self.pddl_if._problem_file_pddl
+            self.pddl_if.domain_file_pddl, self.pddl_if.problem_file_pddl
         )
 
     # ----- Meta action handling -----------------------------------------------
@@ -265,29 +255,29 @@ class KnowledgeBase(object):
         """
 
         if self.predicate_funcs.empty_hand("robot1"):
-            self.initial_predicates.append(("empty-hand", "robot1"))
-        self.initial_predicates.append(("in-reach", "origin", "robot1"))
-        self.initial_predicates.append(("at", "origin", "robot1"))
+            self.initial_state_predicates.append(("empty-hand", "robot1"))
+        self.initial_state_predicates.append(("in-reach", "origin", "robot1"))
+        self.initial_state_predicates.append(("at", "origin", "robot1"))
 
         # Check any predicates in relation with the goal
         for goal in self.goals:
             if self.predicate_funcs.call[goal[0]](*goal[2]):
                 pred_tuple = (goal[0],) + goal[2]
-                self.initial_predicates.append(pred_tuple)
+                self.initial_state_predicates.append(pred_tuple)
 
     def populate_visible_objects(self, scene):
         # TODO maybe move this into a separate dummy perception module
         for obj in scene.objects:
             self.add_object(obj, "item")
             if self.predicate_funcs.call["has-grasp"](obj):
-                self.initial_predicates.append(("has-grasp", obj))
+                self.object_predicates.append(("has-grasp", obj))
 
         # Add "objects" that are always visible
         for object_name in self.objects:
             for object_type in self.objects[object_name]:
                 if self.type_x_child_of_y(object_type, "position"):
                     self.add_object(object_name, "position")
-                    self.initial_predicates.append(("has-grasp", object_name))
+                    self.object_predicates.append(("has-grasp", object_name))
                     break
 
     def type_x_child_of_y(self, x, y):
@@ -362,7 +352,7 @@ class KnowledgeBase(object):
         else:
             self._temp_objects[object_name] = [object_type]
             if self.is_type(object_name, "position"):
-                self._temp_initial_predicates.append(("has-grasp", object_name))
+                self._temp_object_predicates.append(("has-grasp", object_name))
         if object_value is not None:
             self.lookup_table[object_name] = object_value
         return object_name
@@ -375,9 +365,9 @@ class KnowledgeBase(object):
     def make_permanent(self, obj_name):
         self.objects[obj_name] = self._temp_objects[obj_name]
         del self._temp_objects[obj_name]
-        for pred in self._temp_initial_predicates:
+        for pred in self._temp_object_predicates:
             if obj_name in pred:
-                self.initial_predicates.append(pred)
+                self.object_predicates.append(pred)
 
     def joined_objects(self):
         objects = deepcopy(self._temp_objects)
@@ -389,17 +379,17 @@ class KnowledgeBase(object):
         return objects
 
     def solve_temp(self):
-        self.pddl_if_temp.write_domain_pddl(
-            self.actions, self.predicate_definitions, self.types
-        )
         objects = self.joined_objects()
-        self.pddl_if_temp.write_problem_pddl(
+        self.pddl_if_temp.write_pddl(
+            self,
             objects,
-            self.initial_predicates + self._temp_initial_predicates,
+            self.object_predicates
+            + self._temp_object_predicates
+            + self.initial_state_predicates,
             self._temp_goals,
         )
         return planner_interface.pddl_planner(
-            self.pddl_if_temp._domain_file_pddl, self.pddl_if_temp._problem_file_pddl
+            self.pddl_if_temp.domain_file_pddl, self.pddl_if_temp.problem_file_pddl
         )
 
     def clear_temp(self):
@@ -408,4 +398,4 @@ class KnowledgeBase(object):
                 del self.lookup_table[obj]
         self._temp_objects.clear()
         del self._temp_goals[:]
-        del self._temp_initial_predicates[:]
+        del self._temp_object_predicates[:]

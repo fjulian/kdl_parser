@@ -52,7 +52,7 @@ class TestInterface(unittest.TestCase):
 
         # with open(path.join(self.fif_domain_dir, self.fif_init_domain_name), "r") as f:
         #     orig_pddl = f.read()
-        # with open(self.fif._domain_file_pddl, "r") as f:
+        # with open(self.fif.domain_file_pddl, "r") as f:
         #     new_pddl = f.read()
         # Unfortunately cannot directly compare these, since dicts don't keep order
         # self.assertEqual(orig_pddl, new_pddl)
@@ -64,7 +64,7 @@ class TestInterface(unittest.TestCase):
         self.assertEqual(self.fif._actions, fif2._actions)
         self.assertEqual(self.fif._types, fif2._types)
 
-        remove(self.fif._domain_file_pddl)
+        remove(self.fif.domain_file_pddl)
         remove(self.fif._domain_file)
 
     def test_pddl_add_items(self):
