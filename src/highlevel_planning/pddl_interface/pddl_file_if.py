@@ -41,7 +41,7 @@ class PDDLFileInterface:
         # Preprocess
         (
             actions,
-            predicates,
+            predicate_definitions,
             types,
             objects,
             initial_predicates,
@@ -49,12 +49,12 @@ class PDDLFileInterface:
         ) = self._preprocess_knowledge(knowledge_base)
 
         # Write files
-        self.write_domain_pddl(actions, predicates, types)
+        self.write_domain_pddl(actions, predicate_definitions, types)
         self.write_problem_pddl(objects, initial_predicates, goals)
 
     def _preprocess_knowledge(self, knowledge_base):
         actions_pddl = dict()
-        predicates_pddl = deepcopy(knowledge_base._predicates)
+        predicate_definitions_pddl = deepcopy(knowledge_base.predicate_definitions)
         types_pddl = deepcopy(knowledge_base.types)
         objects_pddl = deepcopy(knowledge_base.objects)
         initial_predicates_pddl = deepcopy(knowledge_base.initial_predicates)
@@ -103,7 +103,7 @@ class PDDLFileInterface:
 
         return (
             actions_pddl,
-            predicates_pddl,
+            predicate_definitions_pddl,
             types_pddl,
             objects_pddl,
             initial_predicates_pddl,

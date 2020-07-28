@@ -6,7 +6,6 @@ import pybullet as p
 from highlevel_planning.execution.es_sequential_execution import SequentialExecution
 from highlevel_planning.tools.util import get_combined_aabb
 from highlevel_planning.learning.logic_tools import (
-    parametrize_predicate,
     determine_sequence_preconds,
     test_abstract_feasibility,
     invert_dict,
@@ -267,6 +266,9 @@ class Explorer:
             if (tuple(seq), tuple(params_tuple),) in sequences_tried:
                 continue
             sequences_tried.add((tuple(seq), tuple(params_tuple)))
+
+            # Fill in the gaps of the sequence to make it feasible
+
             sequence_preconds = determine_sequence_preconds(
                 self.knowledge_base, seq, params
             )
@@ -276,19 +278,28 @@ class Explorer:
                 break
         return success, seq, params, sequence_preconds
 
-    def _sample_sequence(self, length):
+    def _sample_sequence(self, length, no_action_repetition=False):
+        """
+        Function to sample actions of a sequence.
+
+        :param length [int]: length of the sequence to be sampled
+        :param no_action_repetition [bool]: If true, there will not be twice the same action in a row.
+        :return:
+        """
         # Generate the sequence
         sequence = list()
         for _ in range(length):
-            while True:
-                temp = np.random.choice(self.action_list)
-                if len(sequence) == 0:
-                    sequence.append(temp)
-                    break
-                elif temp != sequence[-1]:
-                    # This ensures that we don't sample the same action twice in a row
-                    sequence.append(temp)
-                    break
+            if no_action_repetition:
+                while True:
+                    temp = np.random.choice(self.action_list)
+                    if len(sequence) == 0:
+                        sequence.append(temp)
+                        break
+                    elif temp != sequence[-1]:
+                        sequence.append(temp)
+                        break
+            else:
+                sequence.append(np.random.choice(self.action_list))
         return sequence
 
     def _sample_parameters(self, sequence, given_params=None, relevant_objects=None):

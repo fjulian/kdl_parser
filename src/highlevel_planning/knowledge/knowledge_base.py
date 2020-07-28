@@ -24,7 +24,7 @@ class KnowledgeBase(object):
 
         # Domain definition
         self._domain_name = domain_name
-        self._predicates = dict()
+        self.predicate_definitions = dict()
         self.actions = dict()
         self.types = dict()
 
@@ -76,7 +76,7 @@ class KnowledgeBase(object):
             with open(self._domain_file, "rb") as f:
                 load_obj = pickle.load(f)
             self._domain_name = load_obj[0]
-            self._predicates = load_obj[1]
+            self.predicate_definitions = load_obj[1]
             self.actions = load_obj[2]
             self.types = load_obj[3]
             self.objects = load_obj[4]
@@ -90,7 +90,7 @@ class KnowledgeBase(object):
     def save_domain(self):
         save_obj = (
             self._domain_name,
-            self._predicates,
+            self.predicate_definitions,
             self.actions,
             self.types,
             self.objects,
@@ -116,7 +116,7 @@ class KnowledgeBase(object):
             self.actions[action_name] = action_definition
 
     def add_predicate(self, predicate_name, predicate_definition, overwrite=False):
-        if not overwrite and predicate_name in self._predicates:
+        if not overwrite and predicate_name in self.predicate_definitions:
             print(
                 "Predicate "
                 + predicate_name
@@ -124,7 +124,7 @@ class KnowledgeBase(object):
             )
         else:
             assert isinstance(predicate_name, str)
-            self._predicates[predicate_name] = predicate_definition
+            self.predicate_definitions[predicate_name] = predicate_definition
 
     def add_type(self, new_type, parent_type=None):
         assert isinstance(new_type, str)
@@ -389,7 +389,9 @@ class KnowledgeBase(object):
         return objects
 
     def solve_temp(self):
-        self.pddl_if_temp.write_domain_pddl(self.actions, self._predicates, self.types)
+        self.pddl_if_temp.write_domain_pddl(
+            self.actions, self.predicate_definitions, self.types
+        )
         objects = self.joined_objects()
         self.pddl_if_temp.write_problem_pddl(
             objects,
