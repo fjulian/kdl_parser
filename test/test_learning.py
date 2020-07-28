@@ -27,6 +27,8 @@ class TestExplorer(unittest.TestCase):
             "test/knowledge_test/chimera", domain_name="chimera-test-domain"
         )
 
+        kb.goals = []
+
         # Add basic skill descriptions
         skill_descriptions = pddl_descriptions.get_action_descriptions()
         for skill_name, description in skill_descriptions.items():

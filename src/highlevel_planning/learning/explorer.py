@@ -467,11 +467,11 @@ class Explorer:
             return
 
         # Determine initial state
-        state = list()
-        action_description = self.knowledge_base.actions[sequence[0]]
-        for precondition in action_description["preconds"]:
-            parameterized_precond = parametrize_predicate(precondition, parameters[0])
-            state.append(parameterized_precond)
+        state = [
+            ("at", "origin", "robot1"),
+            ("in-reach", "origin", "robot1"),
+            ("empty-hand", "robot1"),
+        ]
 
         for action_idx, action_name in enumerate(sequence):
             action_description = self.knowledge_base.actions[action_name]
@@ -479,12 +479,16 @@ class Explorer:
             parameterized_goals = list()
             for goal in goals:
                 parameterized_goal = parametrize_predicate(goal, parameters[action_idx])
-
                 parameterized_goals.append(parameterized_goal)
 
             # Try to plan towards this goal
             self.knowledge_base.clear_temp()
-            self.knowledge_base.solve_temp(
+            plan = self.knowledge_base.solve_temp(
                 parameterized_goals, initial_predicates=state
             )
-            print("bla")
+            if plan is not False:
+                pass
+                # TODO implement function to parse the plan, then apply it to the state and go into next loop.
+            else:
+                pass
+                # TODO save the steps to fill the gap
