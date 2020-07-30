@@ -1,4 +1,5 @@
 import unittest
+import os
 import numpy as np
 
 # Simulation
@@ -21,11 +22,10 @@ from highlevel_planning.learning.pddl_extender import PDDLExtender
 
 class TestExplorer(unittest.TestCase):
     def setUp(self):
+        self.knowledge_dir = "test/knowledge_test/chimera"
 
         # Set up planner interface and domain representation
-        kb = KnowledgeBase(
-            "test/knowledge_test/chimera", domain_name="chimera-test-domain"
-        )
+        kb = KnowledgeBase(self.knowledge_dir, domain_name="chimera-test-domain")
 
         kb.goals = []
 
@@ -88,6 +88,12 @@ class TestExplorer(unittest.TestCase):
         ]
         self.xplorer.complete_sequence(sequence, parameters)
         self.assertEqual(1, 1)
+
+    def tearDown(self):
+        for filename in os.listdir(os.path.join(self.knowledge_dir, "main")):
+            os.remove(os.path.join(self.knowledge_dir, "main", filename))
+        for filename in os.listdir(os.path.join(self.knowledge_dir, "explore")):
+            os.remove(os.path.join(self.knowledge_dir, "explore", filename))
 
 
 if __name__ == "__main__":

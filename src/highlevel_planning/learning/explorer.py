@@ -5,12 +5,7 @@ import pybullet as p
 
 from highlevel_planning.execution.es_sequential_execution import SequentialExecution
 from highlevel_planning.tools.util import get_combined_aabb
-from highlevel_planning.learning.logic_tools import (
-    determine_sequence_preconds,
-    test_abstract_feasibility,
-    invert_dict,
-    parametrize_predicate,
-)
+from highlevel_planning.learning import logic_tools
 
 # ----- Parameters -------------------------------------
 # TODO: move them to config file
@@ -269,10 +264,10 @@ class Explorer:
 
             # Fill in the gaps of the sequence to make it feasible
 
-            sequence_preconds = determine_sequence_preconds(
+            sequence_preconds = logic_tools.determine_sequence_preconds(
                 self.knowledge_base, seq, params
             )
-            if test_abstract_feasibility(
+            if logic_tools.test_abstract_feasibility(
                 self.knowledge_base, seq, params, sequence_preconds
             ):
                 break
@@ -311,8 +306,8 @@ class Explorer:
         for obj in relevant_objects:
             objects_of_interest_dict[obj] = self.knowledge_base.objects[obj]
         objects_of_interest_dict["robot1"] = self.knowledge_base.objects["robot1"]
-        types_by_parent = invert_dict(self.knowledge_base.types)
-        objects_by_type = invert_dict(objects_of_interest_dict)
+        types_by_parent = logic_tools.invert_dict(self.knowledge_base.types)
+        objects_by_type = logic_tools.invert_dict(objects_of_interest_dict)
 
         for idx_action, action in enumerate(sequence):
             parameter_samples[idx_action] = dict()
@@ -462,12 +457,16 @@ class Explorer:
             raise ValueError("Invalid object")
 
     def complete_sequence(self, sequence, parameters):
+        completed_sequence = list()
+        completed_parameters = list()
+
         # Only need to run for sequences with a length of at least 2
+        # TODO is this really the case? Maybe we can generalize this function and always call it.
         if len(sequence) < 2:
             return
 
         # Determine initial state
-        state = [
+        states = [
             ("at", "origin", "robot1"),
             ("in-reach", "origin", "robot1"),
             ("empty-hand", "robot1"),
@@ -476,19 +475,39 @@ class Explorer:
         for action_idx, action_name in enumerate(sequence):
             action_description = self.knowledge_base.actions[action_name]
             goals = action_description["preconds"]
-            parameterized_goals = list()
-            for goal in goals:
-                parameterized_goal = parametrize_predicate(goal, parameters[action_idx])
-                parameterized_goals.append(parameterized_goal)
+            parameterized_goals = logic_tools.parametrize_predicate_list(
+                goals, parameters[action_idx]
+            )
 
-            # Try to plan towards this goal
+            # Find sequence that makes this action possible
             self.knowledge_base.clear_temp()
             plan = self.knowledge_base.solve_temp(
-                parameterized_goals, initial_predicates=state
+                parameterized_goals, initial_predicates=states
             )
-            if plan is not False:
-                pass
-                # TODO implement function to parse the plan, then apply it to the state and go into next loop.
-            else:
-                pass
-                # TODO save the steps to fill the gap
+            if plan is False:
+                return False
+
+            # TODO implement function to parse the plan, then apply it to the state and go into next loop.
+            # Parse sequence
+            fill_sequence, fill_parameters = logic_tools.parse_plan(
+                plan, self.knowledge_base.actions
+            )
+            fill_sequence_effects = logic_tools.determine_sequence_effects(
+                self.knowledge_base, fill_sequence, fill_parameters
+            )
+
+            # Apply fill sequence to current state
+            logic_tools.apply_effects_to_state(states, fill_sequence_effects)
+
+            # Apply actual action to current state
+            parameterized_effects = logic_tools.parametrize_predicate_list(
+                action_description["effects"], parameters[action_idx]
+            )
+            logic_tools.apply_effects_to_state(states, parameterized_effects)
+
+            # Save the sequence extension
+            completed_sequence.extend(fill_sequence)
+            completed_parameters.extend(fill_parameters)
+            completed_sequence.append(action_name)
+            completed_parameters.append(parameters[action_idx])
+        return completed_sequence, completed_parameters

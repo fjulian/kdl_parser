@@ -2,11 +2,20 @@ from copy import deepcopy
 
 
 def parametrize_predicate(predicate, action_parameters):
+    assert len(predicate) == 3
     return (
         predicate[0],
         predicate[1],
         tuple([action_parameters[obj_name] for obj_name in predicate[2]]),
     )
+
+
+def parametrize_predicate_list(predicates, action_parameters):
+    parametrized_predicates = list()
+    for predicate in predicates:
+        parametrized_predicate = parametrize_predicate(predicate, action_parameters)
+        parametrized_predicates.append(parametrized_predicate)
+    return parametrized_predicates
 
 
 def determine_sequence_preconds(knowledge_base, sequence, parameters):
@@ -68,8 +77,10 @@ def test_abstract_feasibility(knowledge_base, sequence, parameters, preconds):
         whether the sequence is logically feasible.
         
         Args:
+            knowledge_base:
             sequence (list): The action sequence
             parameters (list): Parameters for each action
+            preconds:
         
         Returns:
             bool: True if the sequence is feasible, False otherwise.
@@ -129,3 +140,40 @@ def invert_dict(original_dict):
     for val in inverted_dict:
         inverted_dict[val] = list(dict.fromkeys(inverted_dict[val]))
     return inverted_dict
+
+
+def parse_plan(plan, actions):
+    sequence = list()
+    parameters = list()
+    for plan_item in plan:
+        plan_item_list = plan_item.split(" ")
+        action_name = plan_item_list[1]
+        action_name = action_name.split("_")[0]
+        if len(plan_item_list) > 2:
+            action_parameters = plan_item_list[2:]
+        else:
+            action_parameters = []
+
+        # TODO right now this is only tested for basic skills and not for meta ones
+
+        action_description = actions[action_name]
+        param_dict = dict()
+        assert len(action_parameters) == len(action_description["params"])
+        for param_idx, param_spec in enumerate(action_description["params"]):
+            param_dict[param_spec[0]] = action_parameters[param_idx]
+        sequence.append(action_name)
+        parameters.append(param_dict)
+    return sequence, parameters
+
+
+def apply_effects_to_state(states, effects):
+    states_to_remove = list()
+    for effect in effects:
+        for state in states:
+            if effect[0] == state[0] and list(effect[2]) == list(state[1:]):
+                states_to_remove.append(state)
+    for state in states_to_remove:
+        states.remove(state)
+    for effect in effects:
+        if effect[1]:
+            states.append((effect[0],) + tuple(effect[2]))
