@@ -170,9 +170,10 @@ class Explorer:
             # Sample sequences until an abstractly feasible one was found
             (
                 success,
-                sequence,
-                parameter_samples,
-                sequence_preconds,
+                completed_sequence,
+                completed_parameters,
+                precondition_sequence,
+                precondition_parameters,
             ) = self._sample_feasible_sequence(
                 sequences_tried,
                 given_seq=given_seq,
@@ -186,36 +187,41 @@ class Explorer:
             # count_seq_found[seq_len - 1] += 1
 
             # Found a feasible action sequence. Now test it.
-            preplan_success = self._fulfill_preconditions(sequence_preconds)
+            preplan_success = self._execute_sampled_sequence(
+                precondition_sequence, precondition_parameters
+            )
             if not preplan_success:
                 continue
             print("Preplan SUCCESS")
-            # count_preplan_run_success[seq_len - 1] += 1
 
             # Try actual plan
-            plan_success = self._execute_sampled_sequence(sequence, parameter_samples)
+            plan_success = self._execute_sampled_sequence(
+                completed_sequence, completed_parameters
+            )
             if not plan_success:
                 continue
             print("Sequence SUCCESS")
-            # count_seq_run_success[seq_len - 1] += 1
 
             # Check if the goal was reached
             success = self.knowledge_base.test_goals()
             if not success:
                 continue
             print("GOAL REACHED!!!")
-            # count_goal_reached[seq_len - 1] += 1
 
             if given_seq is not None and given_params is not None:
                 # Generalize action
-                self.pddl_extender.generalize_action(sequence[0], parameter_samples[0])
+                assert (
+                    len(completed_sequence) == 1
+                ), "If the given sequence is longer than 1, this code cannot deal with it yet"
+                self.pddl_extender.generalize_action(
+                    completed_sequence[0], completed_parameters[0]
+                )
             else:
                 # Save the successful sequence and parameters.
                 self.pddl_extender.create_new_action(
                     goals=self.knowledge_base.goals,
-                    sequence=sequence,
-                    parameters=parameter_samples,
-                    sequence_preconds=sequence_preconds,
+                    sequence=completed_sequence,
+                    parameters=completed_parameters,
                 )
 
             self.knowledge_base.clear_temp()
@@ -236,6 +242,7 @@ class Explorer:
         if given_seq is None:
             assert sequence_length is not None
             flag_sample_sequences = True
+            seq = None
         else:
             assert given_params is not None
             flag_sample_sequences = False
@@ -244,6 +251,10 @@ class Explorer:
         failed_samples = 0
         success = True
         sequence_preconds = None
+        completed_sequence = None
+        completed_parameters = None
+        precondition_sequence = None
+        precondition_parameters = None
         while True:
             failed_samples += 1
             if failed_samples > max_failed_samples:
@@ -262,16 +273,36 @@ class Explorer:
                 continue
             sequences_tried.add((tuple(seq), tuple(params_tuple)))
 
-            # Fill in the gaps of the sequence to make it feasible
-
-            sequence_preconds = logic_tools.determine_sequence_preconds(
-                self.knowledge_base, seq, params
-            )
-            if logic_tools.test_abstract_feasibility(
-                self.knowledge_base, seq, params, sequence_preconds
-            ):
-                break
-        return success, seq, params, sequence_preconds
+            if given_seq is None:
+                # Fill in the gaps of the sequence to make it feasible
+                completion_result = self.complete_sequence(seq, params)
+                if completion_result is False:
+                    continue
+                (
+                    completed_sequence,
+                    completed_parameters,
+                    precondition_sequence,
+                    precondition_parameters,
+                ) = completion_result
+            else:
+                completed_sequence = seq
+                completed_parameters = params
+                sequence_preconds = logic_tools.determine_sequence_preconds(
+                    self.knowledge_base, completed_sequence, completed_parameters
+                )
+                self.knowledge_base.clear_temp()
+                precondition_plan = self.knowledge_base.solve_temp(sequence_preconds)
+                precondition_sequence, precondition_parameters = logic_tools.parse_plan(
+                    precondition_plan, self.knowledge_base.actions
+                )
+            break
+        return (
+            success,
+            completed_sequence,
+            completed_parameters,
+            precondition_sequence,
+            precondition_parameters,
+        )
 
     def _sample_sequence(self, length, no_action_repetition=False):
         """
@@ -457,13 +488,8 @@ class Explorer:
             raise ValueError("Invalid object")
 
     def complete_sequence(self, sequence, parameters):
-        completed_sequence = list()
-        completed_parameters = list()
-
-        # Only need to run for sequences with a length of at least 2
-        # TODO is this really the case? Maybe we can generalize this function and always call it.
-        if len(sequence) < 2:
-            return
+        completed_sequence, completed_parameters = list(), list()
+        precondition_sequence, precondition_params = list(), list()
 
         # Determine initial state
         states = [
@@ -487,7 +513,6 @@ class Explorer:
             if plan is False:
                 return False
 
-            # TODO implement function to parse the plan, then apply it to the state and go into next loop.
             # Parse sequence
             fill_sequence, fill_parameters = logic_tools.parse_plan(
                 plan, self.knowledge_base.actions
@@ -506,8 +531,17 @@ class Explorer:
             logic_tools.apply_effects_to_state(states, parameterized_effects)
 
             # Save the sequence extension
-            completed_sequence.extend(fill_sequence)
-            completed_parameters.extend(fill_parameters)
+            if action_idx == 0:
+                precondition_sequence = deepcopy(fill_sequence)
+                precondition_params = deepcopy(fill_parameters)
+            else:
+                completed_sequence.extend(fill_sequence)
+                completed_parameters.extend(fill_parameters)
             completed_sequence.append(action_name)
             completed_parameters.append(parameters[action_idx])
-        return completed_sequence, completed_parameters
+        return (
+            completed_sequence,
+            completed_parameters,
+            precondition_sequence,
+            precondition_params,
+        )
