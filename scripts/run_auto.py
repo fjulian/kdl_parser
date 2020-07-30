@@ -145,18 +145,20 @@ def main():
         if plan is False:
             print("Planner failed despite exploration")
             return
+    sequence, parameters = plan
 
-    if len(plan) == 0:
+    if len(sequence) == 0:
         print("Nothing to do.")
         return
     print("Found plan:")
-    print(plan)
+    for idx, seq_item in enumerate(sequence):
+        print("".join((seq_item, " ", parameters[idx])))
     raw_input("Press enter to run...")
 
     # -----------------------------------
 
     # Set up execution system
-    es = SequentialExecution(skill_set, plan, kb)
+    es = SequentialExecution(skill_set, sequence, parameters, kb)
 
     # Run
     try:
@@ -169,9 +171,7 @@ def main():
                 print("Error messages:")
                 for msg in error_messages:
                     print(msg)
-                raise RuntimeError(
-                    "Error during execution of current step. Aborting."
-                )
+                raise RuntimeError("Error during execution of current step. Aborting.")
             index += 1
             if plan_finished:
                 print("Plan finished. Exiting.")

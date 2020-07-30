@@ -4,16 +4,17 @@ from highlevel_planning.learning.logic_tools import parametrize_predicate
 
 
 class SequentialExecution(ExecutionSystem):
-    def __init__(self, skill_set, plan, knowledge_base):
+    def __init__(self, skill_set, sequence, parameters, knowledge_base):
         self.ticking = False
 
         self.skill_set_ = skill_set
-        self.plan = plan
+        self.sequence = sequence
+        self.parameters = parameters
 
         self.knowledge_base = knowledge_base
 
         self.current_idx_ = 0
-        if len(plan) == 0:
+        if len(sequence) == 0:
             self.finished_plan = True
         else:
             self.finished_plan = False
@@ -34,19 +35,14 @@ class SequentialExecution(ExecutionSystem):
         success = True
         msgs = []
         if not self.finished_plan:
-            plan_item = self.plan[self.current_idx_]
-            plan_item_list = plan_item.split(" ")
-            action_name = plan_item_list[1]
+            action_name = self.sequence[self.current_idx_]
             action_name = action_name.split("_")[0]
-            if len(plan_item_list) > 2:
-                action_parameters = plan_item_list[2:]
-            else:
-                action_parameters = []
+            action_parameters = self.parameters[self.current_idx_]
             success, msgs = self.execute_action(action_name, action_parameters)
 
             if success:
                 self.current_idx_ += 1
-                if self.current_idx_ == len(self.plan):
+                if self.current_idx_ == len(self.sequence):
                     self.finished_plan = True
         return success, self.finished_plan, msgs
 
@@ -122,6 +118,6 @@ class SequentialExecution(ExecutionSystem):
 
     def print_status(self):
         if not self.finished_plan:
-            print("Plan item up next: " + self.plan[self.current_idx_])
+            print("Plan item up next: " + self.sequence[self.current_idx_])
         else:
             print("Finished plan")

@@ -183,7 +183,7 @@ class KnowledgeBase(object):
             self.goals,
         )
         return planner_interface.pddl_planner(
-            self.pddl_if.domain_file_pddl, self.pddl_if.problem_file_pddl
+            self.pddl_if.domain_file_pddl, self.pddl_if.problem_file_pddl, self.actions
         )
 
     # ----- Meta action handling -----------------------------------------------
@@ -385,7 +385,9 @@ class KnowledgeBase(object):
             goals,
         )
         return planner_interface.pddl_planner(
-            self.pddl_if_temp.domain_file_pddl, self.pddl_if_temp.problem_file_pddl
+            self.pddl_if_temp.domain_file_pddl,
+            self.pddl_if_temp.problem_file_pddl,
+            self.actions,
         )
 
     def clear_temp(self):

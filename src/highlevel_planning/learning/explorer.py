@@ -74,17 +74,14 @@ class Explorer:
         plan = self.knowledge_base.solve_temp(self.knowledge_base.goals)
         if not plan:
             return False
+        sequence, parameters = plan
 
         # Extract parameters from plan
-        fixed_parameters_full = [None] * len(plan)
-        for plan_idx, plan_item in enumerate(plan):
-            plan_item_list = plan_item.split(" ")
-            action_name = plan_item_list[1]
+        fixed_parameters_full = [None] * len(sequence)
+        for action_idx, action_name in enumerate(sequence):
             action_description = self.knowledge_base.actions[action_name]
-            parameter_assignments = dict()
+            parameter_assignments = parameters[action_idx]
             fixed_parameters_this_action = dict()
-            for param_idx, param in enumerate(action_description["params"]):
-                parameter_assignments[param[0]] = plan_item_list[2 + param_idx]
             for effect in action_description["effects"]:
                 for goal in self.knowledge_base.goals:
                     if goal[0] == effect[0] and goal[1] == effect[1]:
@@ -107,16 +104,15 @@ class Explorer:
                                     fixed_parameters_this_action[effect_param] = goal[
                                         2
                                     ][effect_param_idx]
-            fixed_parameters_full[plan_idx] = fixed_parameters_this_action
+            fixed_parameters_full[action_idx] = fixed_parameters_this_action
 
         # Determine which actions are goal relevant and remove the rest
         fixed_parameters = list()
-        sequence = list()
-        for plan_idx, plan_item in enumerate(plan):
-            plan_item_list = plan_item.split(" ")
-            if len(fixed_parameters_full[plan_idx]) > 0:
-                fixed_parameters.append(fixed_parameters_full[plan_idx])
-                sequence.append(plan_item_list[1])
+        relevant_sequence = list()
+        for action_idx, action_name in enumerate(sequence):
+            if len(fixed_parameters_full[action_idx]) > 0:
+                fixed_parameters.append(fixed_parameters_full[action_idx])
+                relevant_sequence.append(action_name)
                 break
                 # TODO this break can be removed once the algorithm is adapted to computing necessary actions between
                 # two actions in the sequence.
@@ -126,7 +122,7 @@ class Explorer:
         for _ in range(max_sample_repetitions):
             found_plan = self._sampling_loops(
                 sequences_tried,
-                given_seq=sequence,
+                given_seq=relevant_sequence,
                 given_params=fixed_parameters,
                 relevant_objects=relevant_objects,  # TODO check if it actually makes sense that we only sample goal actions here
             )
@@ -187,7 +183,7 @@ class Explorer:
             # count_seq_found[seq_len - 1] += 1
 
             # Found a feasible action sequence. Now test it.
-            preplan_success = self._execute_sampled_sequence(
+            preplan_success = self._execute_plan(
                 precondition_sequence, precondition_parameters
             )
             if not preplan_success:
@@ -195,9 +191,7 @@ class Explorer:
             print("Preplan SUCCESS")
 
             # Try actual plan
-            plan_success = self._execute_sampled_sequence(
-                completed_sequence, completed_parameters
-            )
+            plan_success = self._execute_plan(completed_sequence, completed_parameters)
             if not plan_success:
                 continue
             print("Sequence SUCCESS")
@@ -292,9 +286,10 @@ class Explorer:
                 )
                 self.knowledge_base.clear_temp()
                 precondition_plan = self.knowledge_base.solve_temp(sequence_preconds)
-                precondition_sequence, precondition_parameters = logic_tools.parse_plan(
-                    precondition_plan, self.knowledge_base.actions
-                )
+                if not precondition_plan:
+                    success = False
+                    break
+                precondition_sequence, precondition_parameters = precondition_plan
             break
         return (
             success,
@@ -401,35 +396,10 @@ class Explorer:
 
     # ----- Other tools ------------------------------------
 
-    def _fulfill_preconditions(self, sequence_preconds):
-        # Set up planning problem that takes us to state where all preconditions are met
-        plan = self.knowledge_base.solve_temp(sequence_preconds)
-
-        if plan is False:
-            return False
-        else:
-            # Execute plan to get to start of sequence
-            success = self._execute_plan(plan)
-            return success
-
-    def _execute_sampled_sequence(self, sequence, parameter_samples):
-        sequence_plan = list()
-        for idx_action, action in enumerate(sequence):
-            act_string = str(idx_action) + ": " + action
-            for parameter in self.knowledge_base.actions[action]["params"]:
-                act_string += " " + parameter_samples[idx_action][parameter[0]]
-            sequence_plan.append(act_string)
-
-        print("----------")
-        print("Sequence: ")
-        for act in sequence_plan:
-            print(act)
-
-        success = self._execute_plan(sequence_plan)
-        return success
-
-    def _execute_plan(self, plan):
-        es = SequentialExecution(self.skill_set, plan, self.knowledge_base)
+    def _execute_plan(self, sequence, parameters):
+        es = SequentialExecution(
+            self.skill_set, sequence, parameters, self.knowledge_base
+        )
         es.setup()
         while True:
             success, plan_finished, msgs = es.step()
@@ -514,9 +484,7 @@ class Explorer:
                 return False
 
             # Parse sequence
-            fill_sequence, fill_parameters = logic_tools.parse_plan(
-                plan, self.knowledge_base.actions
-            )
+            fill_sequence, fill_parameters = plan
             fill_sequence_effects = logic_tools.determine_sequence_effects(
                 self.knowledge_base, fill_sequence, fill_parameters
             )
