@@ -4,7 +4,12 @@ import pybullet as p
 import numpy as np
 from math import pi as m_pi
 import math
-from highlevel_planning.tools.util import IKError, quat_from_mat, homogenous_trafo, invert_hom_trafo
+from highlevel_planning.tools.util import (
+    IKError,
+    quat_from_mat,
+    homogenous_trafo,
+    invert_hom_trafo,
+)
 
 from trac_ik_python.trac_ik import IK
 
@@ -14,14 +19,6 @@ from urdf_parser_py.urdf import URDF as urdf_parser
 from pykdl_utils.kdl_kinematics import KDLKinematics
 
 from rc.controllers import CartesianVelocityControllerKDL
-
-# ------- Parameters ------------------
-# TODO move to config file
-
-max_force_magnitude = 150
-
-
-# --------------------
 
 
 def getMotorJointStates(robot):
@@ -35,7 +32,7 @@ def getMotorJointStates(robot):
 
 
 class RobotArm:
-    def __init__(self, world, robot_model=None):
+    def __init__(self, world, config, robot_model=None):
         self._world = world
         self._model = robot_model
         self.num_joints = 0
@@ -44,6 +41,9 @@ class RobotArm:
         self.joint_idx_hand = 0
         self.arm_base_link_idx = -100
         self.arm_ee_link_idx = -100
+        self._max_force_magnitude = config.getparam(
+            ["robot_arm", "max_force_magnitude"], default_value=150
+        )
 
         # Set up IK solver
         self.urdf_path = os.path.join(os.getcwd(), "data/models/box_panda_hand_pb.urdf")
@@ -172,7 +172,7 @@ class RobotArm:
         return True
 
     def transition_cartesian(
-            self, pos_des, orient_des, duration=None, stop_on_contact=False
+        self, pos_des, orient_des, duration=None, stop_on_contact=False
     ):
         orient_des_rot = R.from_quat(orient_des)
         pos_ee = pos_des - np.matmul(
@@ -237,7 +237,7 @@ class RobotArm:
         self.set_joints(cmd.tolist())
 
     def task_space_velocity_control(
-            self, velocity_translation, velocity_rotation, num_steps
+        self, velocity_translation, velocity_rotation, num_steps
     ):
         """
         Takes a desired end-effector velocity, computes necessary joint velocities and applies them.
@@ -300,7 +300,7 @@ class RobotArm:
     def check_max_contact_force_ok(self):
         force, _ = self.get_wrist_force_torque()
         magnitude = np.linalg.norm(force)
-        if magnitude > max_force_magnitude:
+        if magnitude > self._max_force_magnitude:
             return False
         else:
             return True
@@ -422,5 +422,7 @@ class RobotArm:
         C_O_rob = R.from_quat(C_O_rob)
         T_O_rob = homogenous_trafo(r_O_O_rob, C_O_rob)
         T_rob_O = invert_hom_trafo(T_O_rob)
-        r_R_R_target = np.matmul(T_rob_O, np.reshape(np.append(r_O_O_traget, 1.0), (-1, 1))).squeeze()
+        r_R_R_target = np.matmul(
+            T_rob_O, np.reshape(np.append(r_O_O_traget, 1.0), (-1, 1))
+        ).squeeze()
         return r_R_R_target

@@ -4,13 +4,12 @@ from highlevel_planning.sim.robot_arm import RobotArm
 from highlevel_planning.sim.scene_tossing import SceneTossing
 from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
 from highlevel_planning.sim.scene_move_skill import SceneMoveSkill
-
 from highlevel_planning.skills.navigate import SkillNavigate
 from highlevel_planning.skills.grasping import SkillGrasping
 from highlevel_planning.skills.placing import SkillPlacing
 from highlevel_planning.skills.move import SkillMove
-
 from highlevel_planning.knowledge.predicates import Predicates
+from highlevel_planning.tools.config import ConfigYaml
 
 import pybullet as p
 import numpy as np
@@ -19,6 +18,8 @@ import pickle
 import os
 
 import argparse
+
+BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def drawer_example(sk_grasp, sk_nav, robot, scene, world):
@@ -169,8 +170,13 @@ def main():
     objects = None
     robot_mdl = None
     if restore_existing_objects:
-        with open("data/sim/objects.pkl", "rb") as pkl_file:
+        with open(
+            os.path.join(BASEDIR, "data", "sim", "objects.pkl"), "rb"
+        ) as pkl_file:
             objects, robot_mdl = pickle.load(pkl_file)
+
+    # Load config file
+    cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
     # Create world
     world = World(
@@ -180,11 +186,11 @@ def main():
     # scene = SceneMoveSkill(world, restored_objects=objects)
 
     # Spawn robot
-    robot = RobotArm(world, robot_mdl)
+    robot = RobotArm(world, cfg, robot_mdl)
     robot.reset()
 
     # Set up skills
-    sk_grasp = SkillGrasping(scene, robot)
+    sk_grasp = SkillGrasping(scene, robot, cfg)
     sk_place = SkillPlacing(scene, robot)
     sk_nav = SkillNavigate(scene, robot)
     sk_move = SkillMove(scene, robot, 0.02, world.T_s)
@@ -194,7 +200,7 @@ def main():
 
     # Save world
     if not restore_existing_objects:
-        savedir = os.path.join(os.getcwd(), "data", "sim")
+        savedir = os.path.join(BASEDIR, "data", "sim")
         if not os.path.isdir(savedir):
             os.makedirs(savedir)
         with open(os.path.join(savedir, "objects.pkl"), "wb") as output:

@@ -5,7 +5,7 @@ import numpy as np
 
 
 class Predicates:
-    def __init__(self, scene, robot, knowledge_base):
+    def __init__(self, scene, robot, knowledge_base, cfg):
         self.call = {
             "empty-hand": self.empty_hand,
             "in-hand": self.in_hand,
@@ -26,11 +26,12 @@ class Predicates:
             "has-grasp": [["obj", "navgoal"]],
         }
 
-        self.sk_grasping = SkillGrasping(scene, robot)
+        self.sk_grasping = SkillGrasping(scene, robot, cfg)
         self._scene = scene
         self._robot_uid = robot._model.uid
         self._robot = robot
         self._kb = knowledge_base
+        self._cfg = cfg
 
     def empty_hand(self, robot_name):
         robot = self._robot
@@ -112,11 +113,14 @@ class Predicates:
             return True
 
     def at(self, target_object, robot_name, use_closest_points=True):
+        distance_limit = self._cfg.getparam(
+            ["predicates", "at", "max_distance"], default_value=1.0
+        )
         if self._kb.is_type(target_object, "position"):
             pos_object = self._kb.lookup_table[target_object]
             pos_robot, _ = self._robot.get_link_pose("ridgeback_dummy")
             distance = np.linalg.norm(pos_robot[:2] - pos_object[:2])
-            return distance < 1.0  # TODO move magic number to config file
+            return distance < distance_limit
         elif not use_closest_points:
             obj_info = self._scene.objects[target_object]
             target_id = obj_info.model.uid
@@ -124,7 +128,7 @@ class Predicates:
             pos_object = temp[0]
             pos_robot, _ = self._robot.get_link_pose("ridgeback_dummy")
             distance = np.linalg.norm(pos_robot[:2] - pos_object[:2])
-            return distance < 1.0
+            return distance < distance_limit
         else:
             temp = p.getClosestPoints(
                 self._robot_uid,
@@ -132,7 +136,7 @@ class Predicates:
                 distance=1.1,
             )
             for point in temp:
-                if point[8] < 1.0:
+                if point[8] < distance_limit:
                     return True
             return False
 
@@ -181,7 +185,7 @@ class Predicates:
         lower_supported = aabb_supported[0]
 
         # Check if supported object is above supporting one (z-coordinate)
-        above_tol = 0.05  # TODO move this to parameter file
+        above_tol = self._cfg(["predicates", "on", "max_above"], default_value=0.05)
         above = lower_supported[2] > upper_supporting[2] - above_tol
 
         # Check if supported object is within footprint of supporting one (xy-plane).

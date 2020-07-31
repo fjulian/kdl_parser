@@ -1,0 +1,16 @@
+predicates:
+  at:
+    max_distance: 1.0
+  on:
+    max_above: 0.05
+explorer:
+  max_sample_repetitions: 2
+  max_sequence_length: 2
+  max_samples_per_seqequence_length: 100
+  max_failed_samples: 50
+  bounding_box_inflation_length: 0.2
+  action_denylist: ["nav-in-reach", "nav-at"]
+robot_arm:
+  max_force_magnitude: 150
+grasping:
+  pregrasp_z_offset: 0.15

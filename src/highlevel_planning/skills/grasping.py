@@ -117,12 +117,16 @@ def grasping_process(pipe_connection, scene, robot, lock):
 
 
 class SkillGrasping:
-    def __init__(self, scene_, robot_):
+    def __init__(self, scene_, robot_, config):
         self.scene = scene_
         self.robot = robot_
 
         self.last_pre_pos = None
         self.last_pre_orient = None
+
+        self._pregrasp_z_offset = config.getparam(
+            ["grasping", "pregrasp_z_offset"], default_value=0.15
+        )
 
     def compute_grasp(self, target_name, link_idx=0, grasp_id=0):
         obj_info = self.scene.objects[target_name]
@@ -179,8 +183,7 @@ class SkillGrasping:
 
         # Go to pre-grasp pose
         pos_pre = pos - np.matmul(
-            R.from_quat(orient).as_dcm(),
-            np.array([0.0, 0.0, 0.15]),  # TODO move to config file
+            R.from_quat(orient).as_dcm(), np.array([0.0, 0.0, self._pregrasp_z_offset]),
         )
         pos_pre_joints = self.robot.ik(pos_pre, orient)
         if pos_pre_joints.tolist() is None:

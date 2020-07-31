@@ -7,31 +7,19 @@ from highlevel_planning.execution.es_sequential_execution import SequentialExecu
 from highlevel_planning.tools.util import get_combined_aabb
 from highlevel_planning.learning import logic_tools
 
-# ----- Parameters -------------------------------------
-# TODO: move them to config file
-
-max_sample_repetitions = 2
-max_seq_len = 2
-max_samples_per_seq_len = 100
-max_failed_samples = 50
-
-bounding_box_inflation_length = 0.2
-
-action_blacklist = ["nav-in-reach", "nav-at"]
-
-# ------------------------------------------------------
-
 
 class Explorer:
     def __init__(
-        self, skill_set, robot, scene_objects, pddl_extender, knowledge_base,
+        self, skill_set, robot, scene_objects, pddl_extender, knowledge_base, config
     ):
+        self.config_params = config.getparam(["explorer"])
+
         self.action_list = [
             act
             for act in knowledge_base.actions
             if act not in knowledge_base.meta_actions
         ]
-        for rm_action in action_blacklist:
+        for rm_action in self.config_params["action_denylist"]:
             self.action_list.remove(rm_action)
 
         self.skill_set = skill_set
@@ -119,7 +107,7 @@ class Explorer:
 
         found_plan = False
         self.knowledge_base.clear_temp()
-        for _ in range(max_sample_repetitions):
+        for _ in range(self.config_params["max_sample_repetitions"]):
             found_plan = self._sampling_loops(
                 sequences_tried,
                 given_seq=relevant_sequence,
@@ -135,8 +123,8 @@ class Explorer:
     def _explore_goal_objects(self, sequences_tried, relevant_objects=None):
         found_plan = False
         self.knowledge_base.clear_temp()
-        for _ in range(max_sample_repetitions):
-            for seq_len in range(1, max_seq_len + 1):
+        for _ in range(self.config_params["max_sample_repetitions"]):
+            for seq_len in range(1, self.config_params["max_sequence_length"] + 1):
                 found_plan = self._sampling_loops(
                     sequences_tried, seq_len=seq_len, relevant_objects=relevant_objects
                 )
@@ -159,7 +147,9 @@ class Explorer:
         relevant_objects=None,
     ):
         found_plan = False
-        for sample_idx in range(max_samples_per_seq_len):
+        for sample_idx in range(
+            self.config_params["max_samples_per_seqequence_length"]
+        ):
             # Restore initial state
             p.restoreState(stateId=self.current_state_id)
 
@@ -244,14 +234,13 @@ class Explorer:
 
         failed_samples = 0
         success = True
-        sequence_preconds = None
         completed_sequence = None
         completed_parameters = None
         precondition_sequence = None
         precondition_parameters = None
         while True:
             failed_samples += 1
-            if failed_samples > max_failed_samples:
+            if failed_samples > self.config_params["max_failed_samples"]:
                 success = False
                 break
 
@@ -384,8 +373,8 @@ class Explorer:
         # Inflate the bounding box
         min_coords = bounding_box[0]
         max_coords = bounding_box[1]
-        max_coords += bounding_box_inflation_length
-        min_coords -= bounding_box_inflation_length
+        max_coords += self.config_params["bounding_box_inflation_length"]
+        min_coords -= self.config_params["bounding_box_inflation_length"]
         min_coords[2] = np.max([min_coords[2], arm_base_pos[2] - 0.1])
 
         assert min_coords[2] < max_coords[2]

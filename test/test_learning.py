@@ -19,14 +19,18 @@ from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning.learning.explorer import Explorer
 from highlevel_planning.learning.pddl_extender import PDDLExtender
 
+# Other
+from highlevel_planning.tools.config import ConfigYaml
+
+BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 class TestExplorer(unittest.TestCase):
     def setUp(self):
-        self.knowledge_dir = "test/knowledge_test/chimera"
+        cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
-        # Set up planner interface and domain representation
+        self.knowledge_dir = os.path.join(BASEDIR, "test", "knowledge", "chimera")
         kb = KnowledgeBase(self.knowledge_dir, domain_name="chimera-test-domain")
-
         kb.goals = []
 
         # Add basic skill descriptions
@@ -51,7 +55,7 @@ class TestExplorer(unittest.TestCase):
         # Create world
         world = World(gui_=False, sleep_=False, load_objects=True)
         scene = ScenePlanning1(world, restored_objects=None)
-        robot = RobotArm(world)
+        robot = RobotArm(world, cfg)
         robot.reset()
         robot.to_start()
         world.step_seconds(0.5)
@@ -59,7 +63,7 @@ class TestExplorer(unittest.TestCase):
         # -----------------------------------
 
         # Set up predicates
-        preds = Predicates(scene, robot, kb)
+        preds = Predicates(scene, robot, kb, cfg)
         kb.set_predicate_funcs(preds)
 
         for descr in preds.descriptions.items():
@@ -71,14 +75,14 @@ class TestExplorer(unittest.TestCase):
         kb.populate_visible_objects(scene)
         kb.check_predicates()
 
-        sk_grasp = SkillGrasping(scene, robot)
+        sk_grasp = SkillGrasping(scene, robot, cfg)
         sk_place = SkillPlacing(scene, robot)
         sk_nav = SkillNavigate(scene, robot)
         skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
 
         pddl_ex = PDDLExtender(kb, preds)
 
-        self.xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb)
+        self.xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg)
 
     def test_sequence_completion(self):
         sequence = ["grasp", "place"]

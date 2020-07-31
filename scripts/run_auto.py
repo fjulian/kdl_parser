@@ -1,6 +1,5 @@
 import argparse
 import pickle
-import time
 import numpy as np
 import os
 import pybullet as p
@@ -23,8 +22,12 @@ from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning.learning.explorer import Explorer
 from highlevel_planning.learning.pddl_extender import PDDLExtender
 
+# Other
+from highlevel_planning.tools.config import ConfigYaml
 
 # ----------------------------------------------------------------------
+
+BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def main():
@@ -52,13 +55,20 @@ def main():
     objects = None
     robot_mdl = None
     if restore_existing_objects:
-        with open("data/sim/objects.pkl", "rb") as pkl_file:
+        with open(
+            os.path.join(BASEDIR, "data", "sim", "objects.pkl"), "rb"
+        ) as pkl_file:
             objects, robot_mdl = pickle.load(pkl_file)
+
+    # Load config file
+    cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
     # -----------------------------------
 
     # Set up planner interface and domain representation
-    kb = KnowledgeBase("knowledge/chimera", domain_name="chimera-domain")
+    kb = KnowledgeBase(
+        os.path.join(BASEDIR, "knowledge", "chimera"), domain_name="chimera-domain"
+    )
 
     # Add basic skill descriptions
     skill_descriptions = pddl_descriptions.get_action_descriptions()
@@ -86,7 +96,7 @@ def main():
     scene = ScenePlanning1(world, restored_objects=objects)
 
     # Spawn robot
-    robot = RobotArm(world, robot_mdl)
+    robot = RobotArm(world, cfg, robot_mdl)
     robot.reset()
 
     robot.to_start()
@@ -94,7 +104,7 @@ def main():
 
     # Save world
     if not restore_existing_objects:
-        savedir = os.path.join(os.getcwd(), "data", "sim")
+        savedir = os.path.join(BASEDIR, "data", "sim")
         if not os.path.isdir(savedir):
             os.makedirs(savedir)
         with open(os.path.join(savedir, "objects.pkl"), "wb") as output:
@@ -104,7 +114,7 @@ def main():
     # -----------------------------------
 
     # Set up predicates
-    preds = Predicates(scene, robot, kb)
+    preds = Predicates(scene, robot, kb, cfg)
     kb.set_predicate_funcs(preds)
 
     for descr in preds.descriptions.items():
@@ -117,7 +127,7 @@ def main():
     kb.check_predicates()
 
     # Set up skills
-    sk_grasp = SkillGrasping(scene, robot)
+    sk_grasp = SkillGrasping(scene, robot, cfg)
     sk_place = SkillPlacing(scene, robot)
     sk_nav = SkillNavigate(scene, robot)
     skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
@@ -126,7 +136,7 @@ def main():
     pddl_ex = PDDLExtender(kb, preds)
 
     # Set up exploration
-    xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb)
+    xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg)
 
     # ---------------------------------------------------------------
 
