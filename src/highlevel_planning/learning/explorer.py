@@ -134,6 +134,7 @@ class Explorer:
                 break
         # Restore initial state
         p.restoreState(stateId=self.current_state_id)
+        self.knowledge_base.clear_temp()
         return found_plan
 
     # ----- Tools for sampling ------------------------------------
@@ -208,7 +209,6 @@ class Explorer:
                     parameters=completed_parameters,
                 )
 
-            self.knowledge_base.clear_temp()
             found_plan = True
             break
 
@@ -273,7 +273,6 @@ class Explorer:
                 sequence_preconds = logic_tools.determine_sequence_preconds(
                     self.knowledge_base, completed_sequence, completed_parameters
                 )
-                self.knowledge_base.clear_temp()
                 precondition_plan = self.knowledge_base.solve_temp(sequence_preconds)
                 if not precondition_plan:
                     success = False
@@ -465,7 +464,6 @@ class Explorer:
             )
 
             # Find sequence that makes this action possible
-            self.knowledge_base.clear_temp()
             plan = self.knowledge_base.solve_temp(
                 parameterized_goals, initial_predicates=states
             )
