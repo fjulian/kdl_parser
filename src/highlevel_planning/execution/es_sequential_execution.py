@@ -58,7 +58,7 @@ class SequentialExecution(ExecutionSystem):
         else:
             try:
                 if action_name == "grasp":
-                    target_name = action_parameters[0]
+                    target_name = action_parameters["obj"]
                     target_link_id = -1
                     target_grasp_id = 0
                     res = self.skill_set_["grasp"].grasp_object(
@@ -67,14 +67,14 @@ class SequentialExecution(ExecutionSystem):
                     if not res:
                         raise SkillExecutionError
                 elif action_name == "nav-in-reach" or action_name == "nav-at":
-                    target_name = action_parameters[1]
+                    target_name = action_parameters["goal_pos"]
                     if self.knowledge_base.is_type(target_name, type_query="position"):
                         position = self.knowledge_base.lookup_table[target_name]
                         self.skill_set_["nav"].move_to_pos(position, nav_min_dist=0.3)
                     else:
                         self.skill_set_["nav"].move_to_object(target_name)
                 elif action_name == "place":
-                    target_pos_name = action_parameters[1]
+                    target_pos_name = action_parameters["pos"]
                     target_pos = self.knowledge_base.lookup_table[target_pos_name]
                     self.skill_set_["place"].place_object(target_pos)
                 else:
@@ -90,10 +90,6 @@ class SequentialExecution(ExecutionSystem):
 
         # Check if the effects were reached successfully
         action_description = self.knowledge_base.actions[action_name]
-        action_parameters_dict = {
-            param[0]: action_parameters[idx]
-            for idx, param in enumerate(action_description["params"])
-        }
         for effect in action_description["effects"]:
             if action_name in self.ignore_effects:
                 skip_effect = False
@@ -102,7 +98,7 @@ class SequentialExecution(ExecutionSystem):
                         skip_effect = True
                 if skip_effect:
                     continue
-            parameterized_effect = parametrize_predicate(effect, action_parameters_dict)
+            parameterized_effect = parametrize_predicate(effect, action_parameters)
             res = self.knowledge_base.predicate_funcs.call[effect[0]](
                 *parameterized_effect[2]
             )

@@ -196,21 +196,21 @@ class KnowledgeBase(object):
                 param[0] for param in meta_action["description"]["params"]
             ]
             for idx, sub_action_name in enumerate(meta_action["seq"]):
-                new_plan_item = [sub_action_name, []]
+                new_plan_item = [sub_action_name, {}]
                 sub_action_parameters = self.actions[sub_action_name]["params"]
                 for param_spec in sub_action_parameters:
                     old_param_name = param_spec[0]
                     if old_param_name in meta_action["hidden_params"][idx]:
-                        new_plan_item[1].append(
-                            meta_action["hidden_params"][idx][old_param_name]
-                        )
+                        new_plan_item[1][old_param_name] = meta_action["hidden_params"][
+                            idx
+                        ][old_param_name]
                     elif old_param_name in meta_action["param_translator"][idx]:
                         new_param_name = meta_action["param_translator"][idx][
                             old_param_name
                         ]
-                        parameter_idx = parameter_order.index(new_param_name)
-                        parameter_value = action_parameters[parameter_idx]
-                        new_plan_item[1].append(parameter_value)
+                        new_plan_item[1][old_param_name] = action_parameters[
+                            new_param_name
+                        ]
                     else:
                         raise RuntimeError(
                             "Parameter for sub action of meta action undefined"

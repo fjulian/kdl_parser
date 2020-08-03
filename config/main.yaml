@@ -1,7 +1,7 @@
 predicates:
   at:
     max_distance: 1.0
-  on:
+  on-pred:
     max_above: 0.05
 explorer:
   max_sample_repetitions: 2

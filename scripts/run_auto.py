@@ -1,8 +1,15 @@
+from __future__ import print_function
+
 import argparse
 import pickle
 import numpy as np
 import os
 import pybullet as p
+
+try:
+    input = raw_input
+except NameError:
+    pass
 
 # Simulation
 from highlevel_planning.sim.world import World
@@ -162,8 +169,8 @@ def main():
         return
     print("Found plan:")
     for idx, seq_item in enumerate(sequence):
-        print("".join((seq_item, " ", parameters[idx])))
-    raw_input("Press enter to run...")
+        print("".join((seq_item, " ", str(parameters[idx]))))
+    input("Press enter to run...")
 
     # -----------------------------------
 

@@ -185,7 +185,9 @@ class Predicates:
         lower_supported = aabb_supported[0]
 
         # Check if supported object is above supporting one (z-coordinate)
-        above_tol = self._cfg(["predicates", "on", "max_above"], default_value=0.05)
+        above_tol = self._cfg.getparam(
+            ["predicates", "on-pred", "max_above"], default_value=0.05
+        )
         above = lower_supported[2] > upper_supporting[2] - above_tol
 
         # Check if supported object is within footprint of supporting one (xy-plane).
