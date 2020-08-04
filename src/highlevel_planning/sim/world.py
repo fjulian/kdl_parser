@@ -8,10 +8,9 @@ import atexit
 
 
 class World:
-    def __init__(self, gui_=True, sleep_=True, load_objects=True):
-        self.gui = gui_
+    def __init__(self, gui=True, sleep_=True, load_objects=True):
         self.sleep_flag = sleep_
-        if self.gui:
+        if gui:
             # self.physics_client = p.connect(p.GUI)
             self.physics_client = p.connect(p.SHARED_MEMORY)
         else:

@@ -64,6 +64,7 @@ class KnowledgeBase(object):
         # Temporary variables (e.g. for exploration)
         self._temp_objects = dict()
         self._temp_object_predicates = list()
+        self._temp_generalized_objects = list()
 
     def set_predicate_funcs(self, preds):
         self.predicate_funcs = preds
@@ -355,8 +356,9 @@ class KnowledgeBase(object):
 
     def generalize_temp_object(self, object_name):
         assert object_name in self.objects
-        for new_type in self.types:
-            self.add_temp_object(object_type=new_type, object_name=object_name)
+        self._temp_generalized_objects.append(object_name)
+        # for new_type in self.types:
+        #     self.add_temp_object(object_type=new_type, object_name=object_name)
 
     def make_permanent(self, obj_name):
         self.objects[obj_name] = self._temp_objects[obj_name]
@@ -383,6 +385,7 @@ class KnowledgeBase(object):
             objects,
             self.object_predicates + self._temp_object_predicates + initial_predicates,
             goals,
+            self._temp_generalized_objects,
         )
         return planner_interface.pddl_planner(
             self.pddl_if_temp.domain_file_pddl,
@@ -396,3 +399,4 @@ class KnowledgeBase(object):
                 del self.lookup_table[obj]
         self._temp_objects.clear()
         del self._temp_object_predicates[:]
+        del self._temp_generalized_objects[:]

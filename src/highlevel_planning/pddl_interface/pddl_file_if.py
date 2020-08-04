@@ -22,7 +22,7 @@ def add_object(object_dict, object_name, object_type, object_value=None):
         object_dict[object_name] = [object_type]
 
 
-def _preprocess_knowledge(actions, objects, types, parameterizations):
+def _preprocess_knowledge(actions, objects, types, parameterizations, joker_objects):
     actions_processed = dict()
     types_processed = deepcopy(types)
     objects_processed = deepcopy(objects)
@@ -40,6 +40,9 @@ def _preprocess_knowledge(actions, objects, types, parameterizations):
                     type_suffix += 1
                     add_type(types_processed, new_type, object_param[1])
                     add_object(objects_processed, object_param[2], new_type)
+                    assert (
+                        object_param[1] not in param_type_translator
+                    ), "Code not built for this eventuality"
                     param_type_translator[object_param[1]] = new_type
                 for hidden_param_name in parameterizations[action_name][
                     object_param_set
@@ -47,6 +50,9 @@ def _preprocess_knowledge(actions, objects, types, parameterizations):
                     new_type = "".join((hidden_param_name, "_", str(type_suffix)))
                     type_suffix += 1
                     add_type(types_processed, new_type, hidden_param_name)
+                    assert (
+                        param_type_dict[hidden_param_name] not in param_type_translator
+                    ), "Code not built for this eventuality"
                     param_type_translator[param_type_dict[hidden_param_name]] = new_type
                     for hidden_param_value in parameterizations[action_name][
                         object_param_set
@@ -65,6 +71,10 @@ def _preprocess_knowledge(actions, objects, types, parameterizations):
                 }
         else:
             actions_processed[action_name] = deepcopy(action_descr)
+
+    if joker_objects is not None and len(joker_objects) > 0:
+        for new_type in types_processed:
+            map(lambda x: add_object(objects_processed, x, new_type), joker_objects)
 
     return (
         actions_processed,
@@ -89,13 +99,14 @@ class PDDLFileInterface:
     # ----- Loading and saving PDDL files --------------------------------------
 
     def write_pddl(
-        self, knowledge_base, objects, initial_predicates, goals,
+        self, knowledge_base, objects, initial_predicates, goals, joker_objects=None
     ):
         (actions_processed, types_processed, object_processed,) = _preprocess_knowledge(
             knowledge_base.actions,
             objects,
             knowledge_base.types,
             knowledge_base.parameterizations,
+            joker_objects,
         )
 
         # Write files

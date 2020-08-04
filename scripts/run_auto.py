@@ -55,7 +55,16 @@ def main():
         action="store_true",
         help="if given, the simulation will sleep for each update step, to mimic real time execution.",
     )
+    parser.add_argument(
+        "-d",
+        "--direct",
+        action="store_true",
+        help="if given, the script will not connect to a simulator GUI, but run in direct mode.",
+    )
     args = parser.parse_args()
+
+    if args.direct and args.reuse_objects:
+        raise RuntimeError("Cannot reload objects when in direct mode.")
 
     # Load existing simulation data if desired
     restore_existing_objects = args.reuse_objects
@@ -98,7 +107,9 @@ def main():
 
     # Create world
     world = World(
-        gui_=True, sleep_=args.sleep, load_objects=not restore_existing_objects
+        gui=not args.direct,
+        sleep_=args.sleep,
+        load_objects=not restore_existing_objects,
     )
     scene = ScenePlanning1(world, restored_objects=objects)
 
@@ -167,9 +178,11 @@ def main():
     if len(sequence) == 0:
         print("Nothing to do.")
         return
+    print("---------------------------------------------------")
     print("Found plan:")
     for idx, seq_item in enumerate(sequence):
         print("".join((seq_item, " ", str(parameters[idx]))))
+    print("---------------------------------------------------")
     input("Press enter to run...")
 
     # -----------------------------------
