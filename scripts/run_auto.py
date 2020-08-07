@@ -156,6 +156,10 @@ def main():
     # Set up exploration
     xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg)
 
+    # Define a demonstration to guide exploration
+    demo_sequence = ["place", "place"]
+    demo_parameters = [{"obj": "lid1"}, {"obj": "cube1"}]
+
     # ---------------------------------------------------------------
 
     # Run planner

@@ -31,7 +31,7 @@ class Explorer:
 
         self.current_state_id = None
 
-    def exploration(self):
+    def exploration(self, demo_sequence=None, demo_parameters=None):
         np.random.seed(0)
         sequences_tried = set()
 
@@ -42,7 +42,14 @@ class Explorer:
         goal_objects = self._get_items_goal()
         radii = [0.1, 1.5, 10.0]
 
-        res = self._explore_generalized_action(goal_objects, sequences_tried)
+        res = False
+
+        if demo_sequence is not None and demo_parameters is not None:
+            res = self._explore_demonstration(
+                demo_sequence, demo_parameters, goal_objects, sequences_tried
+            )
+        if not res:
+            res = self._explore_generalized_action(goal_objects, sequences_tried)
         for radius in radii:
             if not res:
                 closeby_objects = self._get_items_closeby(goal_objects, radius=radius)
@@ -52,6 +59,26 @@ class Explorer:
         return res
 
     # ----- Different sampling strategies ------------------------------------
+
+    def _explore_demonstration(
+        self, demo_sequence, demo_parameters, relevant_objects, sequences_tried
+    ):
+
+        found_plan = False
+        self.knowledge_base.clear_temp()
+        for _ in range(self.config_params["max_sample_repetitions"]):
+            found_plan = self._sampling_loops(
+                sequences_tried,
+                given_seq=demo_sequence,
+                given_params=demo_parameters,
+                relevant_objects=relevant_objects,  # TODO check if it actually makes sense that we only sample goal actions here
+                do_complete_sequence=True,
+            )
+            if found_plan:
+                break
+        # Restore initial state
+        p.restoreState(stateId=self.current_state_id)
+        return found_plan
 
     def _explore_generalized_action(self, relevant_objects, sequences_tried):
 
@@ -126,7 +153,10 @@ class Explorer:
         for _ in range(self.config_params["max_sample_repetitions"]):
             for seq_len in range(1, self.config_params["max_sequence_length"] + 1):
                 found_plan = self._sampling_loops(
-                    sequences_tried, seq_len=seq_len, relevant_objects=relevant_objects
+                    sequences_tried,
+                    seq_len=seq_len,
+                    relevant_objects=relevant_objects,
+                    do_complete_sequence=True,
                 )
                 if found_plan:
                     break
@@ -146,6 +176,7 @@ class Explorer:
         given_params=None,
         seq_len=None,
         relevant_objects=None,
+        do_complete_sequence=False,
     ):
         found_plan = False
         for sample_idx in range(
@@ -167,6 +198,7 @@ class Explorer:
                 given_params=given_params,
                 sequence_length=seq_len,
                 relevant_objects=relevant_objects,
+                do_complete_sequence=do_complete_sequence,
             )
             if not success:
                 print("Sampling failed. Abort searching in this sequence length.")
@@ -221,6 +253,7 @@ class Explorer:
         given_seq=None,
         given_params=None,
         relevant_objects=None,
+        do_complete_sequence=False,
     ):
         # Sample sequences until an abstractly feasible one was found
         if given_seq is None:
@@ -256,7 +289,7 @@ class Explorer:
                 continue
             sequences_tried.add((tuple(seq), tuple(params_tuple)))
 
-            if given_seq is None:
+            if given_seq is None or do_complete_sequence:
                 # Fill in the gaps of the sequence to make it feasible
                 completion_result = self.complete_sequence(seq, params)
                 if completion_result is False:
@@ -268,6 +301,7 @@ class Explorer:
                     precondition_parameters,
                 ) = completion_result
             else:
+                # TODO test if this is needed or if we can run this through the completion anyways
                 completed_sequence = seq
                 completed_parameters = params
                 sequence_preconds = logic_tools.determine_sequence_preconds(
