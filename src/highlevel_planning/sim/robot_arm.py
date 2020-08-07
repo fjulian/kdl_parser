@@ -4,7 +4,12 @@ import pybullet as p
 import numpy as np
 from math import pi as m_pi
 import math
-from highlevel_planning.tools.util import IKError, quat_from_mat
+from highlevel_planning.tools.util import (
+    IKError,
+    quat_from_mat,
+    homogenous_trafo,
+    invert_hom_trafo,
+)
 
 from trac_ik_python.trac_ik import IK
 
@@ -14,14 +19,6 @@ from urdf_parser_py.urdf import URDF as urdf_parser
 from pykdl_utils.kdl_kinematics import KDLKinematics
 
 from rc.controllers import CartesianVelocityControllerKDL
-
-
-# ------- Parameters ------------------
-# TODO move to config file
-
-max_force_magnitude = 150
-
-# --------------------
 
 
 def getMotorJointStates(robot):
@@ -35,7 +32,7 @@ def getMotorJointStates(robot):
 
 
 class RobotArm:
-    def __init__(self, world, robot_model=None):
+    def __init__(self, world, config, robot_model=None):
         self._world = world
         self._model = robot_model
         self.num_joints = 0
@@ -44,6 +41,9 @@ class RobotArm:
         self.joint_idx_hand = 0
         self.arm_base_link_idx = -100
         self.arm_ee_link_idx = -100
+        self._max_force_magnitude = config.getparam(
+            ["robot_arm", "max_force_magnitude"], default_value=150
+        )
 
         # Set up IK solver
         self.urdf_path = os.path.join(os.getcwd(), "data/models/box_panda_hand_pb.urdf")
@@ -245,6 +245,9 @@ class RobotArm:
 
         Args:
             velocity ([type]): [description]
+            :param num_steps:
+            :param velocity_rotation:
+            :param velocity_translation:
         """
 
         ctrl = CartesianVelocityControllerKDL()
@@ -261,8 +264,8 @@ class RobotArm:
                     self.link_name_to_index["panda_hand"],
                 ],
             )
-            base_r = R.from_quat(link_poses[0][1])
-            ee_r = R.from_quat(link_poses[1][1])
+            base_r = R.from_quat(link_poses[0][5])
+            ee_r = R.from_quat(link_poses[1][5])
 
             velocity_translation_baseframe = base_r.inv().apply(
                 ee_r.apply(velocity_translation)
@@ -297,7 +300,7 @@ class RobotArm:
     def check_max_contact_force_ok(self):
         force, _ = self.get_wrist_force_torque()
         magnitude = np.linalg.norm(force)
-        if magnitude > max_force_magnitude:
+        if magnitude > self._max_force_magnitude:
             return False
         else:
             return True
@@ -410,6 +413,16 @@ class RobotArm:
 
     def get_link_pose(self, link_name):
         ret = p.getLinkState(self._model.uid, self.link_name_to_index[link_name])
-        pos = np.array(ret[0])
-        orient = np.array(ret[1])
+        pos = np.array(ret[4])
+        orient = np.array(ret[5])
         return pos, orient
+
+    def convert_pos_to_robot_frame(self, r_O_O_traget):
+        r_O_O_rob, C_O_rob = self.get_link_pose("panda_link0")
+        C_O_rob = R.from_quat(C_O_rob)
+        T_O_rob = homogenous_trafo(r_O_O_rob, C_O_rob)
+        T_rob_O = invert_hom_trafo(T_O_rob)
+        r_R_R_target = np.matmul(
+            T_rob_O, np.reshape(np.append(r_O_O_traget, 1.0), (-1, 1))
+        ).squeeze()
+        return r_R_R_target

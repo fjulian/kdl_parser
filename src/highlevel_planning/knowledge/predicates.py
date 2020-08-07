@@ -5,36 +5,37 @@ import numpy as np
 
 
 class Predicates:
-    def __init__(self, scene, robot, robot_lock=None):
+    def __init__(self, scene, robot, knowledge_base, cfg):
         self.call = {
             "empty-hand": self.empty_hand,
             "in-hand": self.in_hand,
             "in-reach": self.in_reach,
+            "at": self.at,
             "inside": self.inside,
             "on": self.on,
+            "has-grasp": self.has_grasp,
         }
 
         self.descriptions = {
             "empty-hand": [["rob", "robot"]],
             "in-hand": [["obj", "item"], ["rob", "robot"]],
             "in-reach": [["target", "navgoal"], ["rob", "robot"]],
+            "at": [["target", "navgoal"], ["rob", "robot"]],
             "inside": [["container", "item"], ["contained", "item"]],
             "on": [["supporting", "item"], ["supported", "item"]],
+            "has-grasp": [["obj", "navgoal"]],
         }
 
-        self.sk_grasping = SkillGrasping(scene, robot)
+        self.sk_grasping = SkillGrasping(scene, robot, cfg)
         self._scene = scene
         self._robot_uid = robot._model.uid
         self._robot = robot
-        self._robot_lock = robot_lock
+        self._kb = knowledge_base
+        self._cfg = cfg
 
     def empty_hand(self, robot_name):
         robot = self._robot
-        if self._robot_lock:
-            self._robot_lock.acquire()
         grasped_sth = robot.check_grasp()
-        if self._robot_lock:
-            self._robot_lock.release()
         return not grasped_sth
 
     def in_hand(self, target_object, robot_name):
@@ -46,9 +47,9 @@ class Predicates:
         dist_finger1 = 100
         dist_finger2 = 100
         for contact in temp:
-            if contact[3] == robot.joint_idx_hand[0]:
+            if contact[3] == robot.joint_idx_fingers[0]:
                 dist_finger1 = contact[8]
-            elif contact[3] == robot.joint_idx_hand[1]:
+            elif contact[3] == robot.joint_idx_fingers[1]:
                 dist_finger2 = contact[8]
         desired_object_in_hand = (abs(dist_finger1) < 0.001) and (
             abs(dist_finger2) < 0.001
@@ -56,10 +57,15 @@ class Predicates:
         return (not empty_hand_res) and desired_object_in_hand
 
     def in_reach(self, target_item, robot_name):
-        if type(target_item) is str:
-            return self.in_reach_obj(target_item, robot_name)
+        if self._kb.is_type(target_item, "position"):
+            return self.in_reach_pos(self._kb.lookup_table[target_item], robot_name)
         elif type(target_item) is list:
+            print(
+                "wooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
+            )  # Want to see if this ever happens
             return self.in_reach_pos(target_item, robot_name)
+        elif type(target_item) is str:
+            return self.in_reach_obj(target_item, robot_name)
         else:
             raise ValueError
 
@@ -75,15 +81,11 @@ class Predicates:
         Returns:
             bool: Whether the object can be grasped from the robot's current position.
         """
-        if self._robot_lock:
-            self._robot_lock.acquire()
         try:
-            pos, orient = self.sk_grasping.compute_grasp(target_object, None, 0)
+            pos, orient = self.sk_grasping.compute_grasp(target_object, 0, 0)
         except SkillExecutionError:
             return False
         cmd = self._robot.ik(pos, orient)
-        if self._robot_lock:
-            self._robot_lock.release()
         if cmd.tolist() is None or cmd is None:
             return False
         else:
@@ -100,15 +102,43 @@ class Predicates:
         Returns:
             [type]: [description]
         """
-        if self._robot_lock:
-            self._robot_lock.acquire()
-        cmd = self._robot.ik(target_pos, self._robot.start_orient)
-        if self._robot_lock:
-            self._robot_lock.release()
+        # Convert position into robot base frame
+        r_O_O_pos = target_pos
+        r_R_R_grasp = self._robot.convert_pos_to_robot_frame(r_O_O_pos)
+
+        cmd = self._robot.ik(r_R_R_grasp, self._robot.start_orient)
         if cmd.tolist() is None or cmd is None:
             return False
         else:
             return True
+
+    def at(self, target_object, robot_name, use_closest_points=True):
+        distance_limit = self._cfg.getparam(
+            ["predicates", "at", "max_distance"], default_value=1.0
+        )
+        if self._kb.is_type(target_object, "position"):
+            pos_object = self._kb.lookup_table[target_object]
+            pos_robot, _ = self._robot.get_link_pose("ridgeback_dummy")
+            distance = np.linalg.norm(pos_robot[:2] - pos_object[:2])
+            return distance < distance_limit
+        elif not use_closest_points:
+            obj_info = self._scene.objects[target_object]
+            target_id = obj_info.model.uid
+            temp = p.getBasePositionAndOrientation(target_id)
+            pos_object = temp[0]
+            pos_robot, _ = self._robot.get_link_pose("ridgeback_dummy")
+            distance = np.linalg.norm(pos_robot[:2] - pos_object[:2])
+            return distance < distance_limit
+        else:
+            temp = p.getClosestPoints(
+                self._robot_uid,
+                self._scene.objects[target_object].model.uid,
+                distance=1.1,
+            )
+            for point in temp:
+                if point[8] < distance_limit:
+                    return True
+            return False
 
     def inside(self, container_object, contained_object):
         """
@@ -155,7 +185,9 @@ class Predicates:
         lower_supported = aabb_supported[0]
 
         # Check if supported object is above supporting one (z-coordinate)
-        above_tol = 0.05  # TODO move this to parameter file
+        above_tol = self._cfg.getparam(
+            ["predicates", "on-pred", "max_above"], default_value=0.05
+        )
         above = lower_supported[2] > upper_supporting[2] - above_tol
 
         # Check if supported object is within footprint of supporting one (xy-plane).
@@ -165,3 +197,6 @@ class Predicates:
         ) and np.all(np.less_equal(pos_supported[:2], upper_supporting[:2]))
 
         return above and within
+
+    def has_grasp(self, obj):
+        return len(self._scene.objects[obj].grasp_pos) > 0

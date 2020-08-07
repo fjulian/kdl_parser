@@ -22,14 +22,75 @@ def add_object(object_dict, object_name, object_type, object_value=None):
         object_dict[object_name] = [object_type]
 
 
+def _preprocess_knowledge(actions, objects, types, parameterizations, joker_objects):
+    actions_processed = dict()
+    types_processed = deepcopy(types)
+    objects_processed = deepcopy(objects)
+
+    for action_name in actions:
+        action_descr = actions[action_name]
+        param_type_dict = {param[0]: param[1] for param in action_descr["params"]}
+        if action_name in parameterizations:
+            action_suffix = 1
+            type_suffix = 1
+            for object_param_set in parameterizations[action_name]:
+                param_type_translator = dict()
+                for object_param in object_param_set:
+                    new_type = "".join((object_param[1], "_", str(type_suffix)))
+                    type_suffix += 1
+                    add_type(types_processed, new_type, object_param[1])
+                    add_object(objects_processed, object_param[2], new_type)
+                    assert (
+                        object_param[1] not in param_type_translator
+                    ), "Code not built for this eventuality"
+                    param_type_translator[object_param[1]] = new_type
+                for hidden_param_name in parameterizations[action_name][
+                    object_param_set
+                ]:
+                    new_type = "".join((hidden_param_name, "_", str(type_suffix)))
+                    type_suffix += 1
+                    add_type(types_processed, new_type, hidden_param_name)
+                    assert (
+                        param_type_dict[hidden_param_name] not in param_type_translator
+                    ), "Code not built for this eventuality"
+                    param_type_translator[param_type_dict[hidden_param_name]] = new_type
+                    for hidden_param_value in parameterizations[action_name][
+                        object_param_set
+                    ][hidden_param_name]:
+                        add_object(objects_processed, hidden_param_value, new_type)
+                new_params = [
+                    [old_param_spec[0], param_type_translator[old_param_spec[1]]]
+                    for old_param_spec in action_descr["params"]
+                ]
+                new_action_name = "".join((action_name, "_", str(action_suffix)))
+                action_suffix += 1
+                actions_processed[new_action_name] = {
+                    "params": new_params,
+                    "preconds": action_descr["preconds"],
+                    "effects": action_descr["effects"],
+                }
+        else:
+            actions_processed[action_name] = deepcopy(action_descr)
+
+    if joker_objects is not None and len(joker_objects) > 0:
+        for new_type in types_processed:
+            map(lambda x: add_object(objects_processed, x, new_type), joker_objects)
+
+    return (
+        actions_processed,
+        types_processed,
+        objects_processed,
+    )
+
+
 class PDDLFileInterface:
     def __init__(self, domain_dir, problem_dir=None, domain_name=""):
         self._domain_dir = domain_dir
         self._problem_dir = problem_dir
         self._domain_name = domain_name
 
-        self._domain_file_pddl = None
-        self._problem_file_pddl = None
+        self.domain_file_pddl = None
+        self.problem_file_pddl = None
         self._requirements = ":strips :typing"
 
         time_now = datetime.now()
@@ -37,78 +98,22 @@ class PDDLFileInterface:
 
     # ----- Loading and saving PDDL files --------------------------------------
 
-    def write_pddl(self, knowledge_base):
-        # Preprocess
-        (
-            actions,
-            predicates,
-            types,
+    def write_pddl(
+        self, knowledge_base, objects, initial_predicates, goals, joker_objects=None
+    ):
+        (actions_processed, types_processed, object_processed,) = _preprocess_knowledge(
+            knowledge_base.actions,
             objects,
-            initial_predicates,
-            goals,
-        ) = self._preprocess_knowledge(knowledge_base)
+            knowledge_base.types,
+            knowledge_base.parameterizations,
+            joker_objects,
+        )
 
         # Write files
-        self.write_domain_pddl(actions, predicates, types)
-        self.write_problem_pddl(objects, initial_predicates, goals)
-
-    def _preprocess_knowledge(self, knowledge_base):
-        actions_pddl = dict()
-        predicates_pddl = deepcopy(knowledge_base._predicates)
-        types_pddl = deepcopy(knowledge_base.types)
-        objects_pddl = deepcopy(knowledge_base.objects)
-        initial_predicates_pddl = deepcopy(knowledge_base.initial_predicates)
-        goals_pddl = deepcopy(knowledge_base.goals)
-
-        for action_name in knowledge_base.actions:
-            action_descr = knowledge_base.actions[action_name]
-            param_type_dict = {param[0]: param[1] for param in action_descr["params"]}
-            if action_name in knowledge_base.parameterizations:
-                action_suffix = 1
-                type_suffix = 1
-                for object_param_set in knowledge_base.parameterizations[action_name]:
-                    param_type_translator = dict()
-                    for object_param in object_param_set:
-                        new_type = "".join((object_param[1], "_", str(type_suffix)))
-                        type_suffix += 1
-                        add_type(types_pddl, new_type, object_param[1])
-                        add_object(objects_pddl, object_param[2], new_type)
-                        param_type_translator[object_param[1]] = new_type
-                    for hidden_param_name in knowledge_base.parameterizations[
-                        action_name
-                    ][object_param_set]:
-                        new_type = "".join((hidden_param_name, "_", str(type_suffix)))
-                        type_suffix += 1
-                        add_type(types_pddl, new_type, hidden_param_name)
-                        param_type_translator[
-                            param_type_dict[hidden_param_name]
-                        ] = new_type
-                        for hidden_param_value in knowledge_base.parameterizations[
-                            action_name
-                        ][object_param_set][hidden_param_name]:
-                            add_object(objects_pddl, hidden_param_value, new_type)
-                    new_params = [
-                        [old_param_spec[0], param_type_translator[old_param_spec[1]]]
-                        for old_param_spec in action_descr["params"]
-                    ]
-                    new_action_name = "".join((action_name, "_", str(action_suffix)))
-                    action_suffix += 1
-                    actions_pddl[new_action_name] = {
-                        "params": new_params,
-                        "preconds": action_descr["preconds"],
-                        "effects": action_descr["effects"],
-                    }
-            else:
-                actions_pddl[action_name] = deepcopy(action_descr)
-
-        return (
-            actions_pddl,
-            predicates_pddl,
-            types_pddl,
-            objects_pddl,
-            initial_predicates_pddl,
-            goals_pddl,
+        self.write_domain_pddl(
+            actions_processed, knowledge_base.predicate_definitions, types_processed
         )
+        self.write_problem_pddl(object_processed, initial_predicates, goals)
 
     def write_domain_pddl(self, actions, predicates, types):
         all_types_present = self.check_types(actions, types, predicates)
@@ -181,10 +186,10 @@ class PDDLFileInterface:
         new_filename = path.join(self._domain_dir, self._time_now_str + "_domain.pddl")
         with open(new_filename, "w") as f:
             f.write(pddl_str)
-        self._domain_file_pddl = new_filename
+        self.domain_file_pddl = new_filename
 
     def read_domain_pddl(self):
-        with open(self._domain_file_pddl, "r") as f:
+        with open(self.domain_file_pddl, "r") as f:
             dom = f.read()
         dom = dom.split("\n")
 
@@ -372,11 +377,12 @@ class PDDLFileInterface:
         with open(new_filename, "w") as f:
             f.write(pddl_str)
         # print("Wrote new PDDL problem file: " + new_filename.split("/")[-1])
-        self._problem_file_pddl = new_filename
+        self.problem_file_pddl = new_filename
 
     # ----- Helper functions ---------------------------------------------------
 
-    def check_types(self, actions, types, predicates):
+    @staticmethod
+    def check_types(actions, types, predicates):
         # Makes sure that all type were defined
         for pred in predicates:
             for item in predicates[pred]:

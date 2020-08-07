@@ -89,13 +89,16 @@ class ObjectInfo:
         init_pos_,
         init_orient_,
         init_scale_=1.0,
-        grasp_pos_=[],
-        grasp_orient_=[],
+        grasp_links_=[],
+        grasp_pos_={},
+        grasp_orient_={},
         model_=None,
         nav_angle_=None,
         nav_min_dist_=None,
-        grasp_links_=None,
     ):
+        assert type(grasp_pos_) is dict
+        assert type(grasp_orient_) is dict
+        assert type(grasp_links_) is list
         self.urdf_path = urdf_path_
         self.init_pos = init_pos_
         self.init_orient = init_orient_

@@ -1,10 +1,8 @@
 import subprocess
+from highlevel_planning.learning.logic_tools import parse_plan
 
 
-# TODO add a debug flag for print statements
-
-
-def pddl_planner(domain_file, problem_file, debug_print=False):
+def pddl_planner(domain_file, problem_file, action_specs, debug_print=False):
     try:
         res = subprocess.check_output(
             ["bin/ff", "-s", "2", "-o", domain_file, "-f", problem_file]
@@ -41,7 +39,8 @@ def pddl_planner(domain_file, problem_file, debug_print=False):
         except ValueError:
             break
     # print(res)
-    return res
+    sequence, parameters = parse_plan(res, action_specs)
+    return sequence, parameters
 
 
 def cut_string_before(string, query, complain=False):

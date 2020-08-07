@@ -1,9 +1,15 @@
+from __future__ import print_function
+
 import argparse
 import pickle
-import time
 import numpy as np
 import os
 import pybullet as p
+
+try:
+    input = raw_input
+except NameError:
+    pass
 
 # Simulation
 from highlevel_planning.sim.world import World
@@ -23,7 +29,12 @@ from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning.learning.explorer import Explorer
 from highlevel_planning.learning.pddl_extender import PDDLExtender
 
+# Other
+from highlevel_planning.tools.config import ConfigYaml
+
 # ----------------------------------------------------------------------
+
+BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def main():
@@ -44,20 +55,36 @@ def main():
         action="store_true",
         help="if given, the simulation will sleep for each update step, to mimic real time execution.",
     )
+    parser.add_argument(
+        "-d",
+        "--direct",
+        action="store_true",
+        help="if given, the script will not connect to a simulator GUI, but run in direct mode.",
+    )
     args = parser.parse_args()
+
+    if args.direct and args.reuse_objects:
+        raise RuntimeError("Cannot reload objects when in direct mode.")
 
     # Load existing simulation data if desired
     restore_existing_objects = args.reuse_objects
     objects = None
     robot_mdl = None
     if restore_existing_objects:
-        with open("data/sim/objects.pkl", "rb") as pkl_file:
+        with open(
+            os.path.join(BASEDIR, "data", "sim", "objects.pkl"), "rb"
+        ) as pkl_file:
             objects, robot_mdl = pickle.load(pkl_file)
+
+    # Load config file
+    cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
     # -----------------------------------
 
     # Set up planner interface and domain representation
-    kb = KnowledgeBase("knowledge/chimera", domain_name="chimera-domain")
+    kb = KnowledgeBase(
+        os.path.join(BASEDIR, "knowledge", "chimera"), domain_name="chimera-domain"
+    )
 
     # Add basic skill descriptions
     skill_descriptions = pddl_descriptions.get_action_descriptions()
@@ -80,12 +107,14 @@ def main():
 
     # Create world
     world = World(
-        gui_=True, sleep_=args.sleep, load_objects=not restore_existing_objects
+        gui=not args.direct,
+        sleep_=args.sleep,
+        load_objects=not restore_existing_objects,
     )
     scene = ScenePlanning1(world, restored_objects=objects)
 
     # Spawn robot
-    robot = RobotArm(world, robot_mdl)
+    robot = RobotArm(world, cfg, robot_mdl)
     robot.reset()
 
     robot.to_start()
@@ -93,7 +122,7 @@ def main():
 
     # Save world
     if not restore_existing_objects:
-        savedir = os.path.join(os.getcwd(), "data", "sim")
+        savedir = os.path.join(BASEDIR, "data", "sim")
         if not os.path.isdir(savedir):
             os.makedirs(savedir)
         with open(os.path.join(savedir, "objects.pkl"), "wb") as output:
@@ -103,7 +132,7 @@ def main():
     # -----------------------------------
 
     # Set up predicates
-    preds = Predicates(scene, robot)
+    preds = Predicates(scene, robot, kb, cfg)
     kb.set_predicate_funcs(preds)
 
     for descr in preds.descriptions.items():
@@ -116,7 +145,7 @@ def main():
     kb.check_predicates()
 
     # Set up skills
-    sk_grasp = SkillGrasping(scene, robot)
+    sk_grasp = SkillGrasping(scene, robot, cfg)
     sk_place = SkillPlacing(scene, robot)
     sk_nav = SkillNavigate(scene, robot)
     skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
@@ -125,7 +154,11 @@ def main():
     pddl_ex = PDDLExtender(kb, preds)
 
     # Set up exploration
-    xplorer = Explorer(skill_set, robot._model.uid, scene.objects, pddl_ex, kb)
+    xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg)
+
+    # Define a demonstration to guide exploration
+    demo_sequence = ["place", "place"]
+    demo_parameters = [{"obj": "lid1"}, {"obj": "cube1"}]
 
     # ---------------------------------------------------------------
 
@@ -144,18 +177,22 @@ def main():
         if plan is False:
             print("Planner failed despite exploration")
             return
+    sequence, parameters = plan
 
-    if len(plan) == 0:
+    if len(sequence) == 0:
         print("Nothing to do.")
         return
+    print("---------------------------------------------------")
     print("Found plan:")
-    print(plan)
-    raw_input("Press enter to run...")
+    for idx, seq_item in enumerate(sequence):
+        print("".join((seq_item, " ", str(parameters[idx]))))
+    print("---------------------------------------------------")
+    input("Press enter to run...")
 
     # -----------------------------------
 
     # Set up execution system
-    es = SequentialExecution(skill_set, plan, kb)
+    es = SequentialExecution(skill_set, sequence, parameters, kb)
 
     # Run
     try:
@@ -163,11 +200,12 @@ def main():
         while True:
             print("------------- Iteration {} ---------------".format(index))
             es.print_status()
-            success, plan_finished = es.step()
+            success, plan_finished, error_messages = es.step()
             if not success:
-                raise RuntimeError(
-                    "Error during execution of current action. Aborting."
-                )
+                print("Error messages:")
+                for msg in error_messages:
+                    print(msg)
+                raise RuntimeError("Error during execution of current step. Aborting.")
             index += 1
             if plan_finished:
                 print("Plan finished. Exiting.")

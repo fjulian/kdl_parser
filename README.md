@@ -163,7 +163,7 @@ knowledge_base.objects = {
 The external planner can be called from a terminal using the following command:
 
 ```bash
-./bin/ff -s 2 -o knowledge/chimera/domain/200221-154221_domain.pddl -f knowledge/chimera/problem/200221-154221_problem.pddl
+./bin/ff -s 2 -o knowledge/chimera/main/200721-150827_domain.pddl -f knowledge/chimera/main/200721-150827_problem.pddl
 ```
 
 Replace domain and problem files appropriately.

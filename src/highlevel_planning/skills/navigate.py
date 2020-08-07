@@ -209,7 +209,7 @@ class SkillNavigate:
         return T_rob_obj
 
     def _set_object_relative_pose(
-        self, object_in_hand_uid, robot_pos, robot_orient, T_rob_obj
+            self, object_in_hand_uid, robot_pos, robot_orient, T_rob_obj
     ):
         if object_in_hand_uid is not None:
             r_O_O_rob = robot_pos
@@ -227,17 +227,42 @@ class SkillNavigate:
             )
 
 
-def get_nav_description():
-    action_name = "nav"
+def get_nav_in_reach_description():
+    action_name = "nav-in-reach"
     action_params = [
         ["current_pos", "navgoal"],
         ["goal_pos", "navgoal"],
         ["rob", "robot"],
     ]
-    action_preconditions = [("in-reach", True, ["current_pos", "rob"])]
+    action_preconditions = [("at", True, ["current_pos", "rob"]), ("has-grasp", True, ["goal_pos"])]
     action_effects = [
         ("in-reach", True, ["goal_pos", "rob"]),
         ("in-reach", False, ["current_pos", "rob"]),
+        ("at", True, ["goal_pos", "rob"]),
+        ("at", False, ["current_pos", "rob"]),
+    ]
+    return (
+        action_name,
+        {
+            "params": action_params,
+            "preconds": action_preconditions,
+            "effects": action_effects,
+        },
+    )
+
+
+def get_nav_at_description():
+    action_name = "nav-at"
+    action_params = [
+        ["current_pos", "navgoal"],
+        ["goal_pos", "navgoal"],
+        ["rob", "robot"],
+    ]
+    action_preconditions = [("at", True, ["current_pos", "rob"])]
+    action_effects = [
+        ("at", True, ["goal_pos", "rob"]),
+        ("at", False, ["current_pos", "rob"]),
+        ("in-reach", False, ["current_pos", "rob"])
     ]
     return (
         action_name,
