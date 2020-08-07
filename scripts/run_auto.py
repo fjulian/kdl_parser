@@ -82,9 +82,7 @@ def main():
     # -----------------------------------
 
     # Set up planner interface and domain representation
-    kb = KnowledgeBase(
-        os.path.join(BASEDIR, "knowledge", "chimera"), domain_name="chimera-domain"
-    )
+    kb = KnowledgeBase(BASEDIR, domain_name="chimera")
 
     # Add basic skill descriptions
     skill_descriptions = pddl_descriptions.get_action_descriptions()
@@ -111,10 +109,10 @@ def main():
         sleep_=args.sleep,
         load_objects=not restore_existing_objects,
     )
-    scene = ScenePlanning1(world, restored_objects=objects)
+    scene = ScenePlanning1(world, BASEDIR, restored_objects=objects)
 
     # Spawn robot
-    robot = RobotArm(world, cfg, robot_mdl)
+    robot = RobotArm(world, cfg, BASEDIR, robot_mdl)
     robot.reset()
 
     robot.to_start()

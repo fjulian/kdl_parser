@@ -6,9 +6,9 @@ import os
 
 
 class Cupboard:
-    def __init__(self, world, pos_, orient_):
+    def __init__(self, world, pos_, orient_, base_dir):
         self.urdf = os.path.join(
-            os.getcwd(), "data/models/cupboard_drawers/cupboard_drawers.urdf"
+            base_dir, "data/models/cupboard_drawers/cupboard_drawers.urdf"
         )
         self.model = world.add_model(self.urdf, position=pos_, orientation=orient_)
         self.pos = pos_

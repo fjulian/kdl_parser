@@ -32,7 +32,7 @@ def getMotorJointStates(robot):
 
 
 class RobotArm:
-    def __init__(self, world, config, robot_model=None):
+    def __init__(self, world, config, base_dir, robot_model=None):
         self._world = world
         self._model = robot_model
         self.num_joints = 0
@@ -46,7 +46,7 @@ class RobotArm:
         )
 
         # Set up IK solver
-        self.urdf_path = os.path.join(os.getcwd(), "data/models/box_panda_hand_pb.urdf")
+        self.urdf_path = os.path.join(base_dir, "data/models/box_panda_hand_pb.urdf")
         with open(self.urdf_path) as f:
             if f.mode == "r":
                 urdf_string = f.read()

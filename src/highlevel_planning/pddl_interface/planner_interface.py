@@ -1,11 +1,20 @@
 import subprocess
+import os
 from highlevel_planning.learning.logic_tools import parse_plan
 
 
-def pddl_planner(domain_file, problem_file, action_specs, debug_print=False):
+def pddl_planner(domain_file, problem_file, action_specs, base_dir, debug_print=False):
     try:
         res = subprocess.check_output(
-            ["bin/ff", "-s", "2", "-o", domain_file, "-f", problem_file]
+            [
+                os.path.join(base_dir, "bin", "ff"),
+                "-s",
+                "2",
+                "-o",
+                domain_file,
+                "-f",
+                problem_file,
+            ]
         )
     except subprocess.CalledProcessError as e:
         # Check if empty plan solves it

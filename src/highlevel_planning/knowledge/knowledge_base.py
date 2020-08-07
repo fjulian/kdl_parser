@@ -11,14 +11,16 @@ def check_path_exists(path_to_check):
 
 
 class KnowledgeBase(object):
-    def __init__(self, knowledge_dir, domain_name=""):
+    def __init__(self, base_dir, domain_name=""):
         self.predicate_funcs = None
 
         # Folder book keeping
-        domain_dir = path.join(knowledge_dir, "main")
+        self.base_dir = base_dir
+        self.knowledge_dir = path.join(base_dir, "knowledge", domain_name)
+        domain_dir = path.join(self.knowledge_dir, "main")
         check_path_exists(domain_dir)
         problem_dir = domain_dir
-        temp_domain_dir = path.join(knowledge_dir, "explore")
+        temp_domain_dir = path.join(self.knowledge_dir, "explore")
         check_path_exists(temp_domain_dir)
         temp_problem_dir = temp_domain_dir
 
@@ -42,8 +44,8 @@ class KnowledgeBase(object):
         #     ("on", True, ("cupboard", "cube1")),
         #     ("at", True, ("container1", "robot1")),
         # ]
-        self.goals = [("on", True, ("container2", "cube1"))]
-        # self.goals = [("inside", True, ("container1", "cube1"))]
+        # self.goals = [("on", True, ("container2", "cube1"))]
+        self.goals = [("inside", True, ("container1", "cube1"))]
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()
@@ -184,7 +186,10 @@ class KnowledgeBase(object):
             self.goals,
         )
         return planner_interface.pddl_planner(
-            self.pddl_if.domain_file_pddl, self.pddl_if.problem_file_pddl, self.actions
+            self.pddl_if.domain_file_pddl,
+            self.pddl_if.problem_file_pddl,
+            self.actions,
+            self.base_dir,
         )
 
     # ----- Meta action handling -----------------------------------------------
@@ -391,6 +396,7 @@ class KnowledgeBase(object):
             self.pddl_if_temp.domain_file_pddl,
             self.pddl_if_temp.problem_file_pddl,
             self.actions,
+            self.base_dir,
         )
 
     def clear_temp(self):

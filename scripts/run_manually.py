@@ -180,13 +180,13 @@ def main():
 
     # Create world
     world = World(
-        gui_=True, sleep_=args.sleep, load_objects=not restore_existing_objects
+        gui=True, sleep_=args.sleep, load_objects=not restore_existing_objects
     )
-    scene = ScenePlanning1(world, restored_objects=objects)
+    scene = ScenePlanning1(world, BASEDIR, restored_objects=objects)
     # scene = SceneMoveSkill(world, restored_objects=objects)
 
     # Spawn robot
-    robot = RobotArm(world, cfg, robot_mdl)
+    robot = RobotArm(world, cfg, BASEDIR, robot_mdl)
     robot.reset()
 
     # Set up skills

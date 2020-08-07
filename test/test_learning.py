@@ -29,33 +29,32 @@ class TestExplorer(unittest.TestCase):
     def setUp(self):
         cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
-        self.knowledge_dir = os.path.join(BASEDIR, "test", "knowledge", "chimera")
-        kb = KnowledgeBase(self.knowledge_dir, domain_name="chimera-test-domain")
-        kb.goals = []
+        self.kb = KnowledgeBase(BASEDIR, domain_name="chimera-test")
+        self.kb.goals = []
 
         # Add basic skill descriptions
         skill_descriptions = pddl_descriptions.get_action_descriptions()
         for skill_name, description in skill_descriptions.items():
-            kb.add_action(
+            self.kb.add_action(
                 action_name=skill_name, action_definition=description, overwrite=True,
             )
 
         # Add required types
-        kb.add_type("robot")
-        kb.add_type("navgoal")  # Anything we can navigate to
-        kb.add_type("position", "navgoal")  # Pure positions
-        kb.add_type("item", "navgoal")  # Anything we can grasp
+        self.kb.add_type("robot")
+        self.kb.add_type("navgoal")  # Anything we can navigate to
+        self.kb.add_type("position", "navgoal")  # Pure positions
+        self.kb.add_type("item", "navgoal")  # Anything we can grasp
 
         # Add origin
-        kb.add_object("origin", "position", np.array([0.0, 0.0, 0.0]))
-        kb.add_object("robot1", "robot")
+        self.kb.add_object("origin", "position", np.array([0.0, 0.0, 0.0]))
+        self.kb.add_object("robot1", "robot")
 
         # -----------------------------------
 
         # Create world
-        world = World(gui_=False, sleep_=False, load_objects=True)
-        scene = ScenePlanning1(world, restored_objects=None)
-        robot = RobotArm(world, cfg)
+        world = World(gui=False, sleep_=False, load_objects=True)
+        scene = ScenePlanning1(world, BASEDIR, restored_objects=None)
+        robot = RobotArm(world, cfg, BASEDIR)
         robot.reset()
         robot.to_start()
         world.step_seconds(0.5)
@@ -63,26 +62,26 @@ class TestExplorer(unittest.TestCase):
         # -----------------------------------
 
         # Set up predicates
-        preds = Predicates(scene, robot, kb, cfg)
-        kb.set_predicate_funcs(preds)
+        preds = Predicates(scene, robot, self.kb, cfg)
+        self.kb.set_predicate_funcs(preds)
 
         for descr in preds.descriptions.items():
-            kb.add_predicate(
+            self.kb.add_predicate(
                 predicate_name=descr[0], predicate_definition=descr[1], overwrite=True
             )
 
         # Planning problem
-        kb.populate_visible_objects(scene)
-        kb.check_predicates()
+        self.kb.populate_visible_objects(scene)
+        self.kb.check_predicates()
 
         sk_grasp = SkillGrasping(scene, robot, cfg)
         sk_place = SkillPlacing(scene, robot)
         sk_nav = SkillNavigate(scene, robot)
         skill_set = {"grasp": sk_grasp, "nav": sk_nav, "place": sk_place}
 
-        pddl_ex = PDDLExtender(kb, preds)
+        pddl_ex = PDDLExtender(self.kb, preds)
 
-        self.xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg)
+        self.xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, self.kb, cfg)
 
     def test_sequence_completion(self):
         sequence = ["grasp", "place"]
@@ -94,10 +93,10 @@ class TestExplorer(unittest.TestCase):
         self.assertEqual(1, 1)
 
     def tearDown(self):
-        for filename in os.listdir(os.path.join(self.knowledge_dir, "main")):
-            os.remove(os.path.join(self.knowledge_dir, "main", filename))
-        for filename in os.listdir(os.path.join(self.knowledge_dir, "explore")):
-            os.remove(os.path.join(self.knowledge_dir, "explore", filename))
+        for filename in os.listdir(os.path.join(self.kb.knowledge_dir, "main")):
+            os.remove(os.path.join(self.kb.knowledge_dir, "main", filename))
+        for filename in os.listdir(os.path.join(self.kb.knowledge_dir, "explore")):
+            os.remove(os.path.join(self.kb.knowledge_dir, "explore", filename))
 
 
 if __name__ == "__main__":

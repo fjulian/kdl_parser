@@ -6,7 +6,7 @@ import pybullet as p
 
 
 class ScenePlanning1:
-    def __init__(self, world, restored_objects=None):
+    def __init__(self, world, base_dir, restored_objects=None):
         self._world = world
 
         if restored_objects is None:
@@ -14,7 +14,7 @@ class ScenePlanning1:
 
             self.objects = dict()
             self.objects["table"] = ObjectInfo(
-                urdf_path_=os.path.join(os.getcwd(), "data/models/table/table.urdf"),
+                urdf_path_=os.path.join(base_dir, "data/models/table/table.urdf"),
                 init_pos_=np.array([3.0, 0.0, 0.0]),
                 init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
             )
@@ -34,13 +34,13 @@ class ScenePlanning1:
             )
             self.objects["container1"] = ObjectInfo(
                 urdf_path_=os.path.join(
-                    os.getcwd(), "data/models/container/container_no_lid.urdf"
+                    base_dir, "data/models/container/container_no_lid.urdf"
                 ),
                 init_pos_=np.array([3.5, -0.25, 0.625]),
                 init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
             )
             self.objects["lid1"] = ObjectInfo(
-                urdf_path_=os.path.join(os.getcwd(), "data/models/container/lid.urdf"),
+                urdf_path_=os.path.join(base_dir, "data/models/container/lid.urdf"),
                 init_pos_=np.array([3.5, -0.25, 0.625]),
                 init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
                 grasp_pos_={5: [np.array([0.0, 0.0, 0.0])]},
@@ -51,14 +51,17 @@ class ScenePlanning1:
             )
             self.objects["container2"] = ObjectInfo(
                 urdf_path_=os.path.join(
-                    os.getcwd(), "data/models/container/container_sliding_lid.urdf"
+                    base_dir, "data/models/container/container_sliding_lid.urdf"
                 ),
                 init_pos_=np.array([3.5, 0.25, 0.625]),
                 init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
             )
 
             cupboard = Cupboard(
-                world, pos_=[0.0, 2.0, 0.0], orient_=[0.0, 0.0, 0.0, 1.0]
+                world,
+                pos_=[0.0, 2.0, 0.0],
+                orient_=[0.0, 0.0, 0.0, 1.0],
+                base_dir=base_dir,
             )
             self.objects["cupboard"] = cupboard.get_info()
 

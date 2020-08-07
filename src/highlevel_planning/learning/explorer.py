@@ -179,9 +179,7 @@ class Explorer:
         do_complete_sequence=False,
     ):
         found_plan = False
-        for sample_idx in range(
-            self.config_params["max_samples_per_seqequence_length"]
-        ):
+        for sample_idx in range(self.config_params["max_samples_per_sequence_length"]):
             # Restore initial state
             p.restoreState(stateId=self.current_state_id)
 
