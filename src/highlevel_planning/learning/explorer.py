@@ -2,6 +2,7 @@
 import numpy as np
 from copy import deepcopy
 import pybullet as p
+from itertools import product
 
 from highlevel_planning.execution.es_sequential_execution import SequentialExecution
 from highlevel_planning.tools.util import get_combined_aabb
@@ -297,6 +298,7 @@ class Explorer:
                     completed_parameters,
                     precondition_sequence,
                     precondition_parameters,
+                    _,
                 ) = completion_result
             else:
                 # TODO test if this is needed or if we can run this through the completion anyways
@@ -443,7 +445,6 @@ class Explorer:
         return item_list
 
     def _get_items_closeby(self, goal_objects, radius=0.5):
-
         # Get robot position
         temp = p.getBasePositionAndOrientation(self.robot_uid_)
         robot_pos = np.array(temp[0])
@@ -466,6 +467,37 @@ class Explorer:
                 closeby_objects.append(obj)
         return closeby_objects
 
+    def _get_items_closeby2(self, goal_objects, distance_limit=0.5):
+        closeby_objects = set()
+        for obj in self.scene_objects:
+            if obj in goal_objects:
+                continue
+
+            obj_uid = self.scene_objects[obj].model.uid
+            ret = p.getClosestPoints(
+                self.robot_uid_, obj_uid, distance=1.2 * distance_limit
+            )
+            if len(ret) > 0:
+                distances = np.array([r[8] for r in ret])
+                distance = np.min(distances)
+                if distance <= distance_limit:
+                    closeby_objects.add(obj)
+                    continue
+
+            for goal_obj in goal_objects:
+                goal_obj_uid = self.scene_objects[goal_obj].model.uid
+                ret = p.getClosestPoints(
+                    obj_uid, goal_obj_uid, distance=1.2 * distance_limit
+                )
+                if len(ret) == 0:
+                    continue
+                distances = np.array([r[8] for r in ret])
+                distance = np.min(distances)
+                if distance <= distance_limit:
+                    closeby_objects.add(obj)
+                    continue
+        return list(closeby_objects)
+
     def _get_object_position(self, object_name):
         if object_name in self.scene_objects:
             pos, _ = p.getBasePositionAndOrientation(
@@ -480,6 +512,7 @@ class Explorer:
     def complete_sequence(self, sequence, parameters):
         completed_sequence, completed_parameters = list(), list()
         precondition_sequence, precondition_params = list(), list()
+        key_action_indices = [0] * len(sequence)
 
         # Determine initial state
         states = [
@@ -526,9 +559,52 @@ class Explorer:
                 completed_parameters.extend(fill_parameters)
             completed_sequence.append(action_name)
             completed_parameters.append(parameters[action_idx])
+            key_action_indices[action_idx] = len(completed_sequence) - 1
         return (
             completed_sequence,
             completed_parameters,
             precondition_sequence,
             precondition_params,
+            key_action_indices,
         )
+
+    def precondition_discovery(self, relevant_objects, completion_results):
+        # Restore initial state
+        p.restoreState(stateId=self.current_state_id)
+
+        predicate_descriptions = self.knowledge_base.predicate_funcs.descriptions
+
+        # Determine all predicates of objects involved in this action and objects that are close to them
+        relevant_predicates = list()
+        for pred in predicate_descriptions:
+            parameters = predicate_descriptions[pred]
+
+            # Find possible parameter assignments
+            parameter_assignments = list()
+            for param_idx, param in enumerate(parameters):
+                assignments_this_param = list()
+                if param[1] == "robot":
+                    assignments_this_param.append("robot1")
+                else:
+                    for obj in relevant_objects:
+                        if self.knowledge_base.is_type(obj, param[1]):
+                            assignments_this_param.append(obj)
+                parameter_assignments.append(assignments_this_param)
+
+            for parametrization in product(*parameter_assignments):
+                relevant_predicates.append((pred, parametrization))
+
+        # Check the predicates
+        pre_predicates = list()
+        for pred in relevant_predicates:
+            if pred[0] == "in-reach":
+                print("bla")
+            res = self.knowledge_base.predicate_funcs.call[pred[0]](*pred[1])
+            pre_predicates.append(res)
+
+        # Execute up to and including a key action
+        print("bla")
+
+        # Determine same predicates again
+
+        # Take note of the ones that changed
