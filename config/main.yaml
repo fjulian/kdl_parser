@@ -10,6 +10,7 @@ explorer:
   max_failed_samples: 50
   bounding_box_inflation_length: 0.2
   action_denylist: ["nav-in-reach", "nav-at"]
+  predicate_precondition_allowlist: ["inside", "on"]
 robot_arm:
   max_force_magnitude: 150
 grasping:

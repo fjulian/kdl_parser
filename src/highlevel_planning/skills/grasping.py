@@ -131,6 +131,8 @@ class SkillGrasping:
     def compute_grasp(self, target_name, link_idx=0, grasp_id=0):
         obj_info = self.scene.objects[target_name]
         target_id = obj_info.model.uid
+        if len(obj_info.grasp_links) == 0:
+            raise SkillExecutionError("No grasps defined for this object")
         link_id = obj_info.grasp_links[link_idx]
 
         num_grasps = len(obj_info.grasp_pos[link_id])

@@ -520,6 +520,7 @@ class Explorer:
             ("in-reach", "origin", "robot1"),
             ("empty-hand", "robot1"),
         ]
+        # TODO determine the initial state automatically
 
         for action_idx, action_name in enumerate(sequence):
             action_description = self.knowledge_base.actions[action_name]
@@ -569,12 +570,47 @@ class Explorer:
         )
 
     def precondition_discovery(self, relevant_objects, completion_results):
+        (
+            completed_sequence,
+            completed_parameters,
+            precondition_sequence,
+            precondition_params,
+            key_action_indices,
+        ) = completion_results
+
         # Restore initial state
         p.restoreState(stateId=self.current_state_id)
 
-        predicate_descriptions = self.knowledge_base.predicate_funcs.descriptions
+        relevant_predicates = self.determine_relevant_predicates(relevant_objects)
 
-        # Determine all predicates of objects involved in this action and objects that are close to them
+        # Check the predicates
+        pre_predicates = self.measure_predicates(relevant_predicates)
+
+        # Execute the pre-condition sequence
+        res = self._execute_plan(precondition_sequence, precondition_params)
+        if not res:
+            return False
+
+        current_predicates = self.measure_predicates(relevant_predicates)
+        bla = np.logical_xor(current_predicates, pre_predicates)
+        changed_indices = np.nonzero(bla)
+
+        # Execute actions one by one, check for non-effect predicate changes
+        for action in completed_sequence:
+            pass
+
+        # Execute up to and including a key action
+        print("bla")
+
+        # Determine same predicates again
+
+        # Take note of the ones that changed
+
+    def determine_relevant_predicates(self, relevant_objects):
+        """
+        Determine all predicates of objects involved in this action and objects that are close to them
+        """
+        predicate_descriptions = self.knowledge_base.predicate_funcs.descriptions
         relevant_predicates = list()
         for pred in predicate_descriptions:
             parameters = predicate_descriptions[pred]
@@ -593,18 +629,29 @@ class Explorer:
 
             for parametrization in product(*parameter_assignments):
                 relevant_predicates.append((pred, parametrization))
+        return relevant_predicates
 
-        # Check the predicates
-        pre_predicates = list()
-        for pred in relevant_predicates:
-            if pred[0] == "in-reach":
-                print("bla")
+    def measure_predicates(self, predicates):
+        measurements = list()
+        for pred in predicates:
             res = self.knowledge_base.predicate_funcs.call[pred[0]](*pred[1])
-            pre_predicates.append(res)
+            measurements.append(res)
+        return measurements
 
-        # Execute up to and including a key action
-        print("bla")
+    def detect_predicate_changes(
+        self, predicate_definitions, old_predicates, new_predicates
+    ):
+        changed_indices = np.nonzero(np.logical_xor(old_predicates, new_predicates))
+        assert len(changed_indices) == 1
+        changed_indices = changed_indices[0]
+        for idx in changed_indices:
+            predicate_def = predicate_definitions[idx]
+            if (
+                predicate_def[0]
+                not in self.config_params["predicate_precondition_allowlist"]
+            ):
+                continue
 
-        # Determine same predicates again
+            # Check if the last action(s) have this predicate change in their effect list. If yes, ignore.
 
-        # Take note of the ones that changed
+            # If we reach here, this is a candidate for the precondition we are trying to determine.

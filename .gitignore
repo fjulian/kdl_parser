@@ -4,6 +4,7 @@ venv
 *.pkl
 *.bullet
 knowledge/chimera
+knowledge/chimera-test
 *.egg-info
 build/
 dist/
