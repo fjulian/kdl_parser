@@ -76,7 +76,7 @@ class Predicates:
         Arguments:
             target_object (string): The object name, as stated in the scene
                                       file and/or the problem PDDL.
-            robot (RobotArm): The interface class of the robot arm to use.
+            robot_name (RobotArm): The interface class of the robot arm to use.
         
         Returns:
             bool: Whether the object can be grasped from the robot's current position.
@@ -97,7 +97,7 @@ class Predicates:
         
         Args:
             target_pos (list): 3D vector of position to query
-            robot ([type]): [description]
+            robot_name ([type]): [description]
         
         Returns:
             [type]: [description]
@@ -155,17 +155,8 @@ class Predicates:
         contained_uid = self._scene.objects[contained_object].model.uid
         aabb_container = get_combined_aabb(container_uid)
         aabb_contained = get_combined_aabb(contained_uid)
-        pos_contained = np.average(aabb_contained, axis=0)
-
-        # The following two lines were deprecated
-        # pos_contained, _ = p.getBasePositionAndOrientation(contained_uid)
-        # pos_contained = np.array(pos_contained)
-
-        lower_border = np.array(aabb_container[0])
-        upper_border = np.array(aabb_container[1])
-
-        return np.all(np.greater_equal(pos_contained, lower_border)) and np.all(
-            np.less_equal(pos_contained, upper_border)
+        return np.all(np.less_equal(aabb_container[0], aabb_contained[0])) and np.all(
+            np.greater_equal(aabb_container[1], aabb_contained[1])
         )
 
     def on(self, supporting_object, supported_object):

@@ -6,7 +6,7 @@ import pybullet as p
 # Simulation
 from highlevel_planning.sim.world import World
 from highlevel_planning.sim.robot_arm import RobotArm
-from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
+from support.scene_test_1 import SceneTest1
 
 # Skills
 from highlevel_planning.skills.navigate import SkillNavigate
@@ -19,7 +19,6 @@ from highlevel_planning.knowledge.predicates import Predicates
 from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning.learning.explorer import Explorer
 from highlevel_planning.learning.pddl_extender import PDDLExtender
-from highlevel_planning.learning import logic_tools
 
 # Other
 from highlevel_planning.tools.config import ConfigYaml
@@ -27,7 +26,7 @@ from highlevel_planning.tools.config import ConfigYaml
 BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-class TestExplorer(unittest.TestCase):
+class TestPredicates(unittest.TestCase):
     kb = None
 
     @classmethod
@@ -52,15 +51,13 @@ class TestExplorer(unittest.TestCase):
 
         # Add origin
         cls.kb.add_object("origin", "position", np.array([0.0, 0.0, 0.0]))
-        cls.kb.add_object("manual_position1", "position", np.array([2.5, 0.2, 0.8]))
-        cls.kb.add_object("manual_position2", "position", np.array([3.5, -0.25, 0.8]))
         cls.kb.add_object("robot1", "robot")
 
         # -----------------------------------
 
         # Create world
         world = World(style="gui", sleep_=False, load_objects=True)
-        scene = ScenePlanning1(world, BASEDIR, restored_objects=None)
+        scene = SceneTest1(world, BASEDIR, restored_objects=None)
         robot = RobotArm(world, cfg, BASEDIR)
         robot.reset()
         robot.to_start()
@@ -94,94 +91,10 @@ class TestExplorer(unittest.TestCase):
         # Save the state the robot is currently in
         cls.default_state_id = p.saveState()
 
-    def test_sequence_completion(self):
-        sequence = ["grasp", "place"]
-        parameters = [
-            {"obj": "lid1", "rob": "robot1"},
-            {"obj": "cube1", "pos": "origin", "rob": "robot1"},
-        ]
-        completion_result = self.xplorer.complete_sequence(sequence, parameters)
-        self.assertEqual(
-            completion_result[0],
-            [
-                "grasp",
-                "nav-in-reach",
-                "place",
-                "nav-in-reach",
-                "grasp",
-                "nav-in-reach",
-                "place",
-            ],
-        )
-        self.assertEqual(
-            completion_result[1],
-            [
-                {"rob": "robot1", "obj": "lid1"},
-                {"goal_pos": "origin", "rob": "robot1", "current_pos": "lid1"},
-                {"rob": "robot1", "obj": "lid1", "pos": "origin"},
-                {"goal_pos": "cube1", "rob": "robot1", "current_pos": "origin"},
-                {"rob": "robot1", "obj": "cube1"},
-                {"goal_pos": "origin", "rob": "robot1", "current_pos": "cube1"},
-                {"rob": "robot1", "obj": "cube1", "pos": "origin"},
-            ],
-        )
-        self.assertEqual(completion_result[2], ["nav-in-reach"])
-        self.assertEqual(
-            completion_result[3],
-            [{"goal_pos": "lid1", "rob": "robot1", "current_pos": "origin"}],
-        )
-
-    def test_single_action_completion(self):
-        sequence = ["grasp"]
-        parameters = [{"obj": "lid1", "rob": "robot1"}]
-        completion_result = self.xplorer.complete_sequence(sequence, parameters)
-        (
-            completed_sequence,
-            completed_parameters,
-            precondition_sequence,
-            precondition_parameters,
-            _,
-        ) = completion_result
-        sequence_preconds = logic_tools.determine_sequence_preconds(
-            self.kb, sequence, parameters
-        )
-        precondition_plan = self.kb.solve_temp(sequence_preconds)
-        if not precondition_plan:
-            self.assertTrue(False)
-        precondition_sequence2, precondition_parameters2 = precondition_plan
-        self.assertEqual(completed_sequence, sequence)
-        self.assertEqual(completed_parameters, parameters)
-        self.assertEqual(precondition_sequence, precondition_sequence2)
-        self.assertEqual(precondition_parameters, precondition_parameters2)
-
-    def test_precondition_discovery(self):
-        sequence = ["place", "place"]
-        parameters = [
-            {"obj": "lid1", "pos": "manual_position1", "rob": "robot1"},
-            {"obj": "cube1", "pos": "manual_position2", "rob": "robot1"},
-        ]
-        completion_result = self.xplorer.complete_sequence(sequence, parameters)
-
-        goal_objects = ["cube1", "container1"]
-        closeby_objects = self.xplorer._get_items_closeby(goal_objects, 0.5)
-        ret = self.xplorer.precondition_discovery(
-            goal_objects + closeby_objects, completion_result
-        )
-        self.assertIn(("on", ()))
-
-        self.assertTrue(True)
-
-    def test_precondition_position_sampling(self):
-        """
-        Test whether we solved the problem from hlp_logbook 31.08.2020.
-        Position to place the lid before grasping the cube should be sampled.
-        """
-        sequence = ["grasp", "place"]
-        parameters = [
-            {"obj": "lid1", "rob": "robot1"},
-            {"obj": "cube1", "pos": "origin", "rob": "robot1"},
-        ]
-        # TODO implement this and the code that this will test.
+    def test_inside(self):
+        self.assertFalse(self.kb.predicate_funcs.call["inside"]("container1", "cube1"))
+        self.assertTrue(self.kb.predicate_funcs.call["inside"]("container1", "cube2"))
+        self.assertFalse(self.kb.predicate_funcs.call["inside"]("cube2", "container1"))
 
     @classmethod
     def tearDownClass(cls):
