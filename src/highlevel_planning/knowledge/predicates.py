@@ -154,8 +154,12 @@ class Predicates:
         container_uid = self._scene.objects[container_object].model.uid
         contained_uid = self._scene.objects[contained_object].model.uid
         aabb_container = get_combined_aabb(container_uid)
-        pos_contained, _ = p.getBasePositionAndOrientation(contained_uid)
-        pos_contained = np.array(pos_contained)
+        aabb_contained = get_combined_aabb(contained_uid)
+        pos_contained = np.average(aabb_contained, axis=0)
+
+        # The following two lines were deprecated
+        # pos_contained, _ = p.getBasePositionAndOrientation(contained_uid)
+        # pos_contained = np.array(pos_contained)
 
         lower_border = np.array(aabb_container[0])
         upper_border = np.array(aabb_container[1])
