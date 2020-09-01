@@ -14,7 +14,7 @@ from scipy.spatial.transform import Rotation as R
 
 def main():
     # Create world
-    world = World(gui_=True, sleep_=True)
+    world = World(style="shared", sleep_=True)
     scene = ScenePlanning1(world)
 
     # Spawn robot

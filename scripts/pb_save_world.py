@@ -20,7 +20,9 @@ if __name__ == "__main__":
             objects, robot_mdl = pickle.load(pkl_file)
 
     # Create world
-    world = World(gui=True, sleep_=True, load_objects=not restore_existing_objects)
+    world = World(
+        style="shared", sleep_=True, load_objects=not restore_existing_objects
+    )
     scene = ScenePlanning1(world, BASEDIR, restored_objects=objects)
 
     # Spawn robot

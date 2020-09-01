@@ -180,7 +180,7 @@ def main():
 
     # Create world
     world = World(
-        gui=True, sleep_=args.sleep, load_objects=not restore_existing_objects
+        style="shared", sleep_=args.sleep, load_objects=not restore_existing_objects
     )
     scene = ScenePlanning1(world, BASEDIR, restored_objects=objects)
     # scene = SceneMoveSkill(world, restored_objects=objects)

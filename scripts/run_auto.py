@@ -56,14 +56,14 @@ def main():
         help="if given, the simulation will sleep for each update step, to mimic real time execution.",
     )
     parser.add_argument(
-        "-d",
-        "--direct",
-        action="store_true",
-        help="if given, the script will not connect to a simulator GUI, but run in direct mode.",
+        "-m",
+        "--method",
+        action="store",
+        help="determines in which mode to connect to pybullet. Can be 'gui', 'direct' or 'shared'.",
     )
     args = parser.parse_args()
 
-    if args.direct and args.reuse_objects:
+    if args.method == "direct" and args.reuse_objects:
         raise RuntimeError("Cannot reload objects when in direct mode.")
 
     # Load existing simulation data if desired
@@ -105,9 +105,7 @@ def main():
 
     # Create world
     world = World(
-        gui=not args.direct,
-        sleep_=args.sleep,
-        load_objects=not restore_existing_objects,
+        style=args.method, sleep_=args.sleep, load_objects=not restore_existing_objects,
     )
     scene = ScenePlanning1(world, BASEDIR, restored_objects=objects)
 

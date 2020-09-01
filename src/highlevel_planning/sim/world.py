@@ -8,13 +8,16 @@ import atexit
 
 
 class World:
-    def __init__(self, gui=True, sleep_=True, load_objects=True):
+    def __init__(self, style="gui", sleep_=True, load_objects=True):
         self.sleep_flag = sleep_
-        if gui:
-            # self.physics_client = p.connect(p.GUI)
+        if style == "gui":
+            self.physics_client = p.connect(p.GUI)
+        elif style == "shared":
             self.physics_client = p.connect(p.SHARED_MEMORY)
-        else:
+        elif style == "direct":
             self.physics_client = p.connect(p.DIRECT)
+        else:
+            raise ValueError
 
         if load_objects:
             p.resetSimulation(self.physics_client)

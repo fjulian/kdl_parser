@@ -7,7 +7,7 @@ import os
 
 def main():
     # Create world
-    world = World(gui_=True, sleep_=True)
+    world = World(style="gui", sleep_=True)
     world.add_plane()
 
     print(os.getcwd())
