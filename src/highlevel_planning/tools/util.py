@@ -35,9 +35,9 @@ def homogenous_trafo(translation, rotation):
     assert type(translation) is np.ndarray
     assert len(translation) == 3
     assert type(rotation) is R
-    T = np.concatenate((rotation.as_dcm(), translation.reshape(-1, 1)), axis=1)
-    T = np.concatenate((T, np.array([[0.0, 0.0, 0.0, 1.0]])), axis=0)
-    return T
+    t = np.concatenate((rotation.as_dcm(), translation.reshape(-1, 1)), axis=1)
+    t = np.concatenate((t, np.array([[0.0, 0.0, 0.0, 1.0]])), axis=0)
+    return t
 
 
 def pos_and_orient_from_hom_trafo(hom_trafo):
@@ -74,6 +74,16 @@ def get_combined_aabb(uid):
     return aabb_min, aabb_max
 
 
+def get_object_position(object_name, scene_objects, knowledge_base):
+    if object_name in scene_objects:
+        pos, _ = p.getBasePositionAndOrientation(scene_objects[object_name].model.uid)
+        return np.array(pos)
+    elif object_name in knowledge_base.lookup_table:
+        return knowledge_base.lookup_table[object_name]
+    else:
+        raise ValueError("Invalid object")
+
+
 class IKError(Exception):
     pass
 
@@ -89,13 +99,19 @@ class ObjectInfo:
         init_pos_,
         init_orient_,
         init_scale_=1.0,
-        grasp_links_=[],
-        grasp_pos_={},
-        grasp_orient_={},
+        grasp_links_=None,
+        grasp_pos_=None,
+        grasp_orient_=None,
         model_=None,
         nav_angle_=None,
         nav_min_dist_=None,
     ):
+        if grasp_links_ is None:
+            grasp_links_ = list()
+        if grasp_pos_ is None:
+            grasp_pos_ = dict()
+        if grasp_orient_ is None:
+            grasp_orient_ = dict()
         assert type(grasp_pos_) is dict
         assert type(grasp_orient_) is dict
         assert type(grasp_links_) is list

@@ -444,30 +444,7 @@ class Explorer:
                     item_list.append(arg)
         return item_list
 
-    def _get_items_closeby(self, goal_objects, radius=0.5):
-        # Get robot position
-        temp = p.getBasePositionAndOrientation(self.robot_uid_)
-        robot_pos = np.array(temp[0])
-        interest_locations = np.array([robot_pos])
-
-        # Get positions of objects that are in the goal description
-        for obj in goal_objects:
-            interest_locations = np.vstack(
-                (interest_locations, self._get_object_position(obj))
-            )
-
-        # Add scene objects that are close to interest locations
-        closeby_objects = list()
-        for obj in self.scene_objects:
-            if obj in goal_objects:
-                continue
-            obj_pos = self._get_object_position(obj)
-            distances = np.linalg.norm(interest_locations - obj_pos, axis=1)
-            if np.any(distances < radius):
-                closeby_objects.append(obj)
-        return closeby_objects
-
-    def _get_items_closeby2(self, goal_objects, distance_limit=0.5):
+    def _get_items_closeby(self, goal_objects, distance_limit=0.5):
         closeby_objects = set()
         for obj in self.scene_objects:
             if obj in goal_objects:
@@ -495,19 +472,7 @@ class Explorer:
                 distance = np.min(distances)
                 if distance <= distance_limit:
                     closeby_objects.add(obj)
-                    continue
         return list(closeby_objects)
-
-    def _get_object_position(self, object_name):
-        if object_name in self.scene_objects:
-            pos, _ = p.getBasePositionAndOrientation(
-                self.scene_objects[object_name].model.uid
-            )
-            return np.array(pos)
-        elif object_name in self.knowledge_base.lookup_table:
-            return self.knowledge_base.lookup_table[object_name]
-        else:
-            raise ValueError("Invalid object")
 
     def complete_sequence(self, sequence, parameters):
         completed_sequence, completed_parameters = list(), list()
