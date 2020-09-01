@@ -1,12 +1,10 @@
 import numpy as np
 import os
-from highlevel_planning.tools.util import rotate_orient, ObjectInfo
 from highlevel_planning.sim.scene_base import SceneBase
-from highlevel_planning.sim.cupboard import Cupboard
-import pybullet as p
+from highlevel_planning.tools.util import rotate_orient, ObjectInfo
 
 
-class ScenePlanning1(object, SceneBase):
+class SceneTest1(SceneBase):
     def __init__(self, world, base_dir, restored_objects=None):
         SceneBase.__init__(self, world, base_dir, restored_objects)
 
@@ -22,7 +20,6 @@ class ScenePlanning1(object, SceneBase):
             self.objects["cube1"] = ObjectInfo(
                 urdf_path_="cube_small.urdf",
                 init_pos_=np.array([2.5, 0.0, 0.7]),
-                # init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
                 init_orient_=rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "z", -20.0),
                 grasp_links_=[-1],
                 grasp_pos_={-1: [np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0])]},
@@ -40,40 +37,17 @@ class ScenePlanning1(object, SceneBase):
                 init_pos_=np.array([3.5, -0.25, 0.625]),
                 init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
             )
-            self.objects["lid1"] = ObjectInfo(
-                urdf_path_=os.path.join(base_dir, "data/models/container/lid.urdf"),
-                init_pos_=np.array([3.5, -0.25, 0.775]),
-                init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
-                grasp_pos_={5: [np.array([0.0, 0.0, 0.0])]},
+            self.objects["cube2"] = ObjectInfo(
+                urdf_path_="cube_small.urdf",
+                init_pos_=np.array([3.5, -0.25, 0.77]),
+                init_orient_=rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "z", -20.0),
+                grasp_links_=[-1],
+                grasp_pos_={-1: [np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0])]},
                 grasp_orient_={
-                    5: [rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "y", 90)]
+                    -1: [
+                        np.array([0.0, 0.0, 0.0, 1.0]),
+                        rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "y", -25.0),
+                    ]
                 },
-                grasp_links_=[5],
             )
-            self.objects["container2"] = ObjectInfo(
-                urdf_path_=os.path.join(
-                    base_dir, "data/models/container/container_sliding_lid.urdf"
-                ),
-                init_pos_=np.array([3.5, 0.25, 0.625]),
-                init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
-            )
-
-            cupboard = Cupboard(
-                world,
-                pos_=[0.0, 2.0, 0.0],
-                orient_=[0.0, 0.0, 0.0, 1.0],
-                base_dir=base_dir,
-            )
-            self.objects["cupboard"] = cupboard.get_info()
-
             self.add_objects()
-
-    def add_objects(self):
-        SceneBase.add_objects(self)
-
-        # Set object-specific properties
-        p.changeDynamics(
-            self.objects["lid1"].model.uid,
-            self.objects["lid1"].model.link_name_to_index["handle"],
-            lateralFriction=1.0,
-        )

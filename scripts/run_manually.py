@@ -1,7 +1,6 @@
 from highlevel_planning.sim.world import World
 from highlevel_planning.sim.robot_arm import RobotArm
 
-from highlevel_planning.sim.scene_tossing import SceneTossing
 from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
 from highlevel_planning.sim.scene_move_skill import SceneMoveSkill
 from highlevel_planning.skills.navigate import SkillNavigate
