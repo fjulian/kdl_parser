@@ -20,6 +20,8 @@ from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning.learning.explorer import Explorer
 from highlevel_planning.learning.pddl_extender import PDDLExtender
 from highlevel_planning.learning import logic_tools
+from highlevel_planning.learning.precondition_discovery import precondition_discovery
+from highlevel_planning.learning.sequence_completion import complete_sequence
 
 # Other
 from highlevel_planning.tools.config import ConfigYaml
@@ -100,7 +102,7 @@ class TestExplorer(unittest.TestCase):
             {"obj": "lid1", "rob": "robot1"},
             {"obj": "cube1", "pos": "origin", "rob": "robot1"},
         ]
-        completion_result = self.xplorer.complete_sequence(sequence, parameters)
+        completion_result = complete_sequence(sequence, parameters, self.kb)
         self.assertEqual(
             completion_result[0],
             [
@@ -134,7 +136,7 @@ class TestExplorer(unittest.TestCase):
     def test_single_action_completion(self):
         sequence = ["grasp"]
         parameters = [{"obj": "lid1", "rob": "robot1"}]
-        completion_result = self.xplorer.complete_sequence(sequence, parameters)
+        completion_result = complete_sequence(sequence, parameters, self.kb)
         (
             completed_sequence,
             completed_parameters,
@@ -160,12 +162,12 @@ class TestExplorer(unittest.TestCase):
             {"obj": "lid1", "pos": "manual_position1", "rob": "robot1"},
             {"obj": "cube1", "pos": "manual_position2", "rob": "robot1"},
         ]
-        completion_result = self.xplorer.complete_sequence(sequence, parameters)
+        completion_result = complete_sequence(sequence, parameters, self.kb)
 
         goal_objects = ["cube1", "container1"]
         closeby_objects = self.xplorer._get_items_closeby(goal_objects, 0.5)
-        ret = self.xplorer.precondition_discovery(
-            goal_objects + closeby_objects, completion_result
+        ret = precondition_discovery(
+            goal_objects + closeby_objects, completion_result, self.xplorer
         )
         self.assertIn(("on", ("container1", "lid1")), ret)
 

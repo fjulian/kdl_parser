@@ -1,12 +1,11 @@
 # Imports
 import numpy as np
-from copy import deepcopy
 import pybullet as p
-from itertools import product
 
 from highlevel_planning.execution.es_sequential_execution import SequentialExecution
 from highlevel_planning.tools.util import get_combined_aabb
 from highlevel_planning.learning import logic_tools
+from highlevel_planning.learning.sequence_completion import complete_sequence
 
 
 class Explorer:
@@ -292,7 +291,7 @@ class Explorer:
 
             if given_seq is None or do_complete_sequence:
                 # Fill in the gaps of the sequence to make it feasible
-                completion_result = self.complete_sequence(seq, params)
+                completion_result = complete_sequence(seq, params, self.knowledge_base)
                 if completion_result is False:
                     continue
                 (
@@ -475,189 +474,3 @@ class Explorer:
                 if distance <= distance_limit:
                     closeby_objects.add(obj)
         return list(closeby_objects)
-
-    def complete_sequence(self, sequence, parameters):
-        completed_sequence, completed_parameters = list(), list()
-        precondition_sequence, precondition_params = list(), list()
-        key_action_indices = [0] * len(sequence)
-
-        # Determine initial state
-        states = [
-            ("at", "origin", "robot1"),
-            ("in-reach", "origin", "robot1"),
-            ("empty-hand", "robot1"),
-        ]
-        # TODO determine the initial state automatically
-
-        for action_idx, action_name in enumerate(sequence):
-            action_description = self.knowledge_base.actions[action_name]
-            goals = action_description["preconds"]
-            parameterized_goals = logic_tools.parametrize_predicate_list(
-                goals, parameters[action_idx]
-            )
-
-            # Find sequence that makes this action possible
-            plan = self.knowledge_base.solve_temp(
-                parameterized_goals, initial_predicates=states
-            )
-            if plan is False:
-                return False
-
-            # Parse sequence
-            fill_sequence, fill_parameters = plan
-            fill_sequence_effects = logic_tools.determine_sequence_effects(
-                self.knowledge_base, fill_sequence, fill_parameters
-            )
-
-            # Apply fill sequence to current state
-            logic_tools.apply_effects_to_state(states, fill_sequence_effects)
-
-            # Apply actual action to current state
-            parameterized_effects = logic_tools.parametrize_predicate_list(
-                action_description["effects"], parameters[action_idx]
-            )
-            logic_tools.apply_effects_to_state(states, parameterized_effects)
-
-            # Save the sequence extension
-            if action_idx == 0:
-                precondition_sequence = deepcopy(fill_sequence)
-                precondition_params = deepcopy(fill_parameters)
-            else:
-                completed_sequence.extend(fill_sequence)
-                completed_parameters.extend(fill_parameters)
-            completed_sequence.append(action_name)
-            completed_parameters.append(parameters[action_idx])
-            key_action_indices[action_idx] = len(completed_sequence) - 1
-        return (
-            completed_sequence,
-            completed_parameters,
-            precondition_sequence,
-            precondition_params,
-            key_action_indices,
-        )
-
-    def precondition_discovery(self, relevant_objects, completion_results):
-        precondition_candidates = list()
-
-        (
-            completed_sequence,
-            completed_parameters,
-            precondition_sequence,
-            precondition_params,
-            key_action_indices,
-        ) = completion_results
-
-        # Restore initial state
-        p.restoreState(stateId=self.current_state_id)
-
-        relevant_predicates = self.determine_relevant_predicates(relevant_objects)
-
-        # Check the predicates
-        pre_predicates = self.measure_predicates(relevant_predicates)
-
-        # Execute the pre-condition sequence
-        res = self._execute_plan(precondition_sequence, precondition_params)
-        if not res:
-            return False
-
-        current_predicates = self.measure_predicates(relevant_predicates)
-        new_side_effects = self.detect_predicate_changes(
-            relevant_predicates,
-            pre_predicates,
-            current_predicates,
-            precondition_sequence,
-            precondition_params,
-        )
-        precondition_candidates.extend(new_side_effects)
-
-        # Execute actions one by one, check for non-effect predicate changes
-        for idx, action in enumerate(completed_sequence):
-            pre_predicates = deepcopy(current_predicates)
-            res = self._execute_plan([action], [completed_parameters[idx]])
-            if not res:
-                return False
-            current_predicates = self.measure_predicates(relevant_predicates)
-            new_side_effects = self.detect_predicate_changes(
-                relevant_predicates,
-                pre_predicates,
-                current_predicates,
-                [action],
-                [completed_parameters[idx]],
-            )
-            precondition_candidates.extend(new_side_effects)
-        return precondition_candidates
-
-    def determine_relevant_predicates(self, relevant_objects):
-        """
-        Determine all predicates of objects involved in this action and objects that are close to them
-        """
-        predicate_descriptions = self.knowledge_base.predicate_funcs.descriptions
-        relevant_predicates = list()
-        for pred in predicate_descriptions:
-            parameters = predicate_descriptions[pred]
-
-            # Find possible parameter assignments
-            parameter_assignments = list()
-            for param_idx, param in enumerate(parameters):
-                assignments_this_param = list()
-                if param[1] == "robot":
-                    assignments_this_param.append("robot1")
-                else:
-                    for obj in relevant_objects:
-                        if self.knowledge_base.is_type(obj, param[1]):
-                            assignments_this_param.append(obj)
-                parameter_assignments.append(assignments_this_param)
-
-            for parametrization in product(*parameter_assignments):
-                relevant_predicates.append((pred, parametrization))
-        return relevant_predicates
-
-    def measure_predicates(self, predicates):
-        measurements = list()
-        for pred in predicates:
-            res = self.knowledge_base.predicate_funcs.call[pred[0]](*pred[1])
-            measurements.append(res)
-        return measurements
-
-    def detect_predicate_changes(
-        self,
-        predicate_definitions,
-        old_predicates,
-        new_predicates,
-        action_sequence,
-        action_parameters,
-    ):
-        side_effects = list()
-
-        changed_indices = np.nonzero(np.logical_xor(old_predicates, new_predicates))
-        assert len(changed_indices) == 1
-        changed_indices = changed_indices[0]
-        for idx in changed_indices:
-            predicate_def = predicate_definitions[idx]
-            if (
-                predicate_def[0]
-                not in self.config_params["predicate_precondition_allowlist"]
-            ):
-                continue
-            predicate_state = new_predicates[idx]
-
-            # Check if the last action(s) have this predicate change in their effect list. If yes, ignore.
-            predicate_expected = False
-            for action_idx, action in enumerate(action_sequence):
-                action_descr = self.knowledge_base.actions[action]
-                for effect in action_descr["effects"]:
-                    if (
-                        effect[0] == predicate_def[0]
-                        and effect[1] == predicate_state
-                        and effect[2] == action_parameters[action_idx]
-                    ):
-                        predicate_expected = True
-                        break
-                if predicate_expected:
-                    break
-            if predicate_expected:
-                continue
-
-            # If we reach here, this is a candidate for the precondition we are trying to determine.
-            side_effects.append(predicate_def)
-        return side_effects
