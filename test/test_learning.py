@@ -52,12 +52,14 @@ class TestExplorer(unittest.TestCase):
 
         # Add origin
         cls.kb.add_object("origin", "position", np.array([0.0, 0.0, 0.0]))
+        cls.kb.add_object("manual_position1", "position", np.array([2.5, 0.2, 0.8]))
+        cls.kb.add_object("manual_position2", "position", np.array([3.5, -0.25, 0.8]))
         cls.kb.add_object("robot1", "robot")
 
         # -----------------------------------
 
         # Create world
-        world = World(gui=False, sleep_=False, load_objects=True)
+        world = World(style="gui", sleep_=False, load_objects=True)
         scene = ScenePlanning1(world, BASEDIR, restored_objects=None)
         robot = RobotArm(world, cfg, BASEDIR)
         robot.reset()
@@ -153,18 +155,31 @@ class TestExplorer(unittest.TestCase):
         self.assertEqual(precondition_parameters, precondition_parameters2)
 
     def test_precondition_discovery(self):
+        sequence = ["place", "place"]
+        parameters = [
+            {"obj": "lid1", "pos": "manual_position1", "rob": "robot1"},
+            {"obj": "cube1", "pos": "manual_position2", "rob": "robot1"},
+        ]
+        completion_result = self.xplorer.complete_sequence(sequence, parameters)
+
+        goal_objects = ["cube1", "container1"]
+        closeby_objects = self.xplorer._get_items_closeby(goal_objects, 0.5)
+        ret = self.xplorer.precondition_discovery(
+            goal_objects + closeby_objects, completion_result
+        )
+        self.assertIn(("on", ("container1", "lid1")), ret)
+
+    def test_precondition_position_sampling(self):
+        """
+        Test whether we solved the problem from hlp_logbook 31.08.2020.
+        Position to place the lid before grasping the cube should be sampled.
+        """
         sequence = ["grasp", "place"]
         parameters = [
             {"obj": "lid1", "rob": "robot1"},
             {"obj": "cube1", "pos": "origin", "rob": "robot1"},
         ]
-        completion_result = self.xplorer.complete_sequence(sequence, parameters)
-
-        goal_objects = ["cube1", "container1"]
-        closeby_objects = self.xplorer._get_items_closeby2(goal_objects, 0.5)
-        self.xplorer.precondition_discovery(closeby_objects, completion_result)
-
-        self.assertTrue(True)
+        # TODO implement this and the code that this will test.
 
     @classmethod
     def tearDownClass(cls):

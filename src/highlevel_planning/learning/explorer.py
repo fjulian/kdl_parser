@@ -53,7 +53,9 @@ class Explorer:
             res = self._explore_generalized_action(goal_objects, sequences_tried)
         for radius in radii:
             if not res:
-                closeby_objects = self._get_items_closeby(goal_objects, radius=radius)
+                closeby_objects = self._get_items_closeby(
+                    goal_objects, distance_limit=radius
+                )
                 res = self._explore_goal_objects(
                     sequences_tried, goal_objects + closeby_objects
                 )
@@ -535,6 +537,8 @@ class Explorer:
         )
 
     def precondition_discovery(self, relevant_objects, completion_results):
+        precondition_candidates = list()
+
         (
             completed_sequence,
             completed_parameters,
@@ -557,19 +561,31 @@ class Explorer:
             return False
 
         current_predicates = self.measure_predicates(relevant_predicates)
-        bla = np.logical_xor(current_predicates, pre_predicates)
-        changed_indices = np.nonzero(bla)
+        new_side_effects = self.detect_predicate_changes(
+            relevant_predicates,
+            pre_predicates,
+            current_predicates,
+            precondition_sequence,
+            precondition_params,
+        )
+        precondition_candidates.extend(new_side_effects)
 
         # Execute actions one by one, check for non-effect predicate changes
-        for action in completed_sequence:
-            pass
-
-        # Execute up to and including a key action
-        print("bla")
-
-        # Determine same predicates again
-
-        # Take note of the ones that changed
+        for idx, action in enumerate(completed_sequence):
+            pre_predicates = deepcopy(current_predicates)
+            res = self._execute_plan([action], [completed_parameters[idx]])
+            if not res:
+                return False
+            current_predicates = self.measure_predicates(relevant_predicates)
+            new_side_effects = self.detect_predicate_changes(
+                relevant_predicates,
+                pre_predicates,
+                current_predicates,
+                [action],
+                [completed_parameters[idx]],
+            )
+            precondition_candidates.extend(new_side_effects)
+        return precondition_candidates
 
     def determine_relevant_predicates(self, relevant_objects):
         """
@@ -604,8 +620,15 @@ class Explorer:
         return measurements
 
     def detect_predicate_changes(
-        self, predicate_definitions, old_predicates, new_predicates
+        self,
+        predicate_definitions,
+        old_predicates,
+        new_predicates,
+        action_sequence,
+        action_parameters,
     ):
+        side_effects = list()
+
         changed_indices = np.nonzero(np.logical_xor(old_predicates, new_predicates))
         assert len(changed_indices) == 1
         changed_indices = changed_indices[0]
@@ -616,7 +639,25 @@ class Explorer:
                 not in self.config_params["predicate_precondition_allowlist"]
             ):
                 continue
+            predicate_state = new_predicates[idx]
 
             # Check if the last action(s) have this predicate change in their effect list. If yes, ignore.
+            predicate_expected = False
+            for action_idx, action in enumerate(action_sequence):
+                action_descr = self.knowledge_base.actions[action]
+                for effect in action_descr["effects"]:
+                    if (
+                        effect[0] == predicate_def[0]
+                        and effect[1] == predicate_state
+                        and effect[2] == action_parameters[action_idx]
+                    ):
+                        predicate_expected = True
+                        break
+                if predicate_expected:
+                    break
+            if predicate_expected:
+                continue
 
             # If we reach here, this is a candidate for the precondition we are trying to determine.
+            side_effects.append(predicate_def)
+        return side_effects
