@@ -73,7 +73,7 @@ class Explorer:
                 sequences_tried,
                 given_seq=demo_sequence,
                 given_params=demo_parameters,
-                relevant_objects=relevant_objects,  # TODO check if it actually makes sense that we only sample goal actions here
+                relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions here
                 do_complete_sequence=True,
             )
             if found_plan:
@@ -141,7 +141,7 @@ class Explorer:
                 sequences_tried,
                 given_seq=relevant_sequence,
                 given_params=fixed_parameters,
-                relevant_objects=relevant_objects,  # TODO check if it actually makes sense that we only sample goal actions here
+                relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions here
             )
             if found_plan:
                 break
@@ -206,7 +206,7 @@ class Explorer:
             # count_seq_found[seq_len - 1] += 1
 
             # Found a feasible action sequence. Now test it.
-            preplan_success = self._execute_plan(
+            preplan_success = self.execute_plan(
                 precondition_sequence, precondition_parameters
             )
             if not preplan_success:
@@ -214,7 +214,7 @@ class Explorer:
             print("Preplan SUCCESS")
 
             # Try actual plan
-            plan_success = self._execute_plan(completed_sequence, completed_parameters)
+            plan_success = self.execute_plan(completed_sequence, completed_parameters)
             if not plan_success:
                 continue
             print("Sequence SUCCESS")
@@ -291,7 +291,9 @@ class Explorer:
 
             if given_seq is None or do_complete_sequence:
                 # Fill in the gaps of the sequence to make it feasible
-                completion_result = complete_sequence(seq, params, self.knowledge_base)
+                completion_result = complete_sequence(
+                    seq, params, relevant_objects, self
+                )
                 if completion_result is False:
                     continue
                 (
@@ -371,7 +373,7 @@ class Explorer:
                 else:
                     # Sample a value for this parameter
                     if self.knowledge_base.type_x_child_of_y(obj_type, "position"):
-                        position = self._sample_position(relevant_objects)
+                        position = self.sample_position(relevant_objects)
                         obj_sample = self.knowledge_base.add_temp_object(
                             object_type=obj_type, object_value=position
                         )
@@ -393,7 +395,7 @@ class Explorer:
             parameter_samples_tuples[idx_action] = tuple(parameters_current_action)
         return parameter_samples, parameter_samples_tuples
 
-    def _sample_position(self, relevant_objects):
+    def sample_position(self, relevant_objects):
         # Choose one goal object next to which to sample
         obj_sample = np.random.choice(relevant_objects)
         uid = self.scene_objects[obj_sample].model.uid
@@ -419,7 +421,7 @@ class Explorer:
 
     # ----- Other tools ------------------------------------
 
-    def _execute_plan(self, sequence, parameters):
+    def execute_plan(self, sequence, parameters):
         es = SequentialExecution(
             self.skill_set, sequence, parameters, self.knowledge_base
         )

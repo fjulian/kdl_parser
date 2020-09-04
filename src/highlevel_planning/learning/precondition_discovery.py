@@ -26,7 +26,7 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
     pre_predicates = measure_predicates(relevant_predicates, explorer.knowledge_base)
 
     # Execute the pre-condition sequence
-    res = explorer._execute_plan(precondition_sequence, precondition_params)
+    res = explorer.execute_plan(precondition_sequence, precondition_params)
     if not res:
         return False
 
@@ -46,7 +46,7 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
     # Execute actions one by one, check for non-effect predicate changes
     for idx, action in enumerate(completed_sequence):
         pre_predicates = deepcopy(current_predicates)
-        res = explorer._execute_plan([action], [completed_parameters[idx]])
+        res = explorer.execute_plan([action], [completed_parameters[idx]])
         if not res:
             return False
         current_predicates = measure_predicates(
@@ -61,6 +61,9 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
             explorer,
         )
         precondition_candidates.extend(new_side_effects)
+
+    # TODO filter out goal attributes
+
     return precondition_candidates
 
 

@@ -61,7 +61,7 @@ class TestExplorer(unittest.TestCase):
         # -----------------------------------
 
         # Create world
-        world = World(style="gui", sleep_=False, load_objects=True)
+        world = World(style="direct", sleep_=False, load_objects=True)
         scene = ScenePlanning1(world, BASEDIR, restored_objects=None)
         robot = RobotArm(world, cfg, BASEDIR)
         robot.reset()
@@ -102,7 +102,12 @@ class TestExplorer(unittest.TestCase):
             {"obj": "lid1", "rob": "robot1"},
             {"obj": "cube1", "pos": "origin", "rob": "robot1"},
         ]
-        completion_result = complete_sequence(sequence, parameters, self.kb)
+        goal_objects = ["cube1", "container1"]
+        closeby_objects = self.xplorer._get_items_closeby(goal_objects, 0.5)
+        relevant_objects = goal_objects + closeby_objects
+        completion_result = complete_sequence(
+            sequence, parameters, relevant_objects, self.xplorer
+        )
         self.assertEqual(
             completion_result[0],
             [
@@ -136,7 +141,12 @@ class TestExplorer(unittest.TestCase):
     def test_single_action_completion(self):
         sequence = ["grasp"]
         parameters = [{"obj": "lid1", "rob": "robot1"}]
-        completion_result = complete_sequence(sequence, parameters, self.kb)
+        goal_objects = ["lid1"]
+        closeby_objects = self.xplorer._get_items_closeby(goal_objects, 0.5)
+        relevant_objects = goal_objects + closeby_objects
+        completion_result = complete_sequence(
+            sequence, parameters, relevant_objects, self.xplorer
+        )
         (
             completed_sequence,
             completed_parameters,
@@ -162,13 +172,14 @@ class TestExplorer(unittest.TestCase):
             {"obj": "lid1", "pos": "manual_position1", "rob": "robot1"},
             {"obj": "cube1", "pos": "manual_position2", "rob": "robot1"},
         ]
-        completion_result = complete_sequence(sequence, parameters, self.kb)
 
         goal_objects = ["cube1", "container1"]
         closeby_objects = self.xplorer._get_items_closeby(goal_objects, 0.5)
-        ret = precondition_discovery(
-            goal_objects + closeby_objects, completion_result, self.xplorer
+        relevant_objects = goal_objects + closeby_objects
+        completion_result = complete_sequence(
+            sequence, parameters, relevant_objects, self.xplorer
         )
+        ret = precondition_discovery(relevant_objects, completion_result, self.xplorer)
         self.assertIn(("on", ("container1", "lid1")), ret)
 
     def test_precondition_position_sampling(self):
@@ -179,8 +190,14 @@ class TestExplorer(unittest.TestCase):
         sequence = ["grasp", "place"]
         parameters = [
             {"obj": "lid1", "rob": "robot1"},
-            {"obj": "cube1", "pos": "origin", "rob": "robot1"},
+            {"obj": "cube1", "pos": "manual_position2", "rob": "robot1"},
         ]
+        goal_objects = ["cube1", "container1"]
+        closeby_objects = self.xplorer._get_items_closeby(goal_objects, 0.5)
+        relevant_objects = goal_objects + closeby_objects
+        completion_result = complete_sequence(
+            sequence, parameters, relevant_objects, self.xplorer
+        )
         # TODO implement this and the code that this will test.
 
     @classmethod
