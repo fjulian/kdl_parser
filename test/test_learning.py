@@ -97,6 +97,7 @@ class TestExplorer(unittest.TestCase):
         cls.default_state_id = p.saveState()
 
     def test_sequence_completion(self):
+        self.kb.clear_temp()
         sequence = ["grasp", "place"]
         parameters = [
             {"obj": "lid1", "rob": "robot1"},
@@ -124,9 +125,17 @@ class TestExplorer(unittest.TestCase):
             completion_result[1],
             [
                 {"rob": "robot1", "obj": "lid1"},
-                {"goal_pos": "origin", "rob": "robot1", "current_pos": "lid1"},
-                {"rob": "robot1", "obj": "lid1", "pos": "origin"},
-                {"goal_pos": "cube1", "rob": "robot1", "current_pos": "origin"},
+                {
+                    "goal_pos": "navgoal_sample_1",
+                    "rob": "robot1",
+                    "current_pos": "lid1",
+                },
+                {"rob": "robot1", "obj": "lid1", "pos": "navgoal_sample_1"},
+                {
+                    "goal_pos": "cube1",
+                    "rob": "robot1",
+                    "current_pos": "navgoal_sample_1",
+                },
                 {"rob": "robot1", "obj": "cube1"},
                 {"goal_pos": "origin", "rob": "robot1", "current_pos": "cube1"},
                 {"rob": "robot1", "obj": "cube1", "pos": "origin"},
@@ -139,6 +148,7 @@ class TestExplorer(unittest.TestCase):
         )
 
     def test_single_action_completion(self):
+        self.kb.clear_temp()
         sequence = ["grasp"]
         parameters = [{"obj": "lid1", "rob": "robot1"}]
         goal_objects = ["lid1"]
@@ -167,6 +177,7 @@ class TestExplorer(unittest.TestCase):
         self.assertEqual(precondition_parameters, precondition_parameters2)
 
     def test_precondition_discovery(self):
+        self.kb.clear_temp()
         sequence = ["place", "place"]
         parameters = [
             {"obj": "lid1", "pos": "manual_position1", "rob": "robot1"},
@@ -187,6 +198,7 @@ class TestExplorer(unittest.TestCase):
         Test whether we solved the problem from hlp_logbook 31.08.2020.
         Position to place the lid before grasping the cube should be sampled.
         """
+        self.kb.clear_temp()
         sequence = ["grasp", "place"]
         parameters = [
             {"obj": "lid1", "rob": "robot1"},
@@ -198,7 +210,43 @@ class TestExplorer(unittest.TestCase):
         completion_result = complete_sequence(
             sequence, parameters, relevant_objects, self.xplorer
         )
-        # TODO implement this and the code that this will test.
+        print("bla")
+        self.assertEqual(
+            completion_result[0],
+            [
+                "grasp",
+                "nav-in-reach",
+                "place",
+                "nav-in-reach",
+                "grasp",
+                "nav-in-reach",
+                "place",
+            ],
+        )
+        self.assertEqual(
+            completion_result[1],
+            [
+                {"rob": "robot1", "obj": "lid1"},
+                {
+                    "goal_pos": "navgoal_sample_1",
+                    "rob": "robot1",
+                    "current_pos": "lid1",
+                },
+                {"rob": "robot1", "obj": "lid1", "pos": "navgoal_sample_1"},
+                {
+                    "goal_pos": "cube1",
+                    "rob": "robot1",
+                    "current_pos": "navgoal_sample_1",
+                },
+                {"rob": "robot1", "obj": "cube1"},
+                {
+                    "goal_pos": "manual_position2",
+                    "rob": "robot1",
+                    "current_pos": "cube1",
+                },
+                {"rob": "robot1", "obj": "cube1", "pos": "manual_position2"},
+            ],
+        )
 
     @classmethod
     def tearDownClass(cls):
