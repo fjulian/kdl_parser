@@ -1,16 +1,14 @@
 from highlevel_planning.sim.world import World
 from highlevel_planning.sim.robot_arm import RobotArm
 
-from highlevel_planning.sim.scene_tossing import SceneTossing
 from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
 from highlevel_planning.sim.scene_move_skill import SceneMoveSkill
-
 from highlevel_planning.skills.navigate import SkillNavigate
 from highlevel_planning.skills.grasping import SkillGrasping
 from highlevel_planning.skills.placing import SkillPlacing
 from highlevel_planning.skills.move import SkillMove
-
 from highlevel_planning.knowledge.predicates import Predicates
+from highlevel_planning.tools.config import ConfigYaml
 
 import pybullet as p
 import numpy as np
@@ -20,6 +18,8 @@ import os
 
 import argparse
 
+BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 def drawer_example(sk_grasp, sk_nav, robot, scene, world):
     # Run move skill
@@ -28,7 +28,7 @@ def drawer_example(sk_grasp, sk_nav, robot, scene, world):
     print(robot.get_wrist_force_torque())
 
     # Grasp the cupboard handle
-    res = sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
+    res = sk_grasp.grasp_object("cupboard", link_idx=3)
     if not res:
         print("Grasping the handle failed.")
         return
@@ -50,7 +50,7 @@ def drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene):
     sk_nav.move_to_object("cupboard", nav_min_dist=1.0)
 
     # Grasp the cupboard handle
-    res = sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
+    res = sk_grasp.grasp_object("cupboard", link_idx=3)
     if not res:
         print("Grasping the handle failed.")
         return
@@ -64,16 +64,18 @@ def drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene):
     robot.to_start()
 
 
-def cube_example(sk_grasp, sk_nav, robot, scene, sk_place):
+def grasp_example(
+    sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1", link_idx=0
+):
     # Run move skill
-    sk_nav.move_to_object("cube1")
+    sk_nav.move_to_object(object_name)
 
     print("empty hand:")
     robot._world.step_seconds(1.0)
     print(robot.get_wrist_force_torque())
 
-    # Grasp the cube
-    sk_grasp.grasp_object("cube1")
+    # Grasp the object
+    sk_grasp.grasp_object(object_name, link_idx=link_idx, grasp_id=0)
 
     robot.to_start()
     print("after homing:")
@@ -104,7 +106,9 @@ def cube_example(sk_grasp, sk_nav, robot, scene, sk_place):
     # print(robot.get_wrist_force())
 
     # Place cube somewhere else
-    sk_place.place_object(scene.objects["cube1"].init_pos + np.array([0.0, 0.2, -0.09]))
+    sk_place.place_object(
+        scene.objects[object_name].init_pos + np.array([0.0, 0.2, -0.09])
+    )
 
 
 def navigate_with_cube(sk_nav, sk_grasp):
@@ -152,6 +156,12 @@ def main():
         action="store_true",
         help="if given, the simulation does not reload objects. Objects must already be present.",
     )
+    parser.add_argument(
+        "-s",
+        "--sleep",
+        action="store_true",
+        help="if given, the simulation will sleep for each update step, to mimic real time execution.",
+    )
     args = parser.parse_args()
 
     # Load existing simulation data if desired
@@ -159,20 +169,27 @@ def main():
     objects = None
     robot_mdl = None
     if restore_existing_objects:
-        with open("data/sim/objects.pkl", "rb") as pkl_file:
+        with open(
+            os.path.join(BASEDIR, "data", "sim", "objects.pkl"), "rb"
+        ) as pkl_file:
             objects, robot_mdl = pickle.load(pkl_file)
 
+    # Load config file
+    cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
+
     # Create world
-    world = World(gui_=True, sleep_=False, load_objects=not restore_existing_objects)
-    scene = ScenePlanning1(world, restored_objects=objects)
+    world = World(
+        style="shared", sleep_=args.sleep, load_objects=not restore_existing_objects
+    )
+    scene = ScenePlanning1(world, BASEDIR, restored_objects=objects)
     # scene = SceneMoveSkill(world, restored_objects=objects)
 
     # Spawn robot
-    robot = RobotArm(world, robot_mdl)
+    robot = RobotArm(world, cfg, BASEDIR, robot_mdl)
     robot.reset()
 
     # Set up skills
-    sk_grasp = SkillGrasping(scene, robot)
+    sk_grasp = SkillGrasping(scene, robot, cfg)
     sk_place = SkillPlacing(scene, robot)
     sk_nav = SkillNavigate(scene, robot)
     sk_move = SkillMove(scene, robot, 0.02, world.T_s)
@@ -182,7 +199,7 @@ def main():
 
     # Save world
     if not restore_existing_objects:
-        savedir = os.path.join(os.getcwd(), "data", "sim")
+        savedir = os.path.join(BASEDIR, "data", "sim")
         if not os.path.isdir(savedir):
             os.makedirs(savedir)
         with open(os.path.join(savedir, "objects.pkl"), "wb") as output:
@@ -193,9 +210,10 @@ def main():
 
     # drawer_example(sk_grasp, sk_nav, robot, scene, world)
 
-    drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
+    # drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
 
-    # cube_example(sk_grasp, sk_nav, robot, scene, sk_place)
+    # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1")
+    grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lid1")
 
     # drive_example(robot, world)
 

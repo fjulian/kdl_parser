@@ -1,9 +1,6 @@
 import unittest
 import py_trees
 
-import sys
-from os import path
-
 from highlevel_planning.execution.custom_chooser import CustomChooser
 
 

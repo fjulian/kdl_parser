@@ -4,41 +4,45 @@ from highlevel_planning.learning.logic_tools import parametrize_predicate
 
 
 class SequentialExecution(ExecutionSystem):
-    def __init__(self, skill_set, plan, knowledge_base):
+    def __init__(self, skill_set, sequence, parameters, knowledge_base):
         self.ticking = False
 
         self.skill_set_ = skill_set
-        self.plan = plan
+        self.sequence = sequence
+        self.parameters = parameters
 
         self.knowledge_base = knowledge_base
 
         self.current_idx_ = 0
-        if len(plan) == 0:
+        if len(sequence) == 0:
             self.finished_plan = True
         else:
             self.finished_plan = False
 
         # Define ignore effects
-        self.ignore_effects = {"nav-in-reach": [("in-reach", False, ["current_pos", "rob"])],
-                               "nav-at": [("at", False, ["current_pos", "rob"])]}
+        self.ignore_effects = {
+            "nav-in-reach": [
+                ("in-reach", False, ["current_pos", "rob"]),
+                ("at", False, ["current_pos", "rob"]),
+            ],
+            "nav-at": [
+                ("at", False, ["current_pos", "rob"]),
+                ("in-reach", False, ["current_pos", "rob"]),
+            ],
+        }
 
     def step(self):
         success = True
         msgs = []
         if not self.finished_plan:
-            plan_item = self.plan[self.current_idx_]
-            plan_item_list = plan_item.split(" ")
-            action_name = plan_item_list[1]
+            action_name = self.sequence[self.current_idx_]
             action_name = action_name.split("_")[0]
-            if len(plan_item_list) > 2:
-                action_parameters = plan_item_list[2:]
-            else:
-                action_parameters = []
+            action_parameters = self.parameters[self.current_idx_]
             success, msgs = self.execute_action(action_name, action_parameters)
 
             if success:
                 self.current_idx_ += 1
-                if self.current_idx_ == len(self.plan):
+                if self.current_idx_ == len(self.sequence):
                     self.finished_plan = True
         return success, self.finished_plan, msgs
 
@@ -54,8 +58,8 @@ class SequentialExecution(ExecutionSystem):
         else:
             try:
                 if action_name == "grasp":
-                    target_name = action_parameters[0]
-                    target_link_id = None
+                    target_name = action_parameters["obj"]
+                    target_link_id = -1
                     target_grasp_id = 0
                     res = self.skill_set_["grasp"].grasp_object(
                         target_name, target_link_id, target_grasp_id
@@ -63,14 +67,14 @@ class SequentialExecution(ExecutionSystem):
                     if not res:
                         raise SkillExecutionError
                 elif action_name == "nav-in-reach" or action_name == "nav-at":
-                    target_name = action_parameters[1]
+                    target_name = action_parameters["goal_pos"]
                     if self.knowledge_base.is_type(target_name, type_query="position"):
                         position = self.knowledge_base.lookup_table[target_name]
                         self.skill_set_["nav"].move_to_pos(position, nav_min_dist=0.3)
                     else:
                         self.skill_set_["nav"].move_to_object(target_name)
                 elif action_name == "place":
-                    target_pos_name = action_parameters[1]
+                    target_pos_name = action_parameters["pos"]
                     target_pos = self.knowledge_base.lookup_table[target_pos_name]
                     self.skill_set_["place"].place_object(target_pos)
                 else:
@@ -86,8 +90,6 @@ class SequentialExecution(ExecutionSystem):
 
         # Check if the effects were reached successfully
         action_description = self.knowledge_base.actions[action_name]
-        action_parameters_dict = {param[0]: action_parameters[idx] for idx, param in
-                                  enumerate(action_description["params"])}
         for effect in action_description["effects"]:
             if action_name in self.ignore_effects:
                 skip_effect = False
@@ -96,16 +98,22 @@ class SequentialExecution(ExecutionSystem):
                         skip_effect = True
                 if skip_effect:
                     continue
-            parameterized_effect = parametrize_predicate(effect, action_parameters_dict)
-            res = self.knowledge_base.predicate_funcs.call[effect[0]](*parameterized_effect[2])
+            parameterized_effect = parametrize_predicate(effect, action_parameters)
+            res = self.knowledge_base.predicate_funcs.call[effect[0]](
+                *parameterized_effect[2]
+            )
             if not res == effect[1]:
                 success = False
-                msgs.append("Failed to reach effect {} during action {}".format(effect[0], action_name))
+                msgs.append(
+                    "Failed to reach effect {} during action {}".format(
+                        effect[0], action_name
+                    )
+                )
 
         return success, msgs
 
     def print_status(self):
         if not self.finished_plan:
-            print("Plan item up next: " + self.plan[self.current_idx_])
+            print("Plan item up next: " + self.sequence[self.current_idx_])
         else:
             print("Finished plan")

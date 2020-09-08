@@ -6,9 +6,9 @@ import os
 
 
 class Cupboard:
-    def __init__(self, world, pos_, orient_):
+    def __init__(self, world, pos_, orient_, base_dir):
         self.urdf = os.path.join(
-            os.getcwd(), "data/models/cupboard_drawers/cupboard_drawers.urdf"
+            base_dir, "data/models/cupboard_drawers/cupboard_drawers.urdf"
         )
         self.model = world.add_model(self.urdf, position=pos_, orientation=orient_)
         self.pos = pos_
@@ -40,8 +40,12 @@ class Cupboard:
             urdf_path_=self.urdf,
             init_pos_=np.array(self.pos),
             init_orient_=np.array(self.orient),
-            grasp_pos_=[np.array([0.0, 0.0, 0.0])],
-            grasp_orient_=[grasp_orient.as_quat()],
+            grasp_pos_={
+                link: [np.array([0.0, 0.0, 0.0])] for link in self.handle_link_idx
+            },
+            grasp_orient_={
+                link: [grasp_orient.as_quat()] for link in self.handle_link_idx
+            },
             model_=self.model,
             nav_angle_=self.nav_angle,
             nav_min_dist_=1.0,

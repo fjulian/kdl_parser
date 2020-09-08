@@ -1,12 +1,11 @@
 from highlevel_planning.skills.grasping import SkillGrasping
-from highlevel_planning.tools.util import get_combined_aabb, SkillExecutionError, homogenous_trafo, invert_hom_trafo
+from highlevel_planning.tools.util import get_combined_aabb, SkillExecutionError
 import pybullet as p
 import numpy as np
-from scipy.spatial.transform import Rotation as R
 
 
 class Predicates:
-    def __init__(self, scene, robot, knowledge_base):
+    def __init__(self, scene, robot, knowledge_base, cfg):
         self.call = {
             "empty-hand": self.empty_hand,
             "in-hand": self.in_hand,
@@ -14,6 +13,7 @@ class Predicates:
             "at": self.at,
             "inside": self.inside,
             "on": self.on,
+            "has-grasp": self.has_grasp,
         }
 
         self.descriptions = {
@@ -23,13 +23,15 @@ class Predicates:
             "at": [["target", "navgoal"], ["rob", "robot"]],
             "inside": [["container", "item"], ["contained", "item"]],
             "on": [["supporting", "item"], ["supported", "item"]],
+            "has-grasp": [["obj", "navgoal"]],
         }
 
-        self.sk_grasping = SkillGrasping(scene, robot)
+        self.sk_grasping = SkillGrasping(scene, robot, cfg)
         self._scene = scene
         self._robot_uid = robot._model.uid
         self._robot = robot
         self._kb = knowledge_base
+        self._cfg = cfg
 
     def empty_hand(self, robot_name):
         robot = self._robot
@@ -50,7 +52,7 @@ class Predicates:
             elif contact[3] == robot.joint_idx_fingers[1]:
                 dist_finger2 = contact[8]
         desired_object_in_hand = (abs(dist_finger1) < 0.001) and (
-                abs(dist_finger2) < 0.001
+            abs(dist_finger2) < 0.001
         )
         return (not empty_hand_res) and desired_object_in_hand
 
@@ -59,7 +61,8 @@ class Predicates:
             return self.in_reach_pos(self._kb.lookup_table[target_item], robot_name)
         elif type(target_item) is list:
             print(
-                "wooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")  # Want to see if this ever happens
+                "wooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
+            )  # Want to see if this ever happens
             return self.in_reach_pos(target_item, robot_name)
         elif type(target_item) is str:
             return self.in_reach_obj(target_item, robot_name)
@@ -73,13 +76,13 @@ class Predicates:
         Arguments:
             target_object (string): The object name, as stated in the scene
                                       file and/or the problem PDDL.
-            robot (RobotArm): The interface class of the robot arm to use.
+            robot_name (RobotArm): The interface class of the robot arm to use.
         
         Returns:
             bool: Whether the object can be grasped from the robot's current position.
         """
         try:
-            pos, orient = self.sk_grasping.compute_grasp(target_object, None, 0)
+            pos, orient = self.sk_grasping.compute_grasp(target_object, 0, 0)
         except SkillExecutionError:
             return False
         cmd = self._robot.ik(pos, orient)
@@ -94,18 +97,14 @@ class Predicates:
         
         Args:
             target_pos (list): 3D vector of position to query
-            robot ([type]): [description]
+            robot_name ([type]): [description]
         
         Returns:
             [type]: [description]
         """
         # Convert position into robot base frame
         r_O_O_pos = target_pos
-        r_O_O_rob, C_O_rob = self._robot.get_link_pose("panda_link0")
-        C_O_rob = R.from_quat(C_O_rob)
-        T_O_rob = homogenous_trafo(r_O_O_rob, C_O_rob)
-        T_rob_O = invert_hom_trafo(T_O_rob)
-        r_R_R_grasp = np.matmul(T_rob_O, np.reshape(np.append(r_O_O_pos, 1.0), (-1, 1))).squeeze()
+        r_R_R_grasp = self._robot.convert_pos_to_robot_frame(r_O_O_pos)
 
         cmd = self._robot.ik(r_R_R_grasp, self._robot.start_orient)
         if cmd.tolist() is None or cmd is None:
@@ -113,17 +112,33 @@ class Predicates:
         else:
             return True
 
-    def at(self, target_object, robot_name):
+    def at(self, target_object, robot_name, use_closest_points=True):
+        distance_limit = self._cfg.getparam(
+            ["predicates", "at", "max_distance"], default_value=1.0
+        )
         if self._kb.is_type(target_object, "position"):
             pos_object = self._kb.lookup_table[target_object]
-        else:
+            pos_robot, _ = self._robot.get_link_pose("ridgeback_dummy")
+            distance = np.linalg.norm(pos_robot[:2] - pos_object[:2])
+            return distance < distance_limit
+        elif not use_closest_points:
             obj_info = self._scene.objects[target_object]
             target_id = obj_info.model.uid
             temp = p.getBasePositionAndOrientation(target_id)
             pos_object = temp[0]
-        pos_robot, _ = self._robot.get_link_pose("ridgeback_dummy")
-        distance = np.linalg.norm(pos_robot[:2] - pos_object[:2])
-        return distance < 1.0
+            pos_robot, _ = self._robot.get_link_pose("ridgeback_dummy")
+            distance = np.linalg.norm(pos_robot[:2] - pos_object[:2])
+            return distance < distance_limit
+        else:
+            temp = p.getClosestPoints(
+                self._robot_uid,
+                self._scene.objects[target_object].model.uid,
+                distance=1.1,
+            )
+            for point in temp:
+                if point[8] < distance_limit:
+                    return True
+            return False
 
     def inside(self, container_object, contained_object):
         """
@@ -139,14 +154,9 @@ class Predicates:
         container_uid = self._scene.objects[container_object].model.uid
         contained_uid = self._scene.objects[contained_object].model.uid
         aabb_container = get_combined_aabb(container_uid)
-        pos_contained, _ = p.getBasePositionAndOrientation(contained_uid)
-        pos_contained = np.array(pos_contained)
-
-        lower_border = np.array(aabb_container[0])
-        upper_border = np.array(aabb_container[1])
-
-        return np.all(np.greater_equal(pos_contained, lower_border)) and np.all(
-            np.less_equal(pos_contained, upper_border)
+        aabb_contained = get_combined_aabb(contained_uid)
+        return np.all(np.less_equal(aabb_container[0], aabb_contained[0])) and np.all(
+            np.greater_equal(aabb_container[1], aabb_contained[1])
         )
 
     def on(self, supporting_object, supported_object):
@@ -170,7 +180,9 @@ class Predicates:
         lower_supported = aabb_supported[0]
 
         # Check if supported object is above supporting one (z-coordinate)
-        above_tol = 0.05  # TODO move this to parameter file
+        above_tol = self._cfg.getparam(
+            ["predicates", "on-pred", "max_above"], default_value=0.05
+        )
         above = lower_supported[2] > upper_supporting[2] - above_tol
 
         # Check if supported object is within footprint of supporting one (xy-plane).
@@ -180,3 +192,6 @@ class Predicates:
         ) and np.all(np.less_equal(pos_supported[:2], upper_supporting[:2]))
 
         return above and within
+
+    def has_grasp(self, obj):
+        return len(self._scene.objects[obj].grasp_pos) > 0

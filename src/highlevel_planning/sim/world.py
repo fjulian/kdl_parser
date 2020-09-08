@@ -8,14 +8,16 @@ import atexit
 
 
 class World:
-    def __init__(self, gui_=True, sleep_=True, load_objects=True):
-        self.gui = gui_
+    def __init__(self, style="gui", sleep_=True, load_objects=True):
         self.sleep_flag = sleep_
-        if self.gui:
-            # self.physics_client = p.connect(p.GUI)
+        if style == "gui":
+            self.physics_client = p.connect(p.GUI)
+        elif style == "shared":
             self.physics_client = p.connect(p.SHARED_MEMORY)
-        else:
+        elif style == "direct":
             self.physics_client = p.connect(p.DIRECT)
+        else:
+            raise ValueError
 
         if load_objects:
             p.resetSimulation(self.physics_client)
@@ -132,6 +134,7 @@ class _Model:
         self._physics_client = physics_client
         self.uid = 0
         self.name = ""
+        self.link_name_to_index = dict()
 
     def load(self, path, position, orientation, scale):
         model_path = os.path.expanduser(path)
@@ -143,6 +146,10 @@ class _Model:
             physicsClientId=self._physics_client,
         )
         self.name = p.getBodyInfo(self.uid)
+
+        for i in range(p.getNumJoints(self.uid)):
+            info = p.getJointInfo(self.uid, i)
+            self.link_name_to_index[info[12]] = i
 
     def remove(self):
         p.removeBody(self.uid)

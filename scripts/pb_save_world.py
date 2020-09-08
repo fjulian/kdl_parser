@@ -9,6 +9,8 @@ import pybullet as p
 
 import pickle
 
+BASEDIR = path.dirname(path.dirname(path.abspath(__file__)))
+
 if __name__ == "__main__":
     restore_existing_objects = False
     objects = None
@@ -18,11 +20,13 @@ if __name__ == "__main__":
             objects, robot_mdl = pickle.load(pkl_file)
 
     # Create world
-    world = World(gui_=True, sleep_=True, load_objects=not restore_existing_objects)
-    scene = ScenePlanning1(world, restored_objects=objects)
+    world = World(
+        style="shared", sleep_=True, load_objects=not restore_existing_objects
+    )
+    scene = ScenePlanning1(world, BASEDIR, restored_objects=objects)
 
     # Spawn robot
-    robot = RobotArm(world, robot_mdl)
+    robot = RobotArm(world, base_dir=BASEDIR, robot_model=robot_mdl)
     robot.reset()
 
     robot.to_start()

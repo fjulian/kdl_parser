@@ -5,3 +5,7 @@ urdf-parser-py==0.0.3
 # py-trees==0.6.8
 cython
 ipython
+
+argparse~=1.2.1
+PyYAML~=3.12
+matplotlib~=2.1.1

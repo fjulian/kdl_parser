@@ -1,7 +1,6 @@
 from highlevel_planning.sim.world import World
 from highlevel_planning.sim.robot_arm import RobotArm
 
-from highlevel_planning.sim.scene_tossing import SceneTossing
 from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
 
 from highlevel_planning.skills.navigate import SkillNavigation
@@ -14,7 +13,7 @@ from scipy.spatial.transform import Rotation as R
 
 def main():
     # Create world
-    world = World(gui_=True, sleep_=True)
+    world = World(style="shared", sleep_=True)
     scene = ScenePlanning1(world)
 
     # Spawn robot
@@ -56,7 +55,7 @@ def main():
     # sk_grasp.grasp_object("cube1")
 
     # Grasp the cupboard handle
-    sk_grasp.grasp_object("cupboard", scene.objects["cupboard"].grasp_links[3])
+    sk_grasp.grasp_object("cupboard", link_idx=3)
 
     # Drive back
     robot.update_velocity([0.0, -0.1, 0.0], 0.0)

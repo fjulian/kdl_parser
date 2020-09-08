@@ -11,37 +11,41 @@ def check_path_exists(path_to_check):
 
 
 class KnowledgeBase(object):
-    def __init__(self, knowledge_dir, domain_name=""):
+    def __init__(self, base_dir, domain_name=""):
         self.predicate_funcs = None
 
         # Folder book keeping
-        domain_dir = path.join(knowledge_dir, "main")
+        self.base_dir = base_dir
+        self.knowledge_dir = path.join(base_dir, "knowledge", domain_name)
+        domain_dir = path.join(self.knowledge_dir, "main")
         check_path_exists(domain_dir)
         problem_dir = domain_dir
-        temp_domain_dir = path.join(knowledge_dir, "explore")
+        temp_domain_dir = path.join(self.knowledge_dir, "explore")
         check_path_exists(temp_domain_dir)
         temp_problem_dir = temp_domain_dir
 
         # Domain definition
         self._domain_name = domain_name
-        self._predicates = dict()
+        self.predicate_definitions = dict()
         self.actions = dict()
         self.types = dict()
 
         # Problem definition
         self.objects = dict()
         self.visible_objects = set()
-        self.initial_predicates = list()
+        self.object_predicates = list()
+        self.initial_state_predicates = list()
         # self.goals = list()
         # self.goals = [("in-hand", True, ("cube1", "robot1"))]
         # self.goals = [("at", True, ("container1", "robot1"))]
-        self.goals = [("on", True, ("cupboard", "cube1"))]
+        # self.goals = [("at", True, ("cupboard", "robot1"))]
+        # self.goals = [("on", True, ("cupboard", "cube1"))]
         # self.goals = [
         #     ("on", True, ("cupboard", "cube1")),
-        #     ("in-reach", True, ("container1", "robot1")),
+        #     ("at", True, ("container1", "robot1")),
         # ]
         # self.goals = [("on", True, ("container2", "cube1"))]
-        # self.goals = [("inside", True, ("container1", "cube1"))]
+        self.goals = [("inside", True, ("container1", "cube1"))]
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()
@@ -60,8 +64,9 @@ class KnowledgeBase(object):
         )
 
         # Temporary variables (e.g. for exploration)
-        self._temp_goals = list()
         self._temp_objects = dict()
+        self._temp_object_predicates = list()
+        self._temp_generalized_objects = list()
 
     def set_predicate_funcs(self, preds):
         self.predicate_funcs = preds
@@ -74,7 +79,7 @@ class KnowledgeBase(object):
             with open(self._domain_file, "rb") as f:
                 load_obj = pickle.load(f)
             self._domain_name = load_obj[0]
-            self._predicates = load_obj[1]
+            self.predicate_definitions = load_obj[1]
             self.actions = load_obj[2]
             self.types = load_obj[3]
             self.objects = load_obj[4]
@@ -88,7 +93,7 @@ class KnowledgeBase(object):
     def save_domain(self):
         save_obj = (
             self._domain_name,
-            self._predicates,
+            self.predicate_definitions,
             self.actions,
             self.types,
             self.objects,
@@ -105,24 +110,24 @@ class KnowledgeBase(object):
     def add_action(self, action_name, action_definition, overwrite=False):
         if not overwrite and action_name in self.actions:
             print(
-                    "Action "
-                    + action_name
-                    + " already exists and no overwrite was requested. Ignoring request."
+                "Action "
+                + action_name
+                + " already exists and no overwrite was requested. Ignoring request."
             )
         else:
             assert isinstance(action_name, str)
             self.actions[action_name] = action_definition
 
     def add_predicate(self, predicate_name, predicate_definition, overwrite=False):
-        if not overwrite and predicate_name in self._predicates:
+        if not overwrite and predicate_name in self.predicate_definitions:
             print(
-                    "Predicate "
-                    + predicate_name
-                    + " already exists and no overwrite was requested. Ignoring request."
+                "Predicate "
+                + predicate_name
+                + " already exists and no overwrite was requested. Ignoring request."
             )
         else:
             assert isinstance(predicate_name, str)
-            self._predicates[predicate_name] = predicate_definition
+            self.predicate_definitions[predicate_name] = predicate_definition
 
     def add_type(self, new_type, parent_type=None):
         assert isinstance(new_type, str)
@@ -164,35 +169,27 @@ class KnowledgeBase(object):
         for obj, obj_type in object_dict.items():
             self.add_object(obj, obj_type)
 
-    def add_inital_predicates(self, pred_list):
-        self.initial_predicates += pred_list
-
-        # Remove duplicates
-        self.initial_predicates = list(dict.fromkeys(self.initial_predicates))
-
     def add_goal(self, goal_list):
         self.goals += goal_list
 
         # Remove duplicates
         self.goals = list(dict.fromkeys(self.goals))
 
-    def add_planning_problem(self, planning_problem):
-        self.add_objects(planning_problem.objects)
-        self.add_inital_predicates(planning_problem.initial_predicates)
-        self.add_goal(planning_problem.goals)
-
-    def clear_planning_problem(self):
-        self.objects.clear()
-        del self.initial_predicates[:]
-        del self.goals[:]
-
     # ----- Solving ------------------------------------------------------------
 
     def solve(self):
         self.save_domain()
-        self.pddl_if.write_pddl(self)
+        self.pddl_if.write_pddl(
+            self,
+            self.objects,
+            self.object_predicates + self.initial_state_predicates,
+            self.goals,
+        )
         return planner_interface.pddl_planner(
-            self.pddl_if._domain_file_pddl, self.pddl_if._problem_file_pddl
+            self.pddl_if.domain_file_pddl,
+            self.pddl_if.problem_file_pddl,
+            self.actions,
+            self.base_dir,
         )
 
     # ----- Meta action handling -----------------------------------------------
@@ -205,19 +202,21 @@ class KnowledgeBase(object):
                 param[0] for param in meta_action["description"]["params"]
             ]
             for idx, sub_action_name in enumerate(meta_action["seq"]):
-                new_plan_item = [sub_action_name, []]
+                new_plan_item = [sub_action_name, {}]
                 sub_action_parameters = self.actions[sub_action_name]["params"]
                 for param_spec in sub_action_parameters:
                     old_param_name = param_spec[0]
                     if old_param_name in meta_action["hidden_params"][idx]:
-                        new_plan_item[1].append(meta_action["hidden_params"][idx][old_param_name])
+                        new_plan_item[1][old_param_name] = meta_action["hidden_params"][
+                            idx
+                        ][old_param_name]
                     elif old_param_name in meta_action["param_translator"][idx]:
                         new_param_name = meta_action["param_translator"][idx][
                             old_param_name
                         ]
-                        parameter_idx = parameter_order.index(new_param_name)
-                        parameter_value = action_parameters[parameter_idx]
-                        new_plan_item[1].append(parameter_value)
+                        new_plan_item[1][old_param_name] = action_parameters[
+                            new_param_name
+                        ]
                     else:
                         raise RuntimeError(
                             "Parameter for sub action of meta action undefined"
@@ -229,13 +228,13 @@ class KnowledgeBase(object):
         return expanded_step
 
     def add_meta_action(
-            self,
-            name,
-            sequence,
-            parameters,
-            param_translator,
-            hidden_parameters,
-            description,
+        self,
+        name,
+        sequence,
+        parameters,
+        param_translator,
+        hidden_parameters,
+        description,
     ):
         assert type(name) is str
         assert type(sequence) is list
@@ -261,26 +260,29 @@ class KnowledgeBase(object):
         """
 
         if self.predicate_funcs.empty_hand("robot1"):
-            self.initial_predicates.append(("empty-hand", "robot1"))
-        self.initial_predicates.append(("in-reach", "origin", "robot1"))
-        self.initial_predicates.append(("at", "origin", "robot1"))
+            self.initial_state_predicates.append(("empty-hand", "robot1"))
+        self.initial_state_predicates.append(("in-reach", "origin", "robot1"))
+        self.initial_state_predicates.append(("at", "origin", "robot1"))
 
         # Check any predicates in relation with the goal
         for goal in self.goals:
             if self.predicate_funcs.call[goal[0]](*goal[2]):
                 pred_tuple = (goal[0],) + goal[2]
-                self.initial_predicates.append(pred_tuple)
+                self.initial_state_predicates.append(pred_tuple)
 
     def populate_visible_objects(self, scene):
         # TODO maybe move this into a separate dummy perception module
         for obj in scene.objects:
             self.add_object(obj, "item")
+            if self.predicate_funcs.call["has-grasp"](obj):
+                self.object_predicates.append(("has-grasp", obj))
 
         # Add "objects" that are always visible
         for object_name in self.objects:
             for object_type in self.objects[object_name]:
                 if self.type_x_child_of_y(object_type, "position"):
                     self.add_object(object_name, "position")
+                    self.object_predicates.append(("has-grasp", object_name))
                     break
 
     def type_x_child_of_y(self, x, y):
@@ -302,12 +304,12 @@ class KnowledgeBase(object):
         return False
 
     def get_objects_by_type(
-            self,
-            type_query,
-            types_by_parent,
-            objects_by_type,
-            object_set=None,
-            visible_only=False,
+        self,
+        type_query,
+        types_by_parent,
+        objects_by_type,
+        object_set=None,
+        visible_only=False,
     ):
         if object_set is None:
             object_set = set()
@@ -328,9 +330,6 @@ class KnowledgeBase(object):
 
     # ----- Handling temporary goals, e.g. for exploration ---------------------
 
-    def set_temp_goals(self, goal_list):
-        self._temp_goals = deepcopy(goal_list)
-
     def add_temp_object(self, object_type, object_name=None, object_value=None):
         assert object_type in self.types
         if object_name is not None:
@@ -340,8 +339,8 @@ class KnowledgeBase(object):
             while True:
                 object_name = "{}_sample_{}".format(object_type, counter)
                 if (
-                        object_name not in self.objects
-                        and object_name not in self._temp_objects
+                    object_name not in self.objects
+                    and object_name not in self._temp_objects
                 ):
                     break
                 counter += 1
@@ -354,18 +353,24 @@ class KnowledgeBase(object):
                         self._temp_objects[object_name].remove(red_type)
         else:
             self._temp_objects[object_name] = [object_type]
+            if self.is_type(object_name, "position"):
+                self._temp_object_predicates.append(("has-grasp", object_name))
         if object_value is not None:
             self.lookup_table[object_name] = object_value
         return object_name
 
     def generalize_temp_object(self, object_name):
         assert object_name in self.objects
-        for new_type in self.types:
-            self.add_temp_object(object_type=new_type, object_name=object_name)
+        self._temp_generalized_objects.append(object_name)
+        # for new_type in self.types:
+        #     self.add_temp_object(object_type=new_type, object_name=object_name)
 
     def make_permanent(self, obj_name):
         self.objects[obj_name] = self._temp_objects[obj_name]
         del self._temp_objects[obj_name]
+        for pred in self._temp_object_predicates:
+            if obj_name in pred:
+                self.object_predicates.append(pred)
 
     def joined_objects(self):
         objects = deepcopy(self._temp_objects)
@@ -376,14 +381,22 @@ class KnowledgeBase(object):
                 objects[obj] = self.objects[obj]
         return objects
 
-    def solve_temp(self):
-        self.pddl_if_temp.write_domain_pddl(self.actions, self._predicates, self.types)
+    def solve_temp(self, goals, initial_predicates=None):
         objects = self.joined_objects()
-        self.pddl_if_temp.write_problem_pddl(
-            objects, self.initial_predicates, self._temp_goals
+        if initial_predicates is None:
+            initial_predicates = self.initial_state_predicates
+        self.pddl_if_temp.write_pddl(
+            self,
+            objects,
+            self.object_predicates + self._temp_object_predicates + initial_predicates,
+            goals,
+            self._temp_generalized_objects,
         )
         return planner_interface.pddl_planner(
-            self.pddl_if_temp._domain_file_pddl, self.pddl_if_temp._problem_file_pddl
+            self.pddl_if_temp.domain_file_pddl,
+            self.pddl_if_temp.problem_file_pddl,
+            self.actions,
+            self.base_dir,
         )
 
     def clear_temp(self):
@@ -391,4 +404,5 @@ class KnowledgeBase(object):
             if obj in self.lookup_table:
                 del self.lookup_table[obj]
         self._temp_objects.clear()
-        del self._temp_goals[:]
+        del self._temp_object_predicates[:]
+        del self._temp_generalized_objects[:]
