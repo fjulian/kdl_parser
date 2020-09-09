@@ -6,6 +6,6 @@ urdf-parser-py==0.0.3
 cython
 ipython
 
-argparse~=1.2.1
-PyYAML~=3.12
-matplotlib~=2.1.1
+argparse
+PyYAML
+matplotlib

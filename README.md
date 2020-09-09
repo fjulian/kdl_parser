@@ -2,9 +2,7 @@
 ## Todo
 
 - High priority
-  - [ ] Write code that generates problem definition based on observations from the simulation
   - [ ] Use python logger instead of print statements.
-  - [ ] Try other IK library
 - Low priority
   - [ ] Write tests for robot arm control code.
 - Done (new on top)
@@ -21,35 +19,27 @@
   - [x] Find a better grasping pose for the drawer handle.
   - [x] Make releasing an object a separate action
   - [x] Allow robot base velocity command to be given in robot base frame
+  - [x] Write code that generates problem definition based on observations from the simulation
 
 
 ## Setup Instructions
 
+### Dependencies
+
+First of all, install some apt packages using
+
+```bash
+./install_requirements.sh
+```
+
+When building `trac_ik` and an error message comes up, complaining about the header `nlopt.hpp` missing, it helps to install nlopt from source: https://github.com/stevengj/nlopt
+
 ### Set up virtualenv
 
 ```
-virtualenv -p /usr/bin/python2 --system-site-packages .venv
+virtualenv --system-site-packages .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-Python version 2 is used because trac IK does not work with python 3 yet.
-
-### Dependencies
-
-Some ROS packages need to be installed:
-
-```
-sudo apt-get install ros-melodic-trac-ik ros-melodic-franka-description ros-melodic-ridgeback-description ros-melodic-joint-state-publisher-gui
-```
-
-In addition, the library `pykdl_utils` - included as submodule - needs to be installed. This can be done using the following commands:
-
-```
-cd <repo-root>/submodules/hrl-kdl/pykdl_utils
-python setup.py install --prefix <repo-root>/.venv
-cd <repo-root>/submodules/hrl-kdl/hrl_geom
-python setup.py install --prefix <repo-root>/.venv
 ```
 
 ### Install Development Code

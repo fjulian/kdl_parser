@@ -51,7 +51,10 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <depend>moma_description</depend>
-
+  <depend>trac_ik_python</depend>
+  <depend>kdl_parser_py</depend>
+  <depend>python_orocos_kdl</depend>
+  <depend>robot_control</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
