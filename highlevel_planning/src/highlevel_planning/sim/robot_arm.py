@@ -1,5 +1,4 @@
 import os
-from copy import deepcopy
 import pybullet as p
 import numpy as np
 from math import pi as m_pi
@@ -10,14 +9,10 @@ from highlevel_planning.tools.util import (
     homogenous_trafo,
     invert_hom_trafo,
 )
-
 from trac_ik_python.trac_ik import IK
-
 from scipy.spatial.transform import Rotation as R
-
-from urdf_parser_py.urdf import URDF as urdf_parser
-from pykdl_utils.kdl_kinematics import KDLKinematics
-
+from kdl_parser_py.urdf import treeFromFile
+import PyKDL
 from rc.controllers import CartesianVelocityControllerKDL
 
 
@@ -55,8 +50,9 @@ class RobotArm:
         )
 
         # Set up FK solver
-        robot_urdf = urdf_parser.from_xml_string(urdf_string)
-        self.kdl_kin = KDLKinematics(robot_urdf, "panda_link0", "panda_link8")
+        flag, kdl_tree = treeFromFile(self.urdf_path)
+        kdl_chain = kdl_tree.getChain("panda_link0", "panda_link8")
+        self.kdl_kin = PyKDL.ChainFkSolverPos_recursive(kdl_chain)
 
         # Specify start command
         self.start_cmd = np.array(
@@ -90,7 +86,7 @@ class RobotArm:
         self.num_joints = p.getNumJoints(self._model.uid)
         for i in range(self.num_joints):
             info = p.getJointInfo(self._model.uid, i)
-            joint_name = info[1]
+            joint_name = info[1] if type(info[1]) is str else info[1].decode("utf-8")
             # print(joint_name, info[16])  # Use this to print all joint names.
             if "panda_joint" in joint_name and len(joint_name) == 12:
                 joint_num = int(joint_name.split("panda_joint")[1])
@@ -106,7 +102,7 @@ class RobotArm:
                 joint_num = int(joint_name.split("panda_finger_joint")[1])
                 self.joint_idx_fingers[joint_num - 1] = i
 
-            _name = info[12]
+            _name = info[12] if type(info[12]) is str else info[12].decode("utf-8")
             self.link_name_to_index[_name] = i
 
         p.enableJointForceTorqueSensor(
@@ -371,11 +367,14 @@ class RobotArm:
         return np.array(sol)
 
     def fk(self, joint_states):
-        # Inspired by https://answers.ros.org/question/281272/get-forward-kinematics-wo-tf-service-call-from-urdf-joint-angles-kinetic-python/
-        pose = self.kdl_kin.forward(joint_states.tolist())
-        pose = np.array(pose)
-        transl = pose[:3, 3]
-        rot_mat = pose[:3, :3]
+        # Inspired by https://github.com/wuphilipp/sawyer_kdl/blob/master/scripts/sawyer_jacobian.py
+        joints = PyKDL.JntArray(len(joint_states))
+        for i in range(len(joint_states)):
+            joints[i] = joint_states[i]
+        frame = PyKDL.Frame()
+        self.kdl_kin.JntToCart(joints, frame)
+        transl = np.array([val for val in frame.p])
+        rot_mat = np.array([[frame.M[i, j] for j in range(3)] for i in range(3)])
         orient = quat_from_mat(rot_mat)
         return transl, orient
 
