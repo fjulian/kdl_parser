@@ -1,86 +1,11 @@
 import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-import py_trees
-import multiprocessing, atexit, time
-
 from highlevel_planning.tools.util import (
     homogenous_trafo,
     invert_hom_trafo,
     pos_and_orient_from_hom_trafo,
 )
-
-
-class ActionNavigate(py_trees.behaviour.Behaviour):
-    def __init__(self, process_pipe, target_name, name="nav_action"):
-        super(ActionNavigate, self).__init__(name)
-        self.logger.debug("%s.__init__()" % (self.__class__.__name__))
-        self._target_name = target_name
-        self._process_pipe = process_pipe
-
-    def initialise(self):
-        self.logger.debug(
-            "%s.initialise()->sending new goal" % (self.__class__.__name__)
-        )
-
-        # Empty existing messages from pipe
-        while self._process_pipe.poll():
-            _ = self._process_pipe.recv()
-
-        # Send command
-        self._process_pipe.send([self._target_name])
-
-    def update(self):
-        new_status = py_trees.common.Status.RUNNING
-        self.feedback_message = "Nav in progress"
-        if self._process_pipe.poll():
-            res = self._process_pipe.recv().pop()
-            if res == 0:
-                new_status = py_trees.common.Status.SUCCESS
-                self.feedback_message = "Nav successful"
-            elif res == 1:
-                # Nav in progress, but this is already set above
-                pass
-            elif res == 2:
-                new_status = py_trees.common.Status.FAILURE
-                self.feedback_message = "Nav failed"
-            else:
-                raise (ValueError, "Unexpected response")
-        self.logger.debug(
-            "%s.update()[%s->%s][%s]"
-            % (self.__class__.__name__, self.status, new_status, self.feedback_message)
-        )
-        return new_status
-
-
-class ProcessNavigate:
-    def __init__(self, scene, robot_uid):
-        self.parent_connection, self.child_connection = multiprocessing.Pipe()
-        self.nav = multiprocessing.Process(
-            target=nav_process, args=(self.child_connection, scene, robot_uid)
-        )
-        atexit.register(self.nav.terminate)
-        self.nav.start()
-        print("Navigation process initiated")
-
-    def get_pipe(self):
-        return self.parent_connection
-
-
-def nav_process(pipe_connection, scene, robot_uid):
-    sk_nav = SkillNavigate(scene, robot_uid)
-    while True:
-        if pipe_connection.poll():
-            cmd = pipe_connection.recv()
-            if len(cmd) == 1:
-                res = sk_nav.move_to_object(cmd[0])
-                if res:
-                    pipe_connection.send([0])
-                else:
-                    pipe_connection.send([2])
-            else:
-                print("Unexpected command")
-        time.sleep(0.5)
 
 
 class SkillNavigate:
@@ -209,7 +134,7 @@ class SkillNavigate:
         return T_rob_obj
 
     def _set_object_relative_pose(
-            self, object_in_hand_uid, robot_pos, robot_orient, T_rob_obj
+        self, object_in_hand_uid, robot_pos, robot_orient, T_rob_obj
     ):
         if object_in_hand_uid is not None:
             r_O_O_rob = robot_pos
@@ -217,7 +142,7 @@ class SkillNavigate:
             T_O_rob = homogenous_trafo(r_O_O_rob, C_O_rob)
 
             T_O_obj = np.matmul(T_O_rob, T_rob_obj)
-            (held_object_pos, held_object_orient,) = pos_and_orient_from_hom_trafo(
+            (held_object_pos, held_object_orient) = pos_and_orient_from_hom_trafo(
                 T_O_obj
             )
             p.resetBasePositionAndOrientation(
@@ -234,7 +159,10 @@ def get_nav_in_reach_description():
         ["goal_pos", "navgoal"],
         ["rob", "robot"],
     ]
-    action_preconditions = [("at", True, ["current_pos", "rob"]), ("has-grasp", True, ["goal_pos"])]
+    action_preconditions = [
+        ("at", True, ["current_pos", "rob"]),
+        ("has-grasp", True, ["goal_pos"]),
+    ]
     action_effects = [
         ("in-reach", True, ["goal_pos", "rob"]),
         ("in-reach", False, ["current_pos", "rob"]),
@@ -262,7 +190,7 @@ def get_nav_at_description():
     action_effects = [
         ("at", True, ["goal_pos", "rob"]),
         ("at", False, ["current_pos", "rob"]),
-        ("in-reach", False, ["current_pos", "rob"])
+        ("in-reach", False, ["current_pos", "rob"]),
     ]
     return (
         action_name,

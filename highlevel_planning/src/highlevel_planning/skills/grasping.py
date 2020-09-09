@@ -2,118 +2,6 @@ import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from highlevel_planning.tools.util import SkillExecutionError
-import py_trees.common
-import multiprocessing
-import time
-import atexit
-
-
-class ActionGrasping(py_trees.behaviour.Behaviour):
-    """
-        Based on the example https://py-trees.readthedocs.io/en/release-0.6.x/_modules/py_trees/demos/action.html#Action
-    """
-
-    def __init__(self, process_pipe, target, name="grasping_action"):
-        super(ActionGrasping, self).__init__(name)
-        self.logger.debug("%s.__init__()" % (self.__class__.__name__))
-        self._target = target
-        self._process_pipe = process_pipe
-
-    def initialise(self):
-        self.logger.debug(
-            "%s.initialise()->sending new goal" % (self.__class__.__name__)
-        )
-
-        # Empty existing messages from pipe
-        while self._process_pipe.poll():
-            _ = self._process_pipe.recv()
-
-        # Send command
-        target_name = self._target[0]
-        target_link_id = self._target[1]
-        target_grasp_id = self._target[2]
-        self._process_pipe.send([target_name, target_link_id, target_grasp_id])
-
-    def update(self):
-        new_status = py_trees.common.Status.RUNNING
-        self.feedback_message = "Grasping in progress"
-        if self._process_pipe.poll():
-            res = self._process_pipe.recv().pop()
-            if res == 0:
-                new_status = py_trees.common.Status.SUCCESS
-                self.feedback_message = "Grasping successful"
-            elif res == 1:
-                # Grasping in progress, but this is already set above
-                pass
-            elif res == 2:
-                new_status = py_trees.common.Status.FAILURE
-                self.feedback_message = "Grasping failed"
-            else:
-                raise RuntimeError("Unexpected response")
-        self.logger.debug(
-            "%s.update()[%s->%s][%s]"
-            % (self.__class__.__name__, self.status, new_status, self.feedback_message)
-        )
-        return new_status
-
-    def terminate(self, new_status):
-        self._process_pipe.send([])
-        self.logger.debug(
-            "%s.terminate()[%s->%s]"
-            % (self.__class__.__name__, self.status, new_status)
-        )
-
-
-class ProcessGrasping:
-    def __init__(self, scene, robot, robot_lock):
-        self.parent_connection, self.child_connection = multiprocessing.Pipe()
-        self.grasping = multiprocessing.Process(
-            target=grasping_process,
-            args=(self.child_connection, scene, robot, robot_lock),
-        )
-        atexit.register(self.grasping.terminate)
-        self.grasping.start()
-        print("Grasping process initiated")
-
-    def get_pipe(self):
-        return self.parent_connection
-
-
-def grasping_process(pipe_connection, scene, robot, lock):
-    sk_grasping = SkillGrasping(scene, robot)
-
-    idle = True
-    proc = None
-    try:
-        while True:
-            if pipe_connection.poll():
-                cmd = pipe_connection.recv()
-                if len(cmd) == 3 and idle:
-                    # Start the process
-                    proc = multiprocessing.Process(
-                        target=sk_grasping.grasp_object,
-                        args=(cmd[0], cmd[1], cmd[2], lock),
-                    )
-                    idle = False
-                    proc.start()
-                elif len(cmd) == 0:
-                    # Abort process
-                    if proc:
-                        proc.terminate()
-                    proc = None
-                    idle = True
-            elif not idle and proc.is_alive():
-                pipe_connection.send([1])
-            elif not idle and not proc.is_alive():
-                # The thread was launched at some point and seems to be finished now
-                proc.terminate()
-                proc = None
-                idle = True
-                pipe_connection.send([0])
-            time.sleep(0.5)
-    except KeyboardInterrupt:
-        if proc is not None:
-            proc.terminate()
 
 
 class SkillGrasping:
@@ -185,7 +73,7 @@ class SkillGrasping:
 
         # Go to pre-grasp pose
         pos_pre = pos - np.matmul(
-            R.from_quat(orient).as_dcm(), np.array([0.0, 0.0, self._pregrasp_z_offset]),
+            R.from_quat(orient).as_dcm(), np.array([0.0, 0.0, self._pregrasp_z_offset])
         )
         pos_pre_joints = self.robot.ik(pos_pre, orient)
         if pos_pre_joints.tolist() is None:
