@@ -60,6 +60,7 @@ def main():
         "--method",
         action="store",
         help="determines in which mode to connect to pybullet. Can be 'gui', 'direct' or 'shared'.",
+        default="gui"
     )
     args = parser.parse_args()
 

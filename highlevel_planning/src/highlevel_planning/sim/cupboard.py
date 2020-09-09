@@ -22,7 +22,7 @@ class Cupboard:
         self.handle_link_idx = [0] * 4
         for i in range(p.getNumJoints(self.model.uid)):
             info = p.getJointInfo(self.model.uid, i)
-            joint_name = info[1]
+            joint_name = info[1] if type(info[1]) is str else info[1].decode("utf-8")
             # print(info)
             if "drawer_joint" in joint_name and len(joint_name) == 13:
                 drawer_link_idx.append(i)

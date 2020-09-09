@@ -149,7 +149,8 @@ class _Model:
 
         for i in range(p.getNumJoints(self.uid)):
             info = p.getJointInfo(self.uid, i)
-            self.link_name_to_index[info[12]] = i
+            name = info[12] if type(info[12]) is str else info[12].decode("utf-8")
+            self.link_name_to_index[name] = i
 
     def remove(self):
         p.removeBody(self.uid)
