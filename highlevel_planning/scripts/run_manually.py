@@ -162,16 +162,22 @@ def main():
         action="store_true",
         help="if given, the simulation will sleep for each update step, to mimic real time execution.",
     )
+    parser.add_argument(
+        "-m",
+        "--method",
+        action="store",
+        help="determines in which mode to connect to pybullet. Can be 'gui', 'direct' or 'shared'.",
+        default="gui",
+    )
     args = parser.parse_args()
 
     # Load existing simulation data if desired
     restore_existing_objects = args.reuse_objects
     objects = None
     robot_mdl = None
+    savedir = os.path.join(BASEDIR, "data", "sim")
     if restore_existing_objects:
-        with open(
-            os.path.join(BASEDIR, "data", "sim", "objects.pkl"), "rb"
-        ) as pkl_file:
+        with open(os.path.join(savedir, "objects.pkl"), "rb") as pkl_file:
             objects, robot_mdl = pickle.load(pkl_file)
 
     # Load config file
@@ -179,7 +185,10 @@ def main():
 
     # Create world
     world = World(
-        style="shared", sleep_=args.sleep, load_objects=not restore_existing_objects
+        style=args.method,
+        sleep_=args.sleep,
+        load_objects=not restore_existing_objects,
+        savedir=savedir,
     )
     scene = ScenePlanning1(world, BASEDIR, restored_objects=objects)
     # scene = SceneMoveSkill(world, restored_objects=objects)
@@ -199,7 +208,6 @@ def main():
 
     # Save world
     if not restore_existing_objects:
-        savedir = os.path.join(BASEDIR, "data", "sim")
         if not os.path.isdir(savedir):
             os.makedirs(savedir)
         with open(os.path.join(savedir, "objects.pkl"), "wb") as output:
@@ -212,8 +220,8 @@ def main():
 
     # drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
 
-    # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1")
-    grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lid1")
+    grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1")
+    # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lid1")
 
     # drive_example(robot, world)
 

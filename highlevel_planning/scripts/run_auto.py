@@ -6,11 +6,6 @@ import numpy as np
 import os
 import pybullet as p
 
-try:
-    input = raw_input
-except NameError:
-    pass
-
 # Simulation
 from highlevel_planning.sim.world import World
 from highlevel_planning.sim.robot_arm import RobotArm
@@ -60,7 +55,7 @@ def main():
         "--method",
         action="store",
         help="determines in which mode to connect to pybullet. Can be 'gui', 'direct' or 'shared'.",
-        default="gui"
+        default="gui",
     )
     args = parser.parse_args()
 
@@ -71,10 +66,9 @@ def main():
     restore_existing_objects = args.reuse_objects
     objects = None
     robot_mdl = None
+    savedir = os.path.join(BASEDIR, "data", "sim")
     if restore_existing_objects:
-        with open(
-            os.path.join(BASEDIR, "data", "sim", "objects.pkl"), "rb"
-        ) as pkl_file:
+        with open(os.path.join(savedir, "objects.pkl"), "rb") as pkl_file:
             objects, robot_mdl = pickle.load(pkl_file)
 
     # Load config file
@@ -89,7 +83,7 @@ def main():
     skill_descriptions = pddl_descriptions.get_action_descriptions()
     for skill_name, description in skill_descriptions.items():
         kb.add_action(
-            action_name=skill_name, action_definition=description, overwrite=True,
+            action_name=skill_name, action_definition=description, overwrite=True
         )
 
     # Add required types
@@ -106,7 +100,10 @@ def main():
 
     # Create world
     world = World(
-        style=args.method, sleep_=args.sleep, load_objects=not restore_existing_objects,
+        style=args.method,
+        sleep_=args.sleep,
+        load_objects=not restore_existing_objects,
+        savedir=savedir,
     )
     scene = ScenePlanning1(world, BASEDIR, restored_objects=objects)
 
@@ -119,7 +116,7 @@ def main():
 
     # Save world
     if not restore_existing_objects:
-        savedir = os.path.join(BASEDIR, "data", "sim")
+
         if not os.path.isdir(savedir):
             os.makedirs(savedir)
         with open(os.path.join(savedir, "objects.pkl"), "wb") as output:

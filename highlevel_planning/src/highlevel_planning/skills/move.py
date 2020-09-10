@@ -2,10 +2,6 @@ import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from highlevel_planning.tools.util import homogenous_trafo, invert_hom_trafo
-import py_trees.common
-import multiprocessing
-import time
-import atexit
 from matplotlib import pyplot as plt
 
 from highlevel_planning.tools.util import IKError
@@ -23,7 +19,7 @@ def ortho_projection(direction):
 def draw_arrow(vec_wristframe, robot, color, arrow_id=None, length=0.2):
     if DEBUG:
         link_state = p.getLinkState(
-            robot._model.uid, robot.link_name_to_index["panda_default_EE"],
+            robot._model.uid, robot.link_name_to_index["panda_default_EE"]
         )
         pos = np.array(link_state[4])
         orient = R.from_quat(link_state[5])
@@ -167,9 +163,7 @@ class SkillMove:
 
         return True
 
-    def plot_data(
-        self, plot_time, plot_direction_data, plot_force_data, filename=None,
-    ):
+    def plot_data(self, plot_time, plot_direction_data, plot_force_data, filename=None):
         plot_force_color = self.robot._world.colors["red"]
         plot_dir_color = self.robot._world.colors["green"]
         _, axs_dir = plt.subplots(3, 1, figsize=(9, 7))
@@ -188,7 +182,7 @@ class SkillMove:
 
             axs_force.append(axs_dir[i].twinx())
             axs_force[i].plot(
-                plot_time, plot_force_data[i, :], label="Force", color=plot_force_color,
+                plot_time, plot_force_data[i, :], label="Force", color=plot_force_color
             )
             axs_force[i].set_ylabel(plot_data["ylabel"][i], color=plot_force_color)
             axs_force[i].tick_params(axis="y", labelcolor=plot_force_color)

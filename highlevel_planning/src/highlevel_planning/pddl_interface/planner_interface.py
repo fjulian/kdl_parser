@@ -16,6 +16,8 @@ def pddl_planner(domain_file, problem_file, action_specs, base_dir, debug_print=
                 problem_file,
             ]
         )
+        if type(res) is not str:
+            res = res.decode("utf-8")
     except subprocess.CalledProcessError as e:
         # Check if empty plan solves it
         empty_idx = e.output.find("The empty plan solves it")

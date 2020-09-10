@@ -8,7 +8,10 @@ import atexit
 
 
 class World:
-    def __init__(self, style="gui", sleep_=True, load_objects=True):
+    def __init__(self, style="gui", sleep_=True, load_objects=True, savedir=None):
+        if not load_objects:
+            assert savedir is not None
+
         self.sleep_flag = sleep_
         if style == "gui":
             self.physics_client = p.connect(p.GUI)
@@ -22,7 +25,7 @@ class World:
         if load_objects:
             p.resetSimulation(self.physics_client)
         else:
-            p.restoreState(fileName=os.path.join(os.getcwd(), "data/sim/state.bullet"))
+            p.restoreState(fileName=os.path.join(savedir, "state.bullet"))
             p.removeAllUserDebugItems()
 
         p.setGravity(0, 0, -9.81, self.physics_client)

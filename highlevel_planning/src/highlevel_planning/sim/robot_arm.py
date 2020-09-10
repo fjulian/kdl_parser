@@ -51,8 +51,8 @@ class RobotArm:
 
         # Set up FK solver
         flag, kdl_tree = treeFromFile(self.urdf_path)
-        kdl_chain = kdl_tree.getChain("panda_link0", "panda_link8")
-        self.kdl_kin = PyKDL.ChainFkSolverPos_recursive(kdl_chain)
+        self.kdl_chain = kdl_tree.getChain("panda_link0", "panda_link8")
+        self.num_arm_joints = self.kdl_chain.getNrOfJoints()
 
         # Specify start command
         self.start_cmd = np.array(
@@ -79,9 +79,7 @@ class RobotArm:
                 orientation=[0.0, 0.0, 0.0, 1.0],
             )
 
-        self.link_name_to_index = {
-            p.getBodyInfo(self._model.uid)[0]: -1,
-        }
+        self.link_name_to_index = {p.getBodyInfo(self._model.uid)[0]: -1}
 
         self.num_joints = p.getNumJoints(self._model.uid)
         for i in range(self.num_joints):
@@ -119,7 +117,7 @@ class RobotArm:
         use_white = True
         for i in range(1, 8):
             self.apply_color(
-                "panda_link{}".format(i), rgba_white if use_white else rgba_light_gray,
+                "panda_link{}".format(i), rgba_white if use_white else rgba_light_gray
             )
             use_white = not use_white
 
@@ -129,9 +127,7 @@ class RobotArm:
 
     def apply_color(self, link_name, rgba):
         link_idx = self.link_name_to_index[link_name]
-        p.changeVisualShape(
-            self._model.uid, linkIndex=link_idx, rgbaColor=rgba,
-        )
+        p.changeVisualShape(self._model.uid, linkIndex=link_idx, rgbaColor=rgba)
 
     def set_joints(self, desired):
         if desired is None:
@@ -367,12 +363,19 @@ class RobotArm:
         return np.array(sol)
 
     def fk(self, joint_states):
+        assert len(joint_states) == self.num_arm_joints
         # Inspired by https://github.com/wuphilipp/sawyer_kdl/blob/master/scripts/sawyer_jacobian.py
-        joints = PyKDL.JntArray(len(joint_states))
+        joints = PyKDL.JntArray(self.num_arm_joints)
         for i in range(len(joint_states)):
             joints[i] = joint_states[i]
         frame = PyKDL.Frame()
-        self.kdl_kin.JntToCart(joints, frame)
+
+        # Need to create a new solver every time because somehow the
+        kdl_fk_solver = PyKDL.ChainFkSolverPos_recursive(self.kdl_chain)
+        ret = kdl_fk_solver.JntToCart(joints, frame)
+        if ret != 0:
+            error_str = kdl_fk_solver.strError(ret)
+            raise RuntimeError(f"FK solver returned: {error_str}")
         transl = np.array([val for val in frame.p])
         rot_mat = np.array([[frame.M[i, j] for j in range(3)] for i in range(3)])
         orient = quat_from_mat(rot_mat)
