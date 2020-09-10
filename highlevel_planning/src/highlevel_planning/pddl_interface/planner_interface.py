@@ -20,14 +20,15 @@ def pddl_planner(domain_file, problem_file, action_specs, base_dir, debug_print=
             res = res.decode("utf-8")
     except subprocess.CalledProcessError as e:
         # Check if empty plan solves it
-        empty_idx = e.output.find("The empty plan solves it")
+        output = e.output if type(e.output) is str else e.output.decode("utf-8")
+        empty_idx = output.find("The empty plan solves it")
         if empty_idx > -1:
             # print("Empty plan solves the goal.")
             return []
         else:
             if debug_print:
                 print("Planning failed: ")
-                print(e.output)
+                print(output)
             return False
     try:
         res = cut_string_before(res, "ff: found legal plan as follows", complain=True)

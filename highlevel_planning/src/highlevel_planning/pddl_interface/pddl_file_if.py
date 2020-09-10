@@ -74,13 +74,10 @@ def _preprocess_knowledge(actions, objects, types, parameterizations, joker_obje
 
     if joker_objects is not None and len(joker_objects) > 0:
         for new_type in types_processed:
-            map(lambda x: add_object(objects_processed, x, new_type), joker_objects)
+            for obj in joker_objects:
+                add_object(objects_processed, obj, new_type)
 
-    return (
-        actions_processed,
-        types_processed,
-        objects_processed,
-    )
+    return actions_processed, types_processed, objects_processed
 
 
 class PDDLFileInterface:
@@ -101,7 +98,7 @@ class PDDLFileInterface:
     def write_pddl(
         self, knowledge_base, objects, initial_predicates, goals, joker_objects=None
     ):
-        (actions_processed, types_processed, object_processed,) = _preprocess_knowledge(
+        (actions_processed, types_processed, object_processed) = _preprocess_knowledge(
             knowledge_base.actions,
             objects,
             knowledge_base.types,
