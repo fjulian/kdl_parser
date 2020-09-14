@@ -155,7 +155,7 @@ def main():
     cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
     # Create world
-    robot, scene = run_util.setup_world(
+    robot, scene = run_util.setup_pybullet_world(
         ScenePlanning1, BASEDIR, savedir, objects, args, cfg, robot_mdl
     )
 

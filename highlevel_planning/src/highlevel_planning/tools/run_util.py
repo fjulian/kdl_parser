@@ -4,8 +4,8 @@ import pybullet as p
 import pickle
 import numpy as np
 
-from highlevel_planning.sim.world import World
-from highlevel_planning.sim.robot_arm import RobotArm
+from highlevel_planning.sim.world import WorldPybullet
+from highlevel_planning.sim.robot_arm import RobotArmPybullet
 from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning.skills import pddl_descriptions
 from highlevel_planning.knowledge.predicates import Predicates
@@ -45,18 +45,18 @@ def restore_pybullet_sim(savedir, args):
     return objects, robot_mdl
 
 
-def setup_world(scene_object, basedir, savedir, objects, args, cfg, robot_mdl):
+def setup_pybullet_world(scene_object, basedir, savedir, objects, args, cfg, robot_mdl):
     # Create world
-    world = World(
+    world = WorldPybullet(
         style=args.method,
-        sleep_=args.sleep,
+        sleep=args.sleep,
         load_objects=not args.reuse_objects,
         savedir=savedir,
     )
     scene = scene_object(world, basedir, restored_objects=objects)
 
     # Spawn robot
-    robot = RobotArm(world, cfg, basedir, robot_mdl)
+    robot = RobotArmPybullet(world, cfg, basedir, robot_mdl)
     robot.reset()
 
     robot.to_start()
@@ -67,7 +67,7 @@ def setup_world(scene_object, basedir, savedir, objects, args, cfg, robot_mdl):
         if not os.path.isdir(savedir):
             os.makedirs(savedir)
         with open(os.path.join(savedir, "objects.pkl"), "wb") as output:
-            pickle.dump((scene.objects, robot._model), output)
+            pickle.dump((scene.objects, robot.model), output)
         p.saveBullet(os.path.join(savedir, "state.bullet"))
 
     return robot, scene

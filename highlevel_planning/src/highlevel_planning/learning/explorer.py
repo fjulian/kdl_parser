@@ -24,7 +24,7 @@ class Explorer:
 
         self.skill_set = skill_set
         self.robot = robot
-        self.robot_uid_ = robot._model.uid
+        self.robot_uid_ = robot.model.uid
         self.scene_objects = scene_objects
         self.pddl_extender = pddl_extender
         self.knowledge_base = knowledge_base
@@ -285,7 +285,7 @@ class Explorer:
                 )
             except NameError:
                 continue
-            if (tuple(seq), tuple(params_tuple),) in sequences_tried:
+            if (tuple(seq), tuple(params_tuple)) in sequences_tried:
                 continue
             sequences_tried.add((tuple(seq), tuple(params_tuple)))
 

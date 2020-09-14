@@ -43,7 +43,7 @@ class SkillGrasping:
         r_Obj_obj_grasp = obj_info.grasp_pos[link_id][grasp_id].reshape((-1, 1))
 
         # Get robot arm base orientation
-        temp1 = p.getLinkState(self.robot._model.uid, self.robot.arm_base_link_idx)
+        temp1 = p.getLinkState(self.robot.model.uid, self.robot.arm_base_link_idx)
         C_O_rob = R.from_quat(np.array(temp1[5]))
 
         # Compute desired position of end effector in robot frame

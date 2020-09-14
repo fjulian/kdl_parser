@@ -1,7 +1,7 @@
 import sys
 from os import path, getcwd, makedirs
 
-from highlevel_planning.sim.world import World
+from highlevel_planning.sim.world import WorldPybullet
 from highlevel_planning.sim.robot_arm import RobotArm
 from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
 
@@ -20,8 +20,8 @@ if __name__ == "__main__":
             objects, robot_mdl = pickle.load(pkl_file)
 
     # Create world
-    world = World(
-        style="shared", sleep_=True, load_objects=not restore_existing_objects
+    world = WorldPybullet(
+        style="shared", sleep=True, load_objects=not restore_existing_objects
     )
     scene = ScenePlanning1(world, BASEDIR, restored_objects=objects)
 

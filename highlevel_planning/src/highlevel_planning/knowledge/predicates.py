@@ -28,7 +28,7 @@ class Predicates:
 
         self.sk_grasping = SkillGrasping(scene, robot, cfg)
         self._scene = scene
-        self._robot_uid = robot._model.uid
+        self._robot_uid = robot.model.uid
         self._robot = robot
         self._kb = knowledge_base
         self._cfg = cfg

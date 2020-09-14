@@ -11,7 +11,7 @@ from highlevel_planning.tools.util import (
 class SkillNavigate:
     def __init__(self, scene, robot):
         self.robot_ = robot
-        self.robot_uid_ = robot._model.uid
+        self.robot_uid_ = robot.model.uid
         self.scene_ = scene
 
     def _check_collisions(self):

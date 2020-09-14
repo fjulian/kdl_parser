@@ -19,7 +19,7 @@ def ortho_projection(direction):
 def draw_arrow(vec_wristframe, robot, color, arrow_id=None, length=0.2):
     if DEBUG:
         link_state = p.getLinkState(
-            robot._model.uid, robot.link_name_to_index["panda_default_EE"]
+            robot.model.uid, robot.link_name_to_index["panda_default_EE"]
         )
         pos = np.array(link_state[4])
         orient = R.from_quat(link_state[5])

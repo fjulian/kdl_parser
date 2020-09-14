@@ -1,4 +1,4 @@
-from highlevel_planning.sim.world import World
+from highlevel_planning.sim.world import WorldPybullet
 
 import pybullet as p
 
@@ -7,7 +7,7 @@ import os
 
 def main():
     # Create world
-    world = World(style="gui", sleep_=True)
+    world = WorldPybullet(style="gui", sleep=True)
     world.add_plane()
 
     print(os.getcwd())

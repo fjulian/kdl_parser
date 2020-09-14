@@ -43,7 +43,7 @@ def main():
     cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
     # Populate simulation
-    robot, scene = run_util.setup_pybullet_world(
+    robot, scene = run_util.setup_world(
         ScenePlanning1, BASEDIR, savedir, objects, args, cfg, robot_mdl
     )
 

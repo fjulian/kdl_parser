@@ -14,21 +14,21 @@ TOL = 1e-4
 
 def getHandLinkPos(robot):
     link_pose = p.getLinkState(
-        robot._model.uid, linkIndex=robot.link_name_to_index["panda_hand"]
+        robot.model.uid, linkIndex=robot.link_name_to_index["panda_hand"]
     )
     return np.array(link_pose[0])
 
 
 def getBaseLinkPos(robot):
     link_pose = p.getLinkState(
-        robot._model.uid, linkIndex=robot.link_name_to_index["panda_link0"]
+        robot.model.uid, linkIndex=robot.link_name_to_index["panda_link0"]
     )
     return np.array(link_pose[0])
 
 
 def getHandLinkOrient(robot):
     link_pose = p.getLinkState(
-        robot._model.uid, linkIndex=robot.link_name_to_index["panda_hand"]
+        robot.model.uid, linkIndex=robot.link_name_to_index["panda_hand"]
     )
     return R.from_quat(link_pose[1])
 

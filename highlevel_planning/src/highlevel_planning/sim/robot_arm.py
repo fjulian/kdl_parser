@@ -16,26 +16,11 @@ import PyKDL
 from rc.controllers import CartesianVelocityControllerKDL
 
 
-def getMotorJointStates(robot):
-    joint_states = p.getJointStates(robot, range(p.getNumJoints(robot)))
-    joint_infos = [p.getJointInfo(robot, i) for i in range(p.getNumJoints(robot))]
-    joint_states = [j for j, i in zip(joint_states, joint_infos) if i[3] > -1]
-    joint_positions = [state[0] for state in joint_states]
-    joint_velocities = [state[1] for state in joint_states]
-    joint_torques = [state[3] for state in joint_states]
-    return joint_positions, joint_velocities, joint_torques
-
-
-class RobotArm:
-    def __init__(self, world, config, base_dir, robot_model=None):
+class RobotArm(object):
+    def __init__(self, world, config, base_dir):
         self._world = world
-        self._model = robot_model
         self.num_joints = 0
-        self.joint_idx_arm = [1, 2, 3, 4, 5, 6, 7]
-        self.joint_idx_fingers = [0, 0]
-        self.joint_idx_hand = 0
-        self.arm_base_link_idx = -100
-        self.arm_ee_link_idx = -100
+
         self._max_force_magnitude = config.getparam(
             ["robot_arm", "max_force_magnitude"], default_value=150
         )
@@ -66,78 +51,26 @@ class RobotArm:
         self.std_vel = 0.3
         self.std_duration = 4
 
-        # Set up velocity setting for driving
-        self._world.velocity_setter = self.velocity_setter
-        self.velocity_trans = [0.0, 0.0, 0.0]
-        self.velocity_turn = 0.0
-
-    def reset(self):
-        if self._model is None:
-            self._model = self._world.add_model(
-                path=self.urdf_path,
-                position=[0.0, 0.0, 0.04],
-                orientation=[0.0, 0.0, 0.0, 1.0],
-            )
-
-        self.link_name_to_index = {p.getBodyInfo(self._model.uid)[0]: -1}
-
-        self.num_joints = p.getNumJoints(self._model.uid)
-        for i in range(self.num_joints):
-            info = p.getJointInfo(self._model.uid, i)
-            joint_name = info[1] if type(info[1]) is str else info[1].decode("utf-8")
-            # print(joint_name, info[16])  # Use this to print all joint names.
-            if "panda_joint" in joint_name and len(joint_name) == 12:
-                joint_num = int(joint_name.split("panda_joint")[1])
-                if joint_num < 8:
-                    self.joint_idx_arm[joint_num - 1] = i
-                if joint_num == 1:
-                    # Save the index of the arm base link
-                    self.arm_base_link_idx = info[16]
-            elif "panda_hand_joint" in joint_name:
-                self.arm_ee_link_idx = info[16]
-                self.joint_idx_hand = i
-            elif "panda_finger_joint" in joint_name:
-                joint_num = int(joint_name.split("panda_finger_joint")[1])
-                self.joint_idx_fingers[joint_num - 1] = i
-
-            _name = info[12] if type(info[12]) is str else info[12].decode("utf-8")
-            self.link_name_to_index[_name] = i
-
-        p.enableJointForceTorqueSensor(
-            self._model.uid, self.joint_idx_hand, enableSensor=1
-        )
-
-        self.apply_colors()
-
-    def apply_colors(self):
-        rgba_white = [0.9, 0.9, 0.9, 1.0]
-        rgba_light_gray = [0.4, 0.4, 0.4, 1.0]
-        rgba_black = [0.15, 0.15, 0.15, 1.0]
-
-        use_white = True
-        for i in range(1, 8):
-            self.apply_color(
-                "panda_link{}".format(i), rgba_white if use_white else rgba_light_gray
-            )
-            use_white = not use_white
-
-        self.apply_color("panda_hand", rgba_white)
-        self.apply_color("panda_rightfinger", rgba_black)
-        self.apply_color("panda_leftfinger", rgba_black)
-
-    def apply_color(self, link_name, rgba):
-        link_idx = self.link_name_to_index[link_name]
-        p.changeVisualShape(self._model.uid, linkIndex=link_idx, rgbaColor=rgba)
-
     def set_joints(self, desired):
-        if desired is None:
-            return
-        p.setJointMotorControlArray(
-            self._model.uid,
-            self.joint_idx_arm,
-            p.POSITION_CONTROL,
-            targetPositions=desired,
-        )
+        raise NotImplementedError
+
+    def get_joints(self):
+        raise NotImplementedError
+
+    def open_gripper(self):
+        raise NotImplementedError
+
+    def close_gripper(self):
+        raise NotImplementedError
+
+    def check_grasp(self):
+        raise NotImplementedError
+
+    def get_wrist_force_torque(self):
+        raise NotImplementedError
+
+    def get_link_pose(self, link_name):
+        raise NotImplementedError
 
     def transition_cmd_to(self, desired, duration=None, stop_on_contact=False):
         desired_pos, _ = self.fk(desired)
@@ -186,7 +119,7 @@ class RobotArm:
         for i in range(1, int(math.ceil(duration * self._world.f_s))):
             pos = current_pos + i * diff_pos
             orient = current_orient + i * diff_orient
-            cmd = self.ik(pos, orient, current_cmd)
+            cmd = self.ik(pos, orient)
             if cmd.tolist() is None or cmd is None:
                 fail_count += 1
                 if fail_count > 10:
@@ -194,23 +127,21 @@ class RobotArm:
                 continue
             else:
                 fail_count = 0
-            current_cmd = cmd
             self.set_joints(cmd.tolist())
             self._world.step_one()
             self._world.sleep(self._world.T_s)
             if stop_on_contact and not self.check_max_contact_force_ok():
                 return False
-        cmd = self.ik(pos_ee, orient_des, current_cmd)
+        cmd = self.ik(pos_ee, orient_des)
         self.set_joints(cmd.tolist())
         return True
 
     def transition_function(self, fcn, t_fin):
-        current_cmd = np.array(self.get_joints())
         t = 0
         fail_count = 0
         while t < t_fin:
             pos, orient = fcn(t)
-            cmd = self.ik(pos, orient, current_cmd)
+            cmd = self.ik(pos, orient)
             if np.any(np.equal(cmd, None)) or cmd is None or cmd.tolist() is None:
                 # print("No IK solution found...")
                 fail_count += 1
@@ -219,75 +150,13 @@ class RobotArm:
                 continue
             else:
                 fail_count = 0
-            current_cmd = cmd
             self.set_joints(cmd.tolist())
             self._world.step_one()
             self._world.sleep(self._world.T_s)
             t += self._world.T_s
         pos, orient = fcn(t_fin)
-        cmd = self.ik(pos, orient, current_cmd)
+        cmd = self.ik(pos, orient)
         self.set_joints(cmd.tolist())
-
-    def task_space_velocity_control(
-        self, velocity_translation, velocity_rotation, num_steps
-    ):
-        """
-        Takes a desired end-effector velocity, computes necessary joint velocities and applies them.
-        Needs to be called at every time step.
-
-        Args:
-            velocity ([type]): [description]
-            :param num_steps:
-            :param velocity_rotation:
-            :param velocity_translation:
-        """
-
-        ctrl = CartesianVelocityControllerKDL()
-        ctrl.init_from_urdf_file(self.urdf_path, "panda_link0", "panda_hand")
-
-        for _ in range(num_steps):
-            mpos, _, _ = getMotorJointStates(self._model.uid)
-
-            # Convert velocity from hand frame to base frame
-            link_poses = p.getLinkStates(
-                self._model.uid,
-                linkIndices=[
-                    self.arm_base_link_idx,
-                    self.link_name_to_index["panda_hand"],
-                ],
-            )
-            base_r = R.from_quat(link_poses[0][5])
-            ee_r = R.from_quat(link_poses[1][5])
-
-            velocity_translation_baseframe = base_r.inv().apply(
-                ee_r.apply(velocity_translation)
-            )
-            velocity_rotation_baseframe = base_r.inv().apply(
-                ee_r.apply(velocity_rotation)
-            )
-
-            cmd = ctrl.compute_command(
-                velocity_translation_baseframe, velocity_rotation_baseframe, mpos[0:7]
-            )
-
-            # Apply them
-            p.setJointMotorControlArray(
-                self._model.uid,
-                self.joint_idx_arm,
-                p.VELOCITY_CONTROL,
-                targetVelocities=list(cmd),
-            )
-
-            self._world.step_one()
-            self._world.sleep(self._world.T_s)
-
-        # Stop the arm
-        p.setJointMotorControlArray(
-            self._model.uid,
-            self.joint_idx_arm,
-            p.VELOCITY_CONTROL,
-            targetVelocities=[0.0] * len(cmd),
-        )
 
     def check_max_contact_force_ok(self):
         force, _ = self.get_wrist_force_torque()
@@ -297,58 +166,8 @@ class RobotArm:
         else:
             return True
 
-    def get_joints(self):
-        temp = p.getJointStates(self._model.uid, self.joint_idx_arm)
-        pos = [a[0] for a in temp]
-        return pos
-
-    def open_gripper(self):
-        pos = [0.038, 0.038]
-        p.setJointMotorControlArray(
-            self._model.uid,
-            self.joint_idx_fingers,
-            p.POSITION_CONTROL,
-            targetPositions=pos,
-        )
-
-    def close_gripper(self):
-        pos = [0.0, 0.0]
-        forces = [25.0, 25.0]
-        p.setJointMotorControlArray(
-            self._model.uid,
-            self.joint_idx_fingers,
-            p.POSITION_CONTROL,
-            targetPositions=pos,
-            forces=forces,
-        )
-
-    def check_grasp(self):
-        gripper_state = p.getJointStates(self._model.uid, self.joint_idx_fingers)
-        assert len(gripper_state) == 2
-
-        # dist_threshold = 0.01
-        # dist = gripper_state[0][0] + gripper_state[1][0]
-        # if dist > dist_threshold:
-        #     object_present = True
-        # else:
-        #     object_present = False
-
-        force_threshold = 1.0
-        force1 = gripper_state[0][3]
-        force2 = gripper_state[1][3]
-        if abs(force1) < force_threshold and abs(force2) < force_threshold:
-            object_present = False
-        else:
-            object_present = True
-
-        return object_present
-
-    def ik(self, pos, orient, seed_state=None):
-        # Ignore passed in seed state and just query the joints.
-        if self._model is None:
-            seed_state = [0.0] * self.ik_solver.number_of_joints
-        else:
-            seed_state = self.get_joints()
+    def ik(self, pos, orient):
+        seed_state = self.get_joints()
         orient = orient / np.linalg.norm(orient)
         sol = self.ik_solver.get_ik(
             seed_state,
@@ -370,7 +189,7 @@ class RobotArm:
             joints[i] = joint_states[i]
         frame = PyKDL.Frame()
 
-        # Need to create a new solver every time because somehow the
+        # Need to create a new solver every time because somehow the internal state gets messed up
         kdl_fk_solver = PyKDL.ChainFkSolverPos_recursive(self.kdl_chain)
         ret = kdl_fk_solver.JntToCart(joints, frame)
         if ret != 0:
@@ -384,6 +203,226 @@ class RobotArm:
     def to_start(self):
         self.transition_cmd_to(self.start_cmd)
 
+    def convert_pos_to_robot_frame(self, r_O_O_traget):
+        r_O_O_rob, C_O_rob = self.get_link_pose("panda_link0")
+        C_O_rob = R.from_quat(C_O_rob)
+        T_O_rob = homogenous_trafo(r_O_O_rob, C_O_rob)
+        T_rob_O = invert_hom_trafo(T_O_rob)
+        r_R_R_target = np.matmul(
+            T_rob_O, np.reshape(np.append(r_O_O_traget, 1.0), (-1, 1))
+        ).squeeze()
+        return r_R_R_target
+
+
+class RobotArmPybullet(RobotArm):
+    def __init__(self, world, config, base_dir, robot_model=None):
+        super(RobotArmPybullet, self).__init__(world, config, base_dir)
+
+        self.model = robot_model
+
+        self.joint_idx_arm = [1, 2, 3, 4, 5, 6, 7]
+        self.joint_idx_fingers = [0, 0]
+        self.joint_idx_hand = 0
+        self.arm_base_link_idx = -100
+        self.arm_ee_link_idx = -100
+        self.link_name_to_index = None
+
+        # Set up velocity setting for driving
+        self._world.velocity_setter = self.velocity_setter
+        self.velocity_trans = [0.0, 0.0, 0.0]
+        self.velocity_turn = 0.0
+
+    def reset(self):
+        if self.model is None:
+            self.model = self._world.add_model(
+                path=self.urdf_path,
+                position=[0.0, 0.0, 0.04],
+                orientation=[0.0, 0.0, 0.0, 1.0],
+            )
+
+        self.link_name_to_index = {p.getBodyInfo(self.model.uid)[0]: -1}
+
+        self.num_joints = p.getNumJoints(self.model.uid)
+        for i in range(self.num_joints):
+            info = p.getJointInfo(self.model.uid, i)
+            joint_name = info[1] if type(info[1]) is str else info[1].decode("utf-8")
+            # print(joint_name, info[16])  # Use this to print all joint names.
+            if "panda_joint" in joint_name and len(joint_name) == 12:
+                joint_num = int(joint_name.split("panda_joint")[1])
+                if joint_num < 8:
+                    self.joint_idx_arm[joint_num - 1] = i
+                if joint_num == 1:
+                    # Save the index of the arm base link
+                    self.arm_base_link_idx = info[16]
+            elif "panda_hand_joint" in joint_name:
+                self.arm_ee_link_idx = info[16]
+                self.joint_idx_hand = i
+            elif "panda_finger_joint" in joint_name:
+                joint_num = int(joint_name.split("panda_finger_joint")[1])
+                self.joint_idx_fingers[joint_num - 1] = i
+
+            _name = info[12] if type(info[12]) is str else info[12].decode("utf-8")
+            self.link_name_to_index[_name] = i
+
+        p.enableJointForceTorqueSensor(
+            self.model.uid, self.joint_idx_hand, enableSensor=1
+        )
+
+        self.apply_colors()
+
+    def apply_colors(self):
+        rgba_white = [0.9, 0.9, 0.9, 1.0]
+        rgba_light_gray = [0.4, 0.4, 0.4, 1.0]
+        rgba_black = [0.15, 0.15, 0.15, 1.0]
+
+        use_white = True
+        for i in range(1, 8):
+            self.apply_color(
+                "panda_link{}".format(i), rgba_white if use_white else rgba_light_gray
+            )
+            use_white = not use_white
+
+        self.apply_color("panda_hand", rgba_white)
+        self.apply_color("panda_rightfinger", rgba_black)
+        self.apply_color("panda_leftfinger", rgba_black)
+
+    def apply_color(self, link_name, rgba):
+        link_idx = self.link_name_to_index[link_name]
+        p.changeVisualShape(self.model.uid, linkIndex=link_idx, rgbaColor=rgba)
+
+    def set_joints(self, desired):
+        if desired is None:
+            return
+        p.setJointMotorControlArray(
+            self.model.uid,
+            self.joint_idx_arm,
+            p.POSITION_CONTROL,
+            targetPositions=desired,
+        )
+
+    def task_space_velocity_control(
+        self, velocity_translation, velocity_rotation, num_steps
+    ):
+        """
+        Takes a desired end-effector velocity, computes necessary joint velocities and applies them.
+        Needs to be called at every time step.
+
+        Args:
+            velocity ([type]): [description]
+            :param num_steps:
+            :param velocity_rotation:
+            :param velocity_translation:
+        """
+
+        ctrl = CartesianVelocityControllerKDL()
+        ctrl.init_from_urdf_file(self.urdf_path, "panda_link0", "panda_hand")
+
+        for _ in range(num_steps):
+            mpos, _, _ = self.get_motor_joint_states()
+
+            # Convert velocity from hand frame to base frame
+            link_poses = p.getLinkStates(
+                self.model.uid,
+                linkIndices=[
+                    self.arm_base_link_idx,
+                    self.link_name_to_index["panda_hand"],
+                ],
+            )
+            base_r = R.from_quat(link_poses[0][5])
+            ee_r = R.from_quat(link_poses[1][5])
+
+            velocity_translation_baseframe = base_r.inv().apply(
+                ee_r.apply(velocity_translation)
+            )
+            velocity_rotation_baseframe = base_r.inv().apply(
+                ee_r.apply(velocity_rotation)
+            )
+
+            cmd = ctrl.compute_command(
+                velocity_translation_baseframe, velocity_rotation_baseframe, mpos[0:7]
+            )
+
+            # Apply them
+            p.setJointMotorControlArray(
+                self.model.uid,
+                self.joint_idx_arm,
+                p.VELOCITY_CONTROL,
+                targetVelocities=list(cmd),
+            )
+
+            self._world.step_one()
+            self._world.sleep(self._world.T_s)
+
+        # Stop the arm
+        p.setJointMotorControlArray(
+            self.model.uid,
+            self.joint_idx_arm,
+            p.VELOCITY_CONTROL,
+            targetVelocities=[0.0] * len(cmd),
+        )
+
+    def get_joints(self):
+        if self.model is None:
+            return [0.0] * self.ik_solver.number_of_joints
+        temp = p.getJointStates(self.model.uid, self.joint_idx_arm)
+        pos = [a[0] for a in temp]
+        return pos
+
+    def open_gripper(self):
+        pos = [0.038, 0.038]
+        p.setJointMotorControlArray(
+            self.model.uid,
+            self.joint_idx_fingers,
+            p.POSITION_CONTROL,
+            targetPositions=pos,
+        )
+
+    def close_gripper(self):
+        pos = [0.0, 0.0]
+        forces = [25.0, 25.0]
+        p.setJointMotorControlArray(
+            self.model.uid,
+            self.joint_idx_fingers,
+            p.POSITION_CONTROL,
+            targetPositions=pos,
+            forces=forces,
+        )
+
+    def get_motor_joint_states(self):
+        joint_states = p.getJointStates(
+            self.model.uid, range(p.getNumJoints(self.model.uid))
+        )
+        joint_infos = [
+            p.getJointInfo(self.model.uid, i)
+            for i in range(p.getNumJoints(self.model.uid))
+        ]
+        joint_states = [j for j, i in zip(joint_states, joint_infos) if i[3] > -1]
+        joint_positions = [state[0] for state in joint_states]
+        joint_velocities = [state[1] for state in joint_states]
+        joint_torques = [state[3] for state in joint_states]
+        return joint_positions, joint_velocities, joint_torques
+
+    def check_grasp(self):
+        gripper_state = p.getJointStates(self.model.uid, self.joint_idx_fingers)
+        assert len(gripper_state) == 2
+
+        # dist_threshold = 0.01
+        # dist = gripper_state[0][0] + gripper_state[1][0]
+        # if dist > dist_threshold:
+        #     object_present = True
+        # else:
+        #     object_present = False
+
+        force_threshold = 1.0
+        force1 = gripper_state[0][3]
+        force2 = gripper_state[1][3]
+        if abs(force1) < force_threshold and abs(force2) < force_threshold:
+            object_present = False
+        else:
+            object_present = True
+
+        return object_present
+
     def update_velocity(self, vel_trans, vel_rot):
         # vel_trans and vel_rot are expected to be in robot body frame.
         self.velocity_trans = vel_trans
@@ -395,7 +434,7 @@ class RobotArm:
 
     def velocity_setter(self):
         # Determine current robot pose
-        _, orient = p.getBasePositionAndOrientation(self._model.uid)
+        _, orient = p.getBasePositionAndOrientation(self.model.uid)
         orient = R.from_quat(orient)
         # euler = orient.as_euler('xyz', degrees=True)
 
@@ -404,27 +443,22 @@ class RobotArm:
         # vel_rot doesn't need to be converted, since body and world z axis coincide.
 
         p.resetBaseVelocity(
-            self._model.uid, vel_trans_world.tolist(), [0.0, 0.0, self.velocity_turn]
+            self.model.uid, vel_trans_world.tolist(), [0.0, 0.0, self.velocity_turn]
         )
 
     def get_wrist_force_torque(self):
-        _, _, f_t, _ = p.getJointState(self._model.uid, self.joint_idx_hand)
+        _, _, f_t, _ = p.getJointState(self.model.uid, self.joint_idx_hand)
         forces = np.array(f_t[:3])
         torques = np.array(f_t[3:])
         return forces, torques
 
     def get_link_pose(self, link_name):
-        ret = p.getLinkState(self._model.uid, self.link_name_to_index[link_name])
+        ret = p.getLinkState(self.model.uid, self.link_name_to_index[link_name])
         pos = np.array(ret[4])
         orient = np.array(ret[5])
         return pos, orient
 
-    def convert_pos_to_robot_frame(self, r_O_O_traget):
-        r_O_O_rob, C_O_rob = self.get_link_pose("panda_link0")
-        C_O_rob = R.from_quat(C_O_rob)
-        T_O_rob = homogenous_trafo(r_O_O_rob, C_O_rob)
-        T_rob_O = invert_hom_trafo(T_O_rob)
-        r_R_R_target = np.matmul(
-            T_rob_O, np.reshape(np.append(r_O_O_traget, 1.0), (-1, 1))
-        ).squeeze()
-        return r_R_R_target
+
+class RobotArmRLBench(RobotArm):
+    def __init__(self):
+        super(RobotArmRLBench, self).__init__()

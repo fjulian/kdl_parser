@@ -7,28 +7,9 @@ from math import ceil
 import atexit
 
 
-class World:
-    def __init__(self, style="gui", sleep_=True, load_objects=True, savedir=None):
-        if not load_objects:
-            assert savedir is not None
-
-        self.sleep_flag = sleep_
-        if style == "gui":
-            self.physics_client = p.connect(p.GUI)
-        elif style == "shared":
-            self.physics_client = p.connect(p.SHARED_MEMORY)
-        elif style == "direct":
-            self.physics_client = p.connect(p.DIRECT)
-        else:
-            raise ValueError
-
-        if load_objects:
-            p.resetSimulation(self.physics_client)
-        else:
-            p.restoreState(fileName=os.path.join(savedir, "state.bullet"))
-            p.removeAllUserDebugItems()
-
-        p.setGravity(0, 0, -9.81, self.physics_client)
+class World(object):
+    def __init__(self, sleep=True):
+        self.sleep_flag = sleep
 
         self.sim_time = 0.0
         self.f_s = 240.0
@@ -55,6 +36,68 @@ class World:
     def sleep(self, seconds):
         if self.sleep_flag:
             time.sleep(seconds)
+
+    def step_one(self):
+        raise NotImplementedError
+
+    def step_seconds(self, secs):
+        for _ in range(int(ceil(secs * self.f_s))):
+            self.step_one()
+            self.sleep(self.T_s)
+
+    def close(self):
+        raise NotImplementedError
+
+
+class _Model:
+    def __init__(self, physics_client):
+        self._physics_client = physics_client
+        self.uid = 0
+        self.name = ""
+        self.link_name_to_index = dict()
+
+    def load(self, path, position, orientation, scale):
+        model_path = os.path.expanduser(path)
+        self.uid = p.loadURDF(
+            model_path,
+            position,
+            orientation,
+            globalScaling=scale,
+            physicsClientId=self._physics_client,
+        )
+        self.name = p.getBodyInfo(self.uid)
+
+        for i in range(p.getNumJoints(self.uid)):
+            info = p.getJointInfo(self.uid, i)
+            name = info[12] if type(info[12]) is str else info[12].decode("utf-8")
+            self.link_name_to_index[name] = i
+
+    def remove(self):
+        p.removeBody(self.uid)
+
+
+class WorldPybullet(World):
+    def __init__(self, style="gui", sleep=True, load_objects=True, savedir=None):
+        super(WorldPybullet, self).__init__(sleep)
+        if not load_objects:
+            assert savedir is not None
+
+        if style == "gui":
+            self.physics_client = p.connect(p.GUI)
+        elif style == "shared":
+            self.physics_client = p.connect(p.SHARED_MEMORY)
+        elif style == "direct":
+            self.physics_client = p.connect(p.DIRECT)
+        else:
+            raise ValueError
+
+        if load_objects:
+            p.resetSimulation(self.physics_client)
+        else:
+            p.restoreState(fileName=os.path.join(savedir, "state.bullet"))
+            p.removeAllUserDebugItems()
+
+        p.setGravity(0, 0, -9.81, self.physics_client)
 
     def add_model(self, path, position, orientation, scale=1.0):
         model = _Model(self.physics_client)
@@ -106,7 +149,7 @@ class World:
             )
         else:
             arrow_id = p.addUserDebugLine(
-                point.tolist(), tip.tolist(), color, width, lifetime,
+                point.tolist(), tip.tolist(), color, width, lifetime
             )
         return arrow_id
 
@@ -119,47 +162,10 @@ class World:
         if self.collision_checker is not None:
             self.collision_checker()
 
-    def step_seconds(self, secs):
-        for _ in range(int(ceil(secs * self.f_s))):
-            self.step_one()
-            self.sleep(self.T_s)
-
-    def add_plane(self):
+    @staticmethod
+    def add_plane():
         return p.loadURDF("plane.urdf")
 
     def close(self):
         print("Closing world")
         p.disconnect(self.physics_client)
-
-
-class _Model:
-    def __init__(self, physics_client):
-        self._physics_client = physics_client
-        self.uid = 0
-        self.name = ""
-        self.link_name_to_index = dict()
-
-    def load(self, path, position, orientation, scale):
-        model_path = os.path.expanduser(path)
-        self.uid = p.loadURDF(
-            model_path,
-            position,
-            orientation,
-            globalScaling=scale,
-            physicsClientId=self._physics_client,
-        )
-        self.name = p.getBodyInfo(self.uid)
-
-        for i in range(p.getNumJoints(self.uid)):
-            info = p.getJointInfo(self.uid, i)
-            name = info[12] if type(info[12]) is str else info[12].decode("utf-8")
-            self.link_name_to_index[name] = i
-
-    def remove(self):
-        p.removeBody(self.uid)
-
-    def get_pos(self):
-        ret = p.getBasePositionAndOrientation(self.uid)
-        pos = np.array(ret[0])
-        orient = np.array(ret[1])
-        return pos, orient
