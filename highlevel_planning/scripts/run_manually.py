@@ -1,6 +1,3 @@
-from highlevel_planning.sim.world import World
-from highlevel_planning.sim.robot_arm import RobotArm
-
 from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
 from highlevel_planning.sim.scene_move_skill import SceneMoveSkill
 from highlevel_planning.skills.navigate import SkillNavigate
@@ -9,14 +6,13 @@ from highlevel_planning.skills.placing import SkillPlacing
 from highlevel_planning.skills.move import SkillMove
 from highlevel_planning.knowledge.predicates import Predicates
 from highlevel_planning.tools.config import ConfigYaml
+from highlevel_planning.tools import run_util
 
 import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-import pickle
 import os
 
-import argparse
 
 BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -149,70 +145,25 @@ def predicate_example(scene, robot):
 
 def main():
     # Command line arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-r",
-        "--reuse-objects",
-        action="store_true",
-        help="if given, the simulation does not reload objects. Objects must already be present.",
-    )
-    parser.add_argument(
-        "-s",
-        "--sleep",
-        action="store_true",
-        help="if given, the simulation will sleep for each update step, to mimic real time execution.",
-    )
-    parser.add_argument(
-        "-m",
-        "--method",
-        action="store",
-        help="determines in which mode to connect to pybullet. Can be 'gui', 'direct' or 'shared'.",
-        default="gui",
-    )
-    args = parser.parse_args()
+    args = run_util.parse_arguments()
 
     # Load existing simulation data if desired
-    restore_existing_objects = args.reuse_objects
-    objects = None
-    robot_mdl = None
     savedir = os.path.join(BASEDIR, "data", "sim")
-    if restore_existing_objects:
-        with open(os.path.join(savedir, "objects.pkl"), "rb") as pkl_file:
-            objects, robot_mdl = pickle.load(pkl_file)
+    objects, robot_mdl = run_util.restore_pybullet_sim(savedir, args)
 
     # Load config file
     cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
     # Create world
-    world = World(
-        style=args.method,
-        sleep_=args.sleep,
-        load_objects=not restore_existing_objects,
-        savedir=savedir,
+    robot, scene = run_util.setup_world(
+        ScenePlanning1, BASEDIR, savedir, objects, args, cfg, robot_mdl
     )
-    scene = ScenePlanning1(world, BASEDIR, restored_objects=objects)
-    # scene = SceneMoveSkill(world, restored_objects=objects)
-
-    # Spawn robot
-    robot = RobotArm(world, cfg, BASEDIR, robot_mdl)
-    robot.reset()
 
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot, cfg)
     sk_place = SkillPlacing(scene, robot)
     sk_nav = SkillNavigate(scene, robot)
-    sk_move = SkillMove(scene, robot, 0.02, world.T_s)
-
-    robot.to_start()
-    world.step_seconds(0.5)
-
-    # Save world
-    if not restore_existing_objects:
-        if not os.path.isdir(savedir):
-            os.makedirs(savedir)
-        with open(os.path.join(savedir, "objects.pkl"), "wb") as output:
-            pickle.dump((scene.objects, robot._model), output)
-        p.saveBullet(os.path.join(savedir, "state.bullet"))
+    sk_move = SkillMove(scene, robot, 0.02, robot._world.T_s)
 
     # ---------- Run examples -----------
 
@@ -233,7 +184,7 @@ def main():
 
     # -----------------------------------
 
-    world.step_seconds(2)
+    robot._world.step_seconds(2)
 
 
 if __name__ == "__main__":
