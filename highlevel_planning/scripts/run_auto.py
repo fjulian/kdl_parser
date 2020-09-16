@@ -1,7 +1,6 @@
-from __future__ import print_function
-
 import numpy as np
 import os
+import atexit
 
 # Simulation
 from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
@@ -19,10 +18,15 @@ from highlevel_planning.learning.pddl_extender import PDDLExtender
 # Other
 from highlevel_planning.tools.config import ConfigYaml
 from highlevel_planning.tools import run_util
+from highlevel_planning.tools.reporter import Reporter
 
 # ----------------------------------------------------------------------
 
 BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def exit_handler(rep: Reporter):
+    rep.write_result_file()
 
 
 def main():
@@ -41,6 +45,9 @@ def main():
 
     # Load config file
     cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
+
+    rep = Reporter(BASEDIR)
+    atexit.register(exit_handler, rep)
 
     # Populate simulation
     robot, scene = run_util.setup_pybullet_world(
@@ -71,16 +78,20 @@ def main():
 
     # Run planner
     plan = kb.solve()
+    rep.report_before_exploration(kb, plan)
+    return
 
     if plan is False:
         print("No plan found, start exploration")
-        success = xplorer.exploration()
+        success, metrics = xplorer.exploration()
+        rep.report_after_exploration(kb, metrics)
         if not success:
             print("Exploration was not successful")
             return
 
         # Run planner again
         plan = kb.solve()
+        rep.report_after_planning(plan)
         if plan is False:
             print("Planner failed despite exploration")
             return

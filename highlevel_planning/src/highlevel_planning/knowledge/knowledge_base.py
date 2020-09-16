@@ -10,7 +10,7 @@ def check_path_exists(path_to_check):
         makedirs(path_to_check)
 
 
-class KnowledgeBase(object):
+class KnowledgeBase:
     def __init__(self, base_dir, domain_name=""):
         self.predicate_funcs = None
 
@@ -25,7 +25,7 @@ class KnowledgeBase(object):
         temp_problem_dir = temp_domain_dir
 
         # Domain definition
-        self._domain_name = domain_name
+        self.domain_name = domain_name
         self.predicate_definitions = dict()
         self.actions = dict()
         self.types = dict()
@@ -44,8 +44,8 @@ class KnowledgeBase(object):
         #     ("on", True, ("cupboard", "cube1")),
         #     ("at", True, ("container1", "robot1")),
         # ]
-        # self.goals = [("on", True, ("container2", "cube1"))]
-        self.goals = [("inside", True, ("container1", "cube1"))]
+        self.goals = [("on", True, ("container2", "cube1"))]
+        # self.goals = [("inside", True, ("container1", "cube1"))]
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()
@@ -53,7 +53,7 @@ class KnowledgeBase(object):
         # Meta action info
         self.meta_actions = dict()
 
-        # Load previous knkowledge base
+        # Load previous knowledge base
         self._domain_file = path.join(domain_dir, "_domain.pkl")
         self.load_domain()
 
@@ -68,6 +68,29 @@ class KnowledgeBase(object):
         self._temp_object_predicates = list()
         self._temp_generalized_objects = list()
 
+    def duplicate(self, original):
+        self.domain_name = deepcopy(original.domain_name)
+        self.predicate_definitions = deepcopy(original.predicate_definitions)
+        self.predicate_definitions = deepcopy(original.predicate_definitions)
+        self.actions = deepcopy(original.actions)
+        self.types = deepcopy(original.types)
+        self.objects = deepcopy(original.objects)
+        self.visible_objects = deepcopy(original.visible_objects)
+        self.object_predicates = deepcopy(original.object_predicates)
+        self.initial_state_predicates = deepcopy(original.initial_state_predicates)
+        self.goals = deepcopy(original.goals)
+        self.lookup_table = deepcopy(original.lookup_table)
+        self.parameterizations = deepcopy(original.parameterizations)
+        self.meta_actions = deepcopy(original.meta_actions)
+        self._temp_objects = deepcopy(original._temp_objects)
+        self._temp_object_predicates = deepcopy(original._temp_object_predicates)
+        self._temp_generalized_objects = deepcopy(original._temp_generalized_objects)
+
+        # -------------
+
+        self.pddl_if = None
+        self.pddl_if_temp = None
+
     def set_predicate_funcs(self, preds):
         self.predicate_funcs = preds
 
@@ -78,7 +101,7 @@ class KnowledgeBase(object):
         if path.exists(self._domain_file):
             with open(self._domain_file, "rb") as f:
                 load_obj = pickle.load(f)
-            self._domain_name = load_obj[0]
+            self.domain_name = load_obj[0]
             self.predicate_definitions = load_obj[1]
             self.actions = load_obj[2]
             self.types = load_obj[3]
@@ -92,7 +115,7 @@ class KnowledgeBase(object):
 
     def save_domain(self):
         save_obj = (
-            self._domain_name,
+            self.domain_name,
             self.predicate_definitions,
             self.actions,
             self.types,
@@ -198,9 +221,6 @@ class KnowledgeBase(object):
         expanded_step = list()
         if action_name in self.meta_actions:
             meta_action = self.meta_actions[action_name]
-            parameter_order = [
-                param[0] for param in meta_action["description"]["params"]
-            ]
             for idx, sub_action_name in enumerate(meta_action["seq"]):
                 new_plan_item = [sub_action_name, {}]
                 sub_action_parameters = self.actions[sub_action_name]["params"]

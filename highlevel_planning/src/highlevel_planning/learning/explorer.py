@@ -1,6 +1,7 @@
 # Imports
 import numpy as np
 import pybullet as p
+from collections import OrderedDict
 
 from highlevel_planning.execution.es_sequential_execution import SequentialExecution
 from highlevel_planning.tools.util import get_combined_aabb
@@ -30,8 +31,10 @@ class Explorer:
         self.knowledge_base = knowledge_base
 
         self.current_state_id = None
+        self.metrics = None
 
     def exploration(self, demo_sequence=None, demo_parameters=None):
+        self.metrics = OrderedDict()
         np.random.seed(0)
         sequences_tried = set()
 
@@ -58,7 +61,7 @@ class Explorer:
                 res = self._explore_goal_objects(
                     sequences_tried, goal_objects + closeby_objects
                 )
-        return res
+        return res, self.metrics
 
     # ----- Different sampling strategies ------------------------------------
 
