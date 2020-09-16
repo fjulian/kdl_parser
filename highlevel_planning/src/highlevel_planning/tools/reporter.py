@@ -5,16 +5,18 @@ from datetime import datetime
 from copy import deepcopy
 
 from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
+from highlevel_planning.tools.config import ConfigYaml
 
 
 class Reporter:
-    def __init__(self, basedir: str):
+    def __init__(self, basedir: str, config: ConfigYaml):
         self.basedir = basedir
         self.data = dict()
         self.metrics = OrderedDict()
         self.time_stamp = datetime.now()
         self.metrics["time"] = self.time_stamp.strftime("%Y-%m-%d_%H-%M-%S")
         self.metrics["description"] = input("Experiment description: ")
+        self.data["configuration"] = deepcopy(config._cfg)
 
     def report_before_exploration(self, knowledge_base: KnowledgeBase, plan):
         kb_clone = KnowledgeBase(self.basedir)
@@ -26,8 +28,11 @@ class Reporter:
     def report_after_exploration(
         self, knowledge_base: KnowledgeBase, exploration_metrics: OrderedDict
     ):
-        self.data["kb_after"] = deepcopy(knowledge_base)
-        self.metrics.update(exploration_metrics)
+        kb_clone = KnowledgeBase(self.basedir)
+        kb_clone.duplicate(knowledge_base)
+        self.data["kb_after"] = kb_clone
+        for key, value in exploration_metrics.items():
+            self.metrics[f"exp_{key}"] = value
 
     def report_after_planning(self, plan):
         self.data["plan_after"] = deepcopy(plan)
@@ -42,7 +47,7 @@ class Reporter:
         savefile = os.path.join(savedir, f"{self.time_stamp}_index.txt")
         with open(savefile, "w") as f:
             for key, value in self.metrics.items():
-                f.write(f"{key:20}: {value}\n")
+                f.write(f"{key:36}: {value}\n")
 
         # Write data
         with open(os.path.join(savedir, f"{self.time_stamp}_data.pkl"), "wb") as f:

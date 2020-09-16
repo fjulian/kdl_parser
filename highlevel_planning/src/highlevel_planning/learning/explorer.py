@@ -32,9 +32,17 @@ class Explorer:
 
         self.current_state_id = None
         self.metrics = None
+        self.metrics_prefix = ""
+
+    def set_metrics_prefix(self, prefix: str):
+        self.metrics_prefix = prefix
+
+    def add_metric(self, key: str, value):
+        self.metrics[f"{self.metrics_prefix}_{key}"] = value
 
     def exploration(self, demo_sequence=None, demo_parameters=None):
         self.metrics = OrderedDict()
+
         np.random.seed(0)
         sequences_tried = set()
 
@@ -43,37 +51,51 @@ class Explorer:
 
         # Identify objects that are involved in reaching the goal
         goal_objects = self._get_items_goal()
-        radii = [0.1, 1.5, 10.0]
+        radii = self.config_params["radii"]
 
         res = False
 
         if demo_sequence is not None and demo_parameters is not None:
+            self.set_metrics_prefix("01_demo")
             res = self._explore_demonstration(
                 demo_sequence, demo_parameters, goal_objects, sequences_tried
             )
+            self.add_metric("result", res)
         if not res:
+            self.set_metrics_prefix("02_generalize")
             res = self._explore_generalized_action(goal_objects, sequences_tried)
+            self.add_metric("result", res)
         for radius in radii:
             if not res:
+                self.set_metrics_prefix(f"03_rad{radius}")
                 closeby_objects = self._get_items_closeby(
                     goal_objects, distance_limit=radius
                 )
+                self.add_metric("closeby_objects", closeby_objects)
                 res = self._explore_goal_objects(
                     sequences_tried, goal_objects + closeby_objects
                 )
+                self.add_metric("result", res)
         return res, self.metrics
 
     # ----- Different sampling strategies ------------------------------------
 
+    @staticmethod
+    def get_sampling_counters_dict():
+        return OrderedDict.fromkeys(
+            ("valid_sequences", "preplan_success", "plan_success", "goal_reached"), 0
+        )
+
     def _explore_demonstration(
         self, demo_sequence, demo_parameters, relevant_objects, sequences_tried
     ):
-
         found_plan = False
         self.knowledge_base.clear_temp()
+        sampling_counters = self.get_sampling_counters_dict()
         for _ in range(self.config_params["max_sample_repetitions"]):
             found_plan = self._sampling_loops(
                 sequences_tried,
+                sampling_counters,
                 given_seq=demo_sequence,
                 given_params=demo_parameters,
                 relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions here
@@ -81,12 +103,16 @@ class Explorer:
             )
             if found_plan:
                 break
+
+        # Store counters
+        for counter in sampling_counters:
+            self.add_metric(counter, sampling_counters[counter])
+
         # Restore initial state
         p.restoreState(stateId=self.current_state_id)
         return found_plan
 
     def _explore_generalized_action(self, relevant_objects, sequences_tried):
-
         # Check if an action with a similar effect already exists
         self.knowledge_base.clear_temp()
         for obj in relevant_objects:
@@ -139,15 +165,22 @@ class Explorer:
 
         found_plan = False
         self.knowledge_base.clear_temp()
+        sampling_counters = self.get_sampling_counters_dict()
         for _ in range(self.config_params["max_sample_repetitions"]):
             found_plan = self._sampling_loops(
                 sequences_tried,
+                sampling_counters,
                 given_seq=relevant_sequence,
                 given_params=fixed_parameters,
                 relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions here
             )
             if found_plan:
                 break
+
+        # Store counters
+        for counter in sampling_counters:
+            self.add_metric(counter, sampling_counters[counter])
+
         # Restore initial state
         p.restoreState(stateId=self.current_state_id)
         return found_plan
@@ -155,18 +188,26 @@ class Explorer:
     def _explore_goal_objects(self, sequences_tried, relevant_objects=None):
         found_plan = False
         self.knowledge_base.clear_temp()
+        sampling_counters = self.get_sampling_counters_dict()
         for _ in range(self.config_params["max_sample_repetitions"]):
             for seq_len in range(1, self.config_params["max_sequence_length"] + 1):
                 found_plan = self._sampling_loops(
                     sequences_tried,
+                    sampling_counters,
                     seq_len=seq_len,
                     relevant_objects=relevant_objects,
                     do_complete_sequence=True,
                 )
                 if found_plan:
+                    self.add_metric("successful_seq_len", seq_len)
                     break
             if found_plan:
                 break
+
+        # Store counters
+        for counter in sampling_counters:
+            self.add_metric(counter, sampling_counters[counter])
+
         # Restore initial state
         p.restoreState(stateId=self.current_state_id)
         self.knowledge_base.clear_temp()
@@ -177,6 +218,7 @@ class Explorer:
     def _sampling_loops(
         self,
         sequences_tried,
+        counters,
         given_seq=None,
         given_params=None,
         seq_len=None,
@@ -206,7 +248,7 @@ class Explorer:
             if not success:
                 print("Sampling failed. Abort searching in this sequence length.")
                 break
-            # count_seq_found[seq_len - 1] += 1
+            counters["valid_sequences"] += 1
 
             # Found a feasible action sequence. Now test it.
             preplan_success = self.execute_plan(
@@ -214,18 +256,21 @@ class Explorer:
             )
             if not preplan_success:
                 continue
+            counters["preplan_success"] += 1
             print("Preplan SUCCESS")
 
             # Try actual plan
             plan_success = self.execute_plan(completed_sequence, completed_parameters)
             if not plan_success:
                 continue
+            counters["plan_success"] += 1
             print("Sequence SUCCESS")
 
             # Check if the goal was reached
             success = self.knowledge_base.test_goals()
             if not success:
                 continue
+            counters["goal_reached"] += 1
             print("GOAL REACHED!!!")
 
             if given_seq is not None and given_params is not None:

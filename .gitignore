@@ -5,6 +5,7 @@ venv
 *.bullet
 highlevel_planning/knowledge/chimera
 highlevel_planning/knowledge/chimera-test
+highlevel_planning/data/reports
 *.egg-info
 build/
 dist/

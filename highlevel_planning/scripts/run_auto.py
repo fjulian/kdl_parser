@@ -46,7 +46,7 @@ def main():
     # Load config file
     cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
-    rep = Reporter(BASEDIR)
+    rep = Reporter(BASEDIR, cfg)
     atexit.register(exit_handler, rep)
 
     # Populate simulation
@@ -79,7 +79,6 @@ def main():
     # Run planner
     plan = kb.solve()
     rep.report_before_exploration(kb, plan)
-    return
 
     if plan is False:
         print("No plan found, start exploration")
