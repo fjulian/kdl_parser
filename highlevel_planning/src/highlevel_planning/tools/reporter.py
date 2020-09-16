@@ -18,12 +18,26 @@ class Reporter:
         self.metrics["description"] = input("Experiment description: ")
         self.data["configuration"] = deepcopy(config._cfg)
 
+    def _extract_kb_metrics(self, kb, prefix: str):
+        self.metrics[f"{prefix}_actions"] = str(len(kb.actions))
+        self.metrics[f"{prefix}_types"] = str(len(kb.types))
+        self.metrics[f"{prefix}_objects"] = str(len(kb.objects))
+        self.metrics[f"{prefix}_visible_objects"] = str(len(kb.visible_objects))
+        self.metrics[f"{prefix}_object_predicates"] = str(len(kb.object_predicates))
+        self.metrics[f"{prefix}_initial_state_predicates"] = str(
+            len(kb.initial_state_predicates)
+        )
+        self.metrics[f"{prefix}_lookup_table"] = str(len(kb.lookup_table))
+        self.metrics[f"{prefix}_parameterizations"] = str(len(kb.parameterizations))
+        self.metrics[f"{prefix}_meta_actions"] = str(len(kb.meta_actions))
+
     def report_before_exploration(self, knowledge_base: KnowledgeBase, plan):
         kb_clone = KnowledgeBase(self.basedir)
         kb_clone.duplicate(knowledge_base)
         self.data["kb_before"] = kb_clone
+        self._extract_kb_metrics(kb_clone, "kb_before")
         self.data["plan_before"] = deepcopy(plan)
-        self.metrics["plan_before_success"] = True if plan is not False else False
+        self.metrics["plan_before_success"] = str(True if plan is not False else False)
 
     def report_after_exploration(
         self, knowledge_base: KnowledgeBase, exploration_metrics: OrderedDict
@@ -31,6 +45,7 @@ class Reporter:
         kb_clone = KnowledgeBase(self.basedir)
         kb_clone.duplicate(knowledge_base)
         self.data["kb_after"] = kb_clone
+        self._extract_kb_metrics(kb_clone, "kb_after")
         for key, value in exploration_metrics.items():
             self.metrics[f"exp_{key}"] = value
 
