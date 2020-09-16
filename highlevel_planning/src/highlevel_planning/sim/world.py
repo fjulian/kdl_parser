@@ -28,9 +28,6 @@ class World(object):
         }
 
         self.velocity_setter = None
-
-        p.setAdditionalSearchPath(pybullet_data.getDataPath())
-
         atexit.register(self.close)
 
     def sleep(self, seconds):
@@ -98,6 +95,7 @@ class WorldPybullet(World):
             p.removeAllUserDebugItems()
 
         p.setGravity(0, 0, -9.81, self.physics_client)
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
     def add_model(self, path, position, orientation, scale=1.0):
         model = _Model(self.physics_client)

@@ -35,15 +35,11 @@ def main():
     if args.method == "direct" and args.reuse_objects:
         raise RuntimeError("Cannot reload objects when in direct mode.")
 
-    # Load existing simulation data if desired
-    savedir = os.path.join(BASEDIR, "data", "sim")
-    objects, robot_mdl = run_util.restore_pybullet_sim(savedir, args)
-
     # Load config file
     cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
     # Populate simulation
-    robot, scene = run_util.setup_world(
+    robot, scene = run_util.setup_pybullet_world(
         ScenePlanning1, BASEDIR, savedir, objects, args, cfg, robot_mdl
     )
 
