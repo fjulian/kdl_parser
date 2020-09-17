@@ -36,7 +36,7 @@
   <joint name="panda_joint_ridgeback_dummy" type="fixed">
     <parent link="ridgeback_dummy"/>
     <child link="panda_link0"/>
-    <origin rpy="0 0 0" xyz="0.2 0 0.45"/>
+    <origin rpy="0 0 0" xyz="0.2 0 0.35"/>
   </joint>
   <!-- The following must only be specified once. It's already specified in the ridgeback description. -->
   <!-- <gazebo>

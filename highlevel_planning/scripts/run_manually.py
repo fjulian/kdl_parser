@@ -17,9 +17,9 @@ import os
 BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def drawer_example(sk_grasp, sk_nav, robot, scene, world):
+def drawer_example(sk_grasp, sk_nav, robot, world):
     # Run move skill
-    sk_nav.move_to_object("cupboard")
+    sk_nav.move_to_object("cupboard", nav_min_dist=1.0)
 
     print(robot.get_wrist_force_torque())
 
@@ -156,7 +156,7 @@ def main():
 
     # Create world
     robot, scene = run_util.setup_pybullet_world(
-        ScenePlanning1, BASEDIR, savedir, objects, args, cfg, robot_mdl
+        SceneMoveSkill, BASEDIR, savedir, objects, args, cfg, robot_mdl
     )
 
     # Set up skills
@@ -167,11 +167,11 @@ def main():
 
     # ---------- Run examples -----------
 
-    # drawer_example(sk_grasp, sk_nav, robot, scene, world)
+    drawer_example(sk_grasp, sk_nav, robot, robot._world)
 
     # drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
 
-    grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1")
+    # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1")
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lid1")
 
     # drive_example(robot, world)
