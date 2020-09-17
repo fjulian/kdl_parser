@@ -35,7 +35,7 @@ class Cupboard:
             )
 
     def get_info(self):
-        grasp_orient = R.from_euler("xzy", [180, 90, 45], degrees=True)
+        grasp_orient = R.from_euler("xzy", [180, 0, -45], degrees=True)
         return ObjectInfo(
             urdf_path_=self.urdf,
             init_pos_=np.array(self.pos),
@@ -48,6 +48,6 @@ class Cupboard:
             },
             model_=self.model,
             nav_angle_=self.nav_angle,
-            nav_min_dist_=1.0,
+            nav_min_dist_=0.9,
             grasp_links_=self.handle_link_idx,
         )

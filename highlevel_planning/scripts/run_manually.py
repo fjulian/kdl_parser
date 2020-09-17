@@ -19,7 +19,7 @@ BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def drawer_example(sk_grasp, sk_nav, robot, world):
     # Run move skill
-    sk_nav.move_to_object("cupboard", nav_min_dist=1.0)
+    sk_nav.move_to_object("cupboard")
 
     print(robot.get_wrist_force_torque())
 
@@ -167,9 +167,9 @@ def main():
 
     # ---------- Run examples -----------
 
-    drawer_example(sk_grasp, sk_nav, robot, robot._world)
+    # drawer_example(sk_grasp, sk_nav, robot, robot._world)
 
-    # drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
+    drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
 
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1")
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lid1")
