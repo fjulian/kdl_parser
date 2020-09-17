@@ -43,7 +43,7 @@ class TestExplorer(unittest.TestCase):
         skill_descriptions = pddl_descriptions.get_action_descriptions()
         for skill_name, description in skill_descriptions.items():
             cls.kb.add_action(
-                action_name=skill_name, action_definition=description, overwrite=True,
+                action_name=skill_name, action_definition=description, overwrite=True
             )
 
         # Add required types

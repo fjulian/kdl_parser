@@ -59,7 +59,10 @@ class CustomChooser(Selector):
                     for node in child.tick():
                         yield node
                         if node is child:
-                            if node.status == Status.RUNNING or node.status == Status.SUCCESS:
+                            if (
+                                node.status == Status.RUNNING
+                                or node.status == Status.SUCCESS
+                            ):
                                 self.current_child = child
                                 if previous != self.current_child:
                                     passed2 = False
@@ -67,7 +70,11 @@ class CustomChooser(Selector):
                                         if passed2:
                                             if child2.status != Status.INVALID:
                                                 child2.stop(Status.INVALID)
-                                        passed2 = True if child2 == self.current_child else passed2
+                                        passed2 = (
+                                            True
+                                            if child2 == self.current_child
+                                            else passed2
+                                        )
                                 found_running_or_success = True
                                 break
                     if found_running_or_success:
@@ -82,6 +89,10 @@ class CustomChooser(Selector):
                 if child.status == Status.RUNNING or child.status == Status.SUCCESS:
                     self.current_child = child
                     break
-        new_status = self.current_child.status if self.current_child is not None else Status.FAILURE
+        new_status = (
+            self.current_child.status
+            if self.current_child is not None
+            else Status.FAILURE
+        )
         self.stop(new_status)
         yield self

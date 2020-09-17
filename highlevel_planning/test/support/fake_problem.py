@@ -8,7 +8,7 @@ class FakePlanningProblem:
             "p2": "waypoint",
         }
         self.initial_predicates = [
-            ("carry", True, ("r1", "s1",)),
+            ("carry", True, ("r1", "s1")),
             ("is-dropping-dock", True, ("p2",)),
         ]
         self.goals = [("new-predicate", True, ("p2", "r1"))]

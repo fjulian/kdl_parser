@@ -1,9 +1,12 @@
 import py_trees
 import time
 
+
 class ConditionChecker_Blackboard(py_trees.behaviour.Behaviour):
     def __init__(self, checker_variable, duration=0):
-        super(ConditionChecker_Blackboard, self).__init__(name='checker_'+checker_variable)
+        super(ConditionChecker_Blackboard, self).__init__(
+            name="checker_" + checker_variable
+        )
         self._checker_variable = checker_variable
         self._duration = duration
         self.blackboard = py_trees.blackboard.Blackboard()
@@ -24,7 +27,10 @@ class ConditionChecker_Blackboard(py_trees.behaviour.Behaviour):
             else:
                 new_status = py_trees.common.Status.FAILURE
                 self.feedback_message = "Check failed"
-        self.logger.debug("%s.update()[%s->%s][%s]" % (self.__class__.__name__, self.status, new_status, self.feedback_message))
+        self.logger.debug(
+            "%s.update()[%s->%s][%s]"
+            % (self.__class__.__name__, self.status, new_status, self.feedback_message)
+        )
         return new_status
 
 
@@ -43,16 +49,16 @@ def main():
     root = py_trees.composites.Chooser(children=[seq_fail, action_success])
     tree = py_trees.trees.BehaviourTree(root)
 
-    print("="*20)
+    print("=" * 20)
     print("Behavior tree:")
-    print("-"*20)
+    print("-" * 20)
     print(py_trees.display.ascii_tree(tree.root))
-    print("="*20)
+    print("=" * 20)
 
     for i in range(6):
         tree.tick()
         time.sleep(0.5)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
