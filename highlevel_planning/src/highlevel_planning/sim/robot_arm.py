@@ -268,6 +268,19 @@ class RobotArmPybullet(RobotArm):
             self.model.uid, self.joint_idx_hand, enableSensor=1
         )
 
+        # Force fingers to move symmetrically
+        c = p.createConstraint(
+            self.model.uid,
+            self.link_name_to_index["panda_leftfinger"],
+            self.model.uid,
+            self.link_name_to_index["panda_rightfinger"],
+            jointType=p.JOINT_GEAR,
+            jointAxis=[1, 0, 0],
+            parentFramePosition=[0, 0, 0],
+            childFramePosition=[0, 0, 0],
+        )
+        p.changeConstraint(c, gearRatio=-1, erp=0.1, maxForce=50)
+
         self.apply_colors()
 
     def apply_colors(self):
