@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>chimera_app_highlevel_planning</name>
+  <name>highlevel_planning</name>
   <version>0.0.0</version>
   <description>The chimera_app_highlevel_planning package</description>
 
@@ -8,6 +8,7 @@
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
   <maintainer email="fjulian@todo.todo">fjulian</maintainer>
+  <author>Julian Foerster</author>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->

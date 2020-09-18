@@ -44,15 +44,11 @@ pip install -r requirements.txt
 
 ### Install Development Code
 
-The library that comes with this package needs to be installed in the virtual environment. To do this in developer mode, use the command
+To make the python package available, just build the package:
 
 ```
-pip install -e .
+catkin build -DCMAKE_BUILD_TYPE=Release highlevel_planning
 ```
-
-in the root directory of the project.
-
-To install them regularly, just for using them, use the command without the flag `-e`.
 
 ### Robot Description
 

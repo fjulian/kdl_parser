@@ -4,6 +4,3 @@
 [submodule "submodules/orocos_kinematics_dynamics"]
 	path = submodules/orocos_kinematics_dynamics
 	url = git@github.com:orocos/orocos_kinematics_dynamics.git
-[submodule "submodules/kdl_parser"]
-	path = submodules/kdl_parser
-	url = git@github.com:ros/kdl_parser.git
