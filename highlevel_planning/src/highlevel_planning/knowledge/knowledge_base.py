@@ -11,7 +11,7 @@ def check_path_exists(path_to_check):
 
 
 class KnowledgeBase:
-    def __init__(self, base_dir, domain_name=""):
+    def __init__(self, base_dir, domain_name="", time_string=None):
         self.predicate_funcs = None
 
         # Folder book keeping
@@ -36,7 +36,7 @@ class KnowledgeBase:
         self.object_predicates = list()
         self.initial_state_predicates = list()
         # self.goals = list()
-        # self.goals = [("in-hand", True, ("cube1", "robot1"))]
+        self.goals = [("in-hand", True, ("cube1", "robot1"))]
         # self.goals = [("at", True, ("container1", "robot1"))]
         # self.goals = [("at", True, ("cupboard", "robot1"))]
         # self.goals = [("on", True, ("cupboard", "cube1"))]
@@ -44,7 +44,7 @@ class KnowledgeBase:
         #     ("on", True, ("cupboard", "cube1")),
         #     ("at", True, ("container1", "robot1")),
         # ]
-        self.goals = [("on", True, ("container2", "cube1"))]
+        # self.goals = [("on", True, ("container2", "cube1"))]
         # self.goals = [("inside", True, ("container1", "cube1"))]
 
         # Value lookups (e.g. for positions)
@@ -58,9 +58,11 @@ class KnowledgeBase:
         self.load_domain()
 
         # PDDL file interfaces
-        self.pddl_if = PDDLFileInterface(domain_dir, problem_dir, domain_name)
+        self.pddl_if = PDDLFileInterface(
+            domain_dir, problem_dir, domain_name, time_string
+        )
         self.pddl_if_temp = PDDLFileInterface(
-            temp_domain_dir, temp_problem_dir, domain_name
+            temp_domain_dir, temp_problem_dir, domain_name, time_string
         )
 
         # Temporary variables (e.g. for exploration)

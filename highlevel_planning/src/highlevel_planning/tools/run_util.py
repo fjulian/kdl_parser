@@ -73,9 +73,9 @@ def setup_pybullet_world(scene_object, basedir, savedir, objects, args, cfg, rob
     return robot, scene
 
 
-def setup_knowledge_base(basedir, scene, robot, cfg):
+def setup_knowledge_base(basedir, scene, robot, cfg, time_string):
     # Set up planner interface and domain representation
-    kb = KnowledgeBase(basedir, domain_name="chimera")
+    kb = KnowledgeBase(basedir, domain_name="chimera", time_string=time_string)
 
     # Add basic skill descriptions
     skill_descriptions = pddl_descriptions.get_action_descriptions()

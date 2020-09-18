@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import atexit
+from datetime import datetime
 
 # Simulation
 from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
@@ -46,7 +47,9 @@ def main():
     # Load config file
     cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
-    rep = Reporter(BASEDIR, cfg)
+    time_now = datetime.now()
+    time_string = time_now.strftime("%y%m%d-%H%M%S")
+    rep = Reporter(BASEDIR, cfg, time_string)
     atexit.register(exit_handler, rep)
 
     # Populate simulation
@@ -56,7 +59,7 @@ def main():
 
     # -----------------------------------
 
-    kb, preds = run_util.setup_knowledge_base(BASEDIR, scene, robot, cfg)
+    kb, preds = run_util.setup_knowledge_base(BASEDIR, scene, robot, cfg, time_string)
 
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot, cfg)

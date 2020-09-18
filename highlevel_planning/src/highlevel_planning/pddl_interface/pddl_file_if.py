@@ -81,7 +81,7 @@ def _preprocess_knowledge(actions, objects, types, parameterizations, joker_obje
 
 
 class PDDLFileInterface:
-    def __init__(self, domain_dir, problem_dir=None, domain_name=""):
+    def __init__(self, domain_dir, problem_dir=None, domain_name="", time_string=None):
         self._domain_dir = domain_dir
         self._problem_dir = problem_dir
         self._domain_name = domain_name
@@ -90,8 +90,11 @@ class PDDLFileInterface:
         self.problem_file_pddl = None
         self._requirements = ":strips :typing"
 
-        time_now = datetime.now()
-        self._time_now_str = time_now.strftime("%y%m%d-%H%M%S")
+        if time_string is None:
+            time_now = datetime.now()
+            self._time_now_str = time_now.strftime("%y%m%d-%H%M%S")
+        else:
+            self._time_now_str = time_string
 
     # ----- Loading and saving PDDL files --------------------------------------
 
