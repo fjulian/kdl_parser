@@ -103,7 +103,7 @@ def grasp_example(
 
     # Place cube somewhere else
     sk_place.place_object(
-        scene.objects[object_name].init_pos + np.array([0.0, 0.2, -0.09])
+        scene.objects[object_name].init_pos + np.array([0.0, 0.1, -0.09])
     )
 
 
@@ -156,7 +156,7 @@ def main():
 
     # Create world
     robot, scene = run_util.setup_pybullet_world(
-        SceneMoveSkill, BASEDIR, savedir, objects, args, cfg, robot_mdl
+        ScenePlanning1, BASEDIR, savedir, objects, args, cfg, robot_mdl
     )
 
     # Set up skills
@@ -169,10 +169,12 @@ def main():
 
     # drawer_example(sk_grasp, sk_nav, robot, robot._world)
 
-    drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
+    # drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
 
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1")
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lid1")
+    # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lego")
+    grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="duck")
 
     # drive_example(robot, world)
 

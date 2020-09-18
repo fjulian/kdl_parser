@@ -5,6 +5,4 @@ sudo apt-get install ros-$ROS_DISTRO-urdf \
     ros-$ROS_DISTRO-tf-conversions \
     swig \
     ros-$ROS_DISTRO-urdfdom-py \
-    ros-$ROS_DISTRO-xacro \
-    ros-$ROS_DISTRO-kdl-parser \
-    ros-$ROS_DISTRO-kdl-parser-py
+    ros-$ROS_DISTRO-xacro

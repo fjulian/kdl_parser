@@ -33,6 +33,25 @@ class ScenePlanning1(SceneBase):
                     ]
                 },
             )
+            self.objects["lego"] = ObjectInfo(
+                urdf_path_="lego/lego.urdf",
+                init_pos_=np.array([2.45, -0.3, 0.68]),
+                init_orient_=rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "z", 0.0),
+                init_scale_=2.0,
+                grasp_links_=[-1],
+                grasp_pos_={-1: [np.array([0.0, 0.0, 0.0])]},
+                grasp_orient_={-1: [np.array([0.0, 0.0, 0.0, 1.0])]},
+            )
+            self.objects["duck"] = ObjectInfo(
+                urdf_path_="duck_vhacd.urdf",
+                init_pos_=np.array([2.8, -0.25, 0.67]),
+                init_orient_=rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "x", 90.0),
+                grasp_links_=[-1],
+                grasp_pos_={-1: [np.array([-0.02, 0.04, 0.0])]},
+                grasp_orient_={
+                    -1: [rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "x", -90.0)]
+                },
+            )
             self.objects["container1"] = ObjectInfo(
                 urdf_path_=os.path.join(
                     base_dir, "data/models/container/container_no_lid.urdf"
