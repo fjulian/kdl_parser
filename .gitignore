@@ -3,8 +3,9 @@ venv
 *.pyc
 *.pkl
 *.bullet
-knowledge/chimera
-knowledge/chimera-test
+highlevel_planning/knowledge/chimera
+highlevel_planning/knowledge/chimera-test
+highlevel_planning/data/reports
 *.egg-info
 build/
 dist/
