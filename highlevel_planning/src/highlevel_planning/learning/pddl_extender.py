@@ -118,13 +118,13 @@ class PDDLExtender(object):
                 action_params.append([arg, "position"])
             else:
                 original_types = self.knowledge_base.objects[arg]
-                new_type = "".join((original_types[0], "-", arg, "-", time_string))
+                new_type = f"{original_types[0]}-{arg}-{time_string}"
                 action_params.append([arg, new_type])
                 self.knowledge_base.add_type(new_type, original_types[0])
                 self.knowledge_base.add_object(arg, new_type)
             already_retyped.append(arg)
 
-    def _process_parameterizations(self, param_list, action_name):
+    def _process_parameterizations(self, param_list: list, action_name: str):
         """
         [summary]
 

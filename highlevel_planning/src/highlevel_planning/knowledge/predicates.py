@@ -48,9 +48,9 @@ class Predicates:
         dist_finger2 = 100
         for contact in temp:
             if contact[3] == robot.joint_idx_fingers[0]:
-                dist_finger1 = contact[8]
+                dist_finger1 = contact[8] if contact[8] < dist_finger1 else dist_finger1
             elif contact[3] == robot.joint_idx_fingers[1]:
-                dist_finger2 = contact[8]
+                dist_finger2 = contact[8] if contact[8] < dist_finger2 else dist_finger2
         desired_object_in_hand = (abs(dist_finger1) < 0.001) and (
             abs(dist_finger2) < 0.001
         )

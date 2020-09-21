@@ -18,6 +18,7 @@ class Reporter:
             self.metrics["time"] = time_stamp.strftime("%y%m%d-%H%M%S")
         else:
             self.metrics["time"] = time_string
+        print(f"Time string for reporting is {self.metrics['time']}")
         self.metrics["description"] = input("Experiment description: ")
         self.data["configuration"] = deepcopy(config._cfg)
 
@@ -38,6 +39,7 @@ class Reporter:
         kb_clone = KnowledgeBase(self.basedir)
         kb_clone.duplicate(knowledge_base)
         self.data["kb_before"] = kb_clone
+        self.metrics["goal"] = str(kb_clone.goals)
         self._extract_kb_metrics(kb_clone, "kb_before")
         self.data["plan_before"] = deepcopy(plan)
         self.metrics["plan_before_success"] = str(True if plan is not False else False)

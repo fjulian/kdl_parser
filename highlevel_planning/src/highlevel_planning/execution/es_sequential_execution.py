@@ -59,10 +59,10 @@ class SequentialExecution(ExecutionSystem):
             try:
                 if action_name == "grasp":
                     target_name = action_parameters["obj"]
-                    target_link_id = -1
-                    target_grasp_id = 0
+                    target_link_idx = 0
+                    target_grasp_idx = 0
                     res = self.skill_set_["grasp"].grasp_object(
-                        target_name, target_link_id, target_grasp_id
+                        target_name, target_link_idx, target_grasp_idx
                     )
                     if not res:
                         raise SkillExecutionError

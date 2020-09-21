@@ -36,15 +36,17 @@ class KnowledgeBase:
         self.object_predicates = list()
         self.initial_state_predicates = list()
         # self.goals = list()
-        self.goals = [("in-hand", True, ("cube1", "robot1"))]
+        # self.goals = [("in-hand", True, ("cube1", "robot1"))]
         # self.goals = [("at", True, ("container1", "robot1"))]
         # self.goals = [("at", True, ("cupboard", "robot1"))]
         # self.goals = [("on", True, ("cupboard", "cube1"))]
+        # self.goals = [("on", True, ("cupboard", "duck"))]
         # self.goals = [
         #     ("on", True, ("cupboard", "cube1")),
         #     ("at", True, ("container1", "robot1")),
         # ]
         # self.goals = [("on", True, ("container2", "cube1"))]
+        self.goals = [("on", True, ("container2", "lego"))]
         # self.goals = [("inside", True, ("container1", "cube1"))]
 
         # Value lookups (e.g. for positions)
