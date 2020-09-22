@@ -2,6 +2,7 @@ import numpy as np
 import os
 import atexit
 from datetime import datetime
+import pybullet as p
 
 # Simulation
 from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
@@ -10,7 +11,9 @@ from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
 from highlevel_planning.skills.navigate import SkillNavigate
 from highlevel_planning.skills.grasping import SkillGrasping
 from highlevel_planning.skills.placing import SkillPlacing
-from highlevel_planning.execution.es_sequential_execution import SequentialExecution
+from highlevel_planning.execution.es_sequential_execution import (
+    execute_plan_sequentially,
+)
 
 # Learning
 from highlevel_planning.learning.explorer import Explorer
@@ -28,6 +31,14 @@ BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def exit_handler(rep: Reporter):
     rep.write_result_file()
+
+
+def print_plan(sequence, parameters):
+    print("---------------------------------------------------")
+    print("Found plan:")
+    for idx, seq_item in enumerate(sequence):
+        print(f"{seq_item} {parameters[idx]}")
+    print("---------------------------------------------------")
 
 
 def main():
@@ -79,59 +90,41 @@ def main():
 
     # ---------------------------------------------------------------
 
-    # Run planner
-    plan = kb.solve()
-    rep.report_before_exploration(kb, plan)
+    # Store initial state
+    initial_state_id = p.saveState()
 
-    if plan is False:
-        print("No plan found, start exploration")
-        success, metrics = xplorer.exploration()
-        rep.report_after_exploration(kb, metrics)
-        if not success:
-            print("Exploration was not successful")
-            return
-
-        # Run planner again
+    while True:
+        # Plan
         plan = kb.solve()
-        rep.report_after_planning(plan)
+
+        # Execute
         if plan is False:
-            print("Planner failed despite exploration")
-            return
-    sequence, parameters = plan
-
-    if len(sequence) == 0:
-        print("Nothing to do.")
-        return
-    print("---------------------------------------------------")
-    print("Found plan:")
-    for idx, seq_item in enumerate(sequence):
-        print("".join((seq_item, " ", str(parameters[idx]))))
-    print("---------------------------------------------------")
-    # input("Press enter to run...")
-
-    # -----------------------------------
-
-    # Set up execution system
-    es = SequentialExecution(skill_set, sequence, parameters, kb)
-
-    # Run
-    try:
-        index = 1
-        while True:
-            print("------------- Iteration {} ---------------".format(index))
-            es.print_status()
-            success, plan_finished, error_messages = es.step()
-            if not success:
-                print("Error messages:")
-                for msg in error_messages:
-                    print(msg)
-                raise RuntimeError("Error during execution of current step. Aborting.")
-            index += 1
-            if plan_finished:
-                print("Plan finished. Exiting.")
+            print("No plan found.")
+        else:
+            sequence, parameters = plan
+            print_plan(sequence, parameters)
+            input("Press enter to run...")
+            res = execute_plan_sequentially(
+                sequence, parameters, skill_set, kb, verbose=True
+            )
+            if res:
+                print("Reached goal successfully. Exiting.")
                 break
-    except KeyboardInterrupt:
-        pass
+            else:
+                print("Failure during plan execution.")
+
+        # Decide what happens next
+        choice = input(f"Choose next action: (a)bort, (e)xplore\n" f"Your choice: ")
+        if choice == "e":
+            # Exploration
+            success, metrics = xplorer.exploration(state_id=initial_state_id)
+            if not success:
+                print("Exploration was not successful")
+                break
+        else:
+            if choice != "a":
+                print("Invalid choice, aborting.")
+            break
 
 
 if __name__ == "__main__":

@@ -3,7 +3,9 @@ import numpy as np
 import pybullet as p
 from collections import OrderedDict
 
-from highlevel_planning.execution.es_sequential_execution import SequentialExecution
+from highlevel_planning.execution.es_sequential_execution import (
+    execute_plan_sequentially,
+)
 from highlevel_planning.tools.util import get_combined_aabb
 from highlevel_planning.learning import logic_tools
 from highlevel_planning.learning.sequence_completion import complete_sequence
@@ -40,14 +42,18 @@ class Explorer:
     def add_metric(self, key: str, value):
         self.metrics[f"{self.metrics_prefix}_{key}"] = value
 
-    def exploration(self, demo_sequence=None, demo_parameters=None):
+    def exploration(self, demo_sequence=None, demo_parameters=None, state_id=None):
         self.metrics = OrderedDict()
 
         np.random.seed(0)
         sequences_tried = set()
 
         # Save the state the robot is currently in
-        self.current_state_id = p.saveState()
+        if state_id is None:
+            self.current_state_id = p.saveState()
+        else:
+            self.current_state_id = state_id
+            p.restoreState(state_id)
 
         # Identify objects that are involved in reaching the goal
         goal_objects = self._get_items_goal()
@@ -251,27 +257,32 @@ class Explorer:
             counters["valid_sequences"] += 1
 
             # Found a feasible action sequence. Now test it.
-            preplan_success = self.execute_plan(
-                precondition_sequence, precondition_parameters
+            preplan_success = execute_plan_sequentially(
+                precondition_sequence,
+                precondition_parameters,
+                self.skill_set,
+                self.knowledge_base,
             )
             if not preplan_success:
                 continue
             counters["preplan_success"] += 1
-            print("Preplan SUCCESS")
 
             # Try actual plan
-            plan_success = self.execute_plan(completed_sequence, completed_parameters)
+            plan_success = execute_plan_sequentially(
+                completed_sequence,
+                completed_parameters,
+                self.skill_set,
+                self.knowledge_base,
+            )
             if not plan_success:
                 continue
             counters["plan_success"] += 1
-            print("Sequence SUCCESS")
 
             # Check if the goal was reached
             success = self.knowledge_base.test_goals()
             if not success:
                 continue
             counters["goal_reached"] += 1
-            print("GOAL REACHED!!!")
 
             if given_seq is not None and given_params is not None:
                 # Generalize action
@@ -468,18 +479,6 @@ class Explorer:
         return sample
 
     # ----- Other tools ------------------------------------
-
-    def execute_plan(self, sequence, parameters):
-        es = SequentialExecution(
-            self.skill_set, sequence, parameters, self.knowledge_base
-        )
-        es.setup()
-        while True:
-            success, plan_finished, msgs = es.step()
-            # TODO if we run into a failure, check why this failure happened and adapt the PDDL if necessary
-            if plan_finished or not success:
-                break
-        return success
 
     def _get_items_goal(self, objects_only=False):
         """

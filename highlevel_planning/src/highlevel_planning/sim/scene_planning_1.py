@@ -91,8 +91,9 @@ class ScenePlanning1(SceneBase):
         SceneBase.add_objects(self)
 
         # Set object-specific properties
-        p.changeDynamics(
-            self.objects["lid1"].model.uid,
-            self.objects["lid1"].model.link_name_to_index["handle"],
-            lateralFriction=1.0,
-        )
+        if "lid1" in self.objects:
+            p.changeDynamics(
+                self.objects["lid1"].model.uid,
+                self.objects["lid1"].model.link_name_to_index["handle"],
+                lateralFriction=1.0,
+            )

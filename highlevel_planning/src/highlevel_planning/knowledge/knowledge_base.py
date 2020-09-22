@@ -46,8 +46,8 @@ class KnowledgeBase:
         #     ("at", True, ("container1", "robot1")),
         # ]
         # self.goals = [("on", True, ("container2", "cube1"))]
-        self.goals = [("on", True, ("container2", "lego"))]
-        # self.goals = [("inside", True, ("container1", "cube1"))]
+        # self.goals = [("on", True, ("container2", "lego"))]
+        self.goals = [("inside", True, ("container1", "cube1"))]
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()
