@@ -2,6 +2,7 @@
 import numpy as np
 import pybullet as p
 from collections import OrderedDict
+from copy import deepcopy
 
 from highlevel_planning.execution.es_sequential_execution import (
     execute_plan_sequentially,
@@ -72,6 +73,12 @@ class Explorer:
                 demo_sequence, demo_parameters, goal_objects, sequences_tried
             )
             self.add_metric("result", res)
+        if not planning_failed and not res:
+            self.set_metrics_prefix("02_prepend")
+            closeby_objects = self._get_items_closeby(
+                goal_objects, distance_limit=0.5  # TODO move magic number to parameters
+            )
+            res = self._explore_prepending_sequence(closeby_objects, sequences_tried)
         if not res:
             self.set_metrics_prefix("02_generalize")
             res = self._explore_generalized_action(goal_objects, sequences_tried)
@@ -107,11 +114,48 @@ class Explorer:
             found_plan = self._sampling_loops(
                 sequences_tried,
                 sampling_counters,
+                seq_len=len(demo_sequence),
                 given_seq=demo_sequence,
                 given_params=demo_parameters,
                 relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions here
                 do_complete_sequence=True,
             )
+            if found_plan:
+                break
+
+        # Store counters
+        for counter in sampling_counters:
+            self.add_metric(counter, sampling_counters[counter])
+
+        # Restore initial state
+        p.restoreState(stateId=self.current_state_id)
+        return found_plan
+
+    def _explore_prepending_sequence(self, relevant_objects, sequences_tried):
+        plan = self.knowledge_base.solve()
+        if not plan:
+            return False
+        sequence, parameters = plan
+
+        found_plan = False
+        self.knowledge_base.clear_temp()
+        sampling_counters = self.get_sampling_counters_dict()
+        min_sequence_length = len(sequence)
+        max_sequence_length = np.max(
+            (self.config_params["max_sequence_length"], len(sequence) + 1)
+        )
+        for _ in range(self.config_params["max_sample_repetitions"]):
+            for seq_len in range(min_sequence_length, max_sequence_length + 1):
+                found_plan = self._sampling_loops(
+                    sequences_tried,
+                    sampling_counters,
+                    seq_len,
+                    given_seq=sequence,
+                    given_params=parameters,
+                    relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions
+                )
+                if found_plan:
+                    break
             if found_plan:
                 break
 
@@ -178,14 +222,22 @@ class Explorer:
         found_plan = False
         self.knowledge_base.clear_temp()
         sampling_counters = self.get_sampling_counters_dict()
+        min_sequence_length = len(relevant_sequence)
+        max_sequence_length = np.max(
+            (self.config_params["max_sequence_length"], len(relevant_sequence))
+        )
         for _ in range(self.config_params["max_sample_repetitions"]):
-            found_plan = self._sampling_loops(
-                sequences_tried,
-                sampling_counters,
-                given_seq=relevant_sequence,
-                given_params=fixed_parameters,
-                relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions here
-            )
+            for seq_len in range(min_sequence_length, max_sequence_length + 1):
+                found_plan = self._sampling_loops(
+                    sequences_tried,
+                    sampling_counters,
+                    seq_len,
+                    given_seq=relevant_sequence,
+                    given_params=fixed_parameters,
+                    relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions
+                )
+                if found_plan:
+                    break
             if found_plan:
                 break
 
@@ -206,7 +258,7 @@ class Explorer:
                 found_plan = self._sampling_loops(
                     sequences_tried,
                     sampling_counters,
-                    seq_len=seq_len,
+                    seq_len,
                     relevant_objects=relevant_objects,
                     do_complete_sequence=True,
                 )
@@ -231,9 +283,9 @@ class Explorer:
         self,
         sequences_tried,
         counters,
+        seq_len: int,
         given_seq=None,
         given_params=None,
-        seq_len=None,
         relevant_objects=None,
         do_complete_sequence=False,
     ):
@@ -251,9 +303,9 @@ class Explorer:
                 precondition_parameters,
             ) = self._sample_feasible_sequence(
                 sequences_tried,
+                seq_len,
                 given_seq=given_seq,
                 given_params=given_params,
-                sequence_length=seq_len,
                 relevant_objects=relevant_objects,
                 do_complete_sequence=do_complete_sequence,
             )
@@ -313,22 +365,24 @@ class Explorer:
 
     def _sample_feasible_sequence(
         self,
-        sequences_tried,
-        sequence_length=None,
-        given_seq=None,
-        given_params=None,
+        sequences_tried: set,
+        sequence_length: int,
+        given_seq: list = None,
+        given_params: list = None,
         relevant_objects=None,
-        do_complete_sequence=False,
+        do_complete_sequence: bool = False,
     ):
-        # Sample sequences until an abstractly feasible one was found
+        """
+        Sample sequences until an abstractly feasible one was found
+        """
+
         if given_seq is None:
-            assert sequence_length is not None
-            flag_sample_sequences = True
-            seq = None
+            given_seq = list()
+            given_params = list()
         else:
-            assert given_params is not None
-            flag_sample_sequences = False
-            seq = given_seq
+            assert len(given_seq) <= sequence_length
+            given_seq = deepcopy(given_seq)
+            given_params = deepcopy(given_params)
 
         failed_samples = 0
         success = True
@@ -342,17 +396,24 @@ class Explorer:
                 success = False
                 break
 
-            if flag_sample_sequences:
-                seq = self._sample_sequence(sequence_length)
+            if len(given_seq) < sequence_length:
+                pre_seq = self._sample_sequence(sequence_length - len(given_seq))
+                seq = pre_seq + given_seq
+                pre_params = [{}] * (sequence_length - len(given_seq))
+                given_params = pre_params + given_params
+            else:
+                seq = given_seq
+
             try:
                 params, params_tuple = self._sample_parameters(
                     seq, given_params, relevant_objects
                 )
             except NameError:
                 continue
-            if (tuple(seq), tuple(params_tuple)) in sequences_tried:
+            sequence_tuple = (tuple(seq), tuple(params_tuple))
+            if sequence_tuple in sequences_tried:
                 continue
-            sequences_tried.add((tuple(seq), tuple(params_tuple)))
+            sequences_tried.add(sequence_tuple)
 
             if given_seq is None or do_complete_sequence:
                 # Fill in the gaps of the sequence to make it feasible
