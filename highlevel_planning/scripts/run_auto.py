@@ -99,8 +99,10 @@ def main():
 
         # Execute
         if plan is False:
+            planning_failed = True
             print("No plan found.")
         else:
+            planning_failed = False
             sequence, parameters = plan
             print_plan(sequence, parameters)
             input("Press enter to run...")
@@ -117,7 +119,9 @@ def main():
         choice = input(f"Choose next action: (a)bort, (e)xplore\n" f"Your choice: ")
         if choice == "e":
             # Exploration
-            success, metrics = xplorer.exploration(state_id=initial_state_id)
+            success, metrics = xplorer.exploration(
+                planning_failed, state_id=initial_state_id
+            )
             if not success:
                 print("Exploration was not successful")
                 break

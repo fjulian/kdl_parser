@@ -32,7 +32,7 @@ First of all, install some apt packages using
 ./install_requirements.sh
 ```
 
-When building `trac_ik` and an error message comes up, complaining about the header `nlopt.hpp` missing, it helps to install nlopt from source: https://github.com/stevengj/nlopt
+If an error message comes up when building `trac_ik`, complaining about the header `nlopt.hpp` missing, it helps to install nlopt from source: https://github.com/stevengj/nlopt.
 
 ### Set up virtualenv
 

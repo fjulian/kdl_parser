@@ -42,7 +42,13 @@ class Explorer:
     def add_metric(self, key: str, value):
         self.metrics[f"{self.metrics_prefix}_{key}"] = value
 
-    def exploration(self, demo_sequence=None, demo_parameters=None, state_id=None):
+    def exploration(
+        self,
+        planning_failed: bool,
+        demo_sequence=None,
+        demo_parameters=None,
+        state_id=None,
+    ):
         self.metrics = OrderedDict()
 
         np.random.seed(0)
@@ -60,7 +66,6 @@ class Explorer:
         radii = self.config_params["radii"]
 
         res = False
-
         if demo_sequence is not None and demo_parameters is not None:
             self.set_metrics_prefix("01_demo")
             res = self._explore_demonstration(
@@ -129,7 +134,7 @@ class Explorer:
         sequence, parameters = plan
 
         # Extract parameters from plan
-        fixed_parameters_full = [None] * len(sequence)
+        fixed_parameters_full = list()
         for action_idx, action_name in enumerate(sequence):
             action_description = self.knowledge_base.actions[action_name]
             parameter_assignments = parameters[action_idx]
@@ -156,7 +161,8 @@ class Explorer:
                                     fixed_parameters_this_action[effect_param] = goal[
                                         2
                                     ][effect_param_idx]
-            fixed_parameters_full[action_idx] = fixed_parameters_this_action
+            fixed_parameters_full.append(fixed_parameters_this_action)
+        assert len(fixed_parameters_full) == len(sequence)
 
         # Determine which actions are goal relevant and remove the rest
         fixed_parameters = list()
@@ -408,8 +414,8 @@ class Explorer:
         return sequence
 
     def _sample_parameters(self, sequence, given_params=None, relevant_objects=None):
-        parameter_samples = [None] * len(sequence)
-        parameter_samples_tuples = [None] * len(sequence)
+        parameter_samples = list()
+        parameter_samples_tuples = list()
 
         # Create list of relevant items in the scene
         objects_of_interest_dict = dict()
@@ -420,7 +426,7 @@ class Explorer:
         objects_by_type = logic_tools.invert_dict(objects_of_interest_dict)
 
         for idx_action, action in enumerate(sequence):
-            parameter_samples[idx_action] = dict()
+            parameter_samples.append(dict())
             parameters_current_action = list()
             for parameter in self.knowledge_base.actions[action]["params"]:
                 obj_type = parameter[1]
@@ -451,7 +457,9 @@ class Explorer:
                         obj_sample = np.random.choice(list(objects_to_sample_from))
                 parameter_samples[idx_action][obj_name] = obj_sample
                 parameters_current_action.append(obj_sample)
-            parameter_samples_tuples[idx_action] = tuple(parameters_current_action)
+            parameter_samples_tuples.append(tuple(parameters_current_action))
+        assert len(parameter_samples) == len(sequence)
+        assert len(parameter_samples_tuples) == len(sequence)
         return parameter_samples, parameter_samples_tuples
 
     def sample_position(self, relevant_objects):
