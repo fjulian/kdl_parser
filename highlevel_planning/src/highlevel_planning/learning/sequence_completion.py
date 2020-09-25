@@ -172,7 +172,7 @@ def resample_positions(
                 else:
                     new_position = explorer.sample_position(relevant_objects)
                     new_param_value = explorer.knowledge_base.add_temp_object(
-                        object_type=param_type, object_value=new_position
+                        object_type="position", object_value=new_position
                     )
                     parameters[idx][param_name] = new_param_value
                     resampled_parameters[param_value] = new_param_value

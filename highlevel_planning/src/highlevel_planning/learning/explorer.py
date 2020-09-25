@@ -123,10 +123,10 @@ class Explorer:
             return False
         sequence, parameters = plan
         relevant_sequence, relevant_parameters = self._extract_goal_relevant_sequence(
-            sequence, parameters
+            sequence, parameters, fix_all_params=True
         )
 
-        min_sequence_length = len(relevant_sequence)
+        min_sequence_length = len(relevant_sequence) + 1
         max_sequence_length = np.max(
             (self.config_params["max_sequence_length"], len(relevant_sequence) + 1)
         )
@@ -335,13 +335,13 @@ class Explorer:
                 pre_seq = self._sample_sequence(sequence_length - len(given_seq))
                 seq = pre_seq + given_seq
                 pre_params = [{}] * (sequence_length - len(given_seq))
-                given_params = pre_params + given_params
+                fixed_params = pre_params + given_params
             else:
                 seq = given_seq
 
             try:
                 params, params_tuple = self._sample_parameters(
-                    seq, given_params, relevant_objects
+                    seq, fixed_params, relevant_objects
                 )
             except NameError:
                 continue
@@ -482,7 +482,20 @@ class Explorer:
 
     # ----- Other tools ------------------------------------
 
-    def _extract_goal_relevant_sequence(self, sequence, parameters):
+    def _extract_goal_relevant_sequence(
+        self, sequence, parameters, fix_all_params: bool = False
+    ):
+        """
+
+        Args:
+            sequence:
+            parameters:
+            fix_all_params: If set to true, all parameters of an action that contributes to the goal are fix.
+                            If not, only the goal relevant parameters are fixed.
+
+        Returns:
+
+        """
         # Extract parameters from plan
         fixed_parameters_full = list()
         for action_idx, action_name in enumerate(sequence):
@@ -511,6 +524,12 @@ class Explorer:
                                     fixed_parameters_this_action[effect_param] = goal[
                                         2
                                     ][effect_param_idx]
+            if fix_all_params and len(fixed_parameters_this_action) > 0:
+                for param in action_description["params"]:
+                    if param[0] not in fixed_parameters_this_action:
+                        fixed_parameters_this_action[param[0]] = parameter_assignments[
+                            param[0]
+                        ]
             fixed_parameters_full.append(fixed_parameters_this_action)
         assert len(fixed_parameters_full) == len(sequence)
 
