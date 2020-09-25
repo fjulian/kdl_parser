@@ -1,5 +1,4 @@
 import time
-from copy import deepcopy
 
 from highlevel_planning.learning.logic_tools import (
     determine_sequence_effects,
@@ -12,7 +11,7 @@ class PDDLExtender(object):
         self.predicates = predicates
         self.knowledge_base = knowledge_base
 
-    def create_new_action(self, goals, sequence, parameters):
+    def create_new_action(self, goals, meta_preconditions, sequence, parameters):
         time_string = time.strftime("%y%m%d%H%M%S")
         action_name = sequence[0] + "-" + goals[0][0] + "-" + time_string
 
@@ -44,6 +43,10 @@ class PDDLExtender(object):
             for arg in precond[2]:
                 self._retype_argument(arg, action_params, already_retyped, time_string)
             action_preconditions.append(precond)
+        for meta_precond in meta_preconditions:
+            for arg in meta_precond[2]:
+                self._retype_argument(arg, action_params, already_retyped, time_string)
+            action_preconditions.append(meta_precond)
 
         # Submit new action description
         new_action_description = {
@@ -92,8 +95,7 @@ class PDDLExtender(object):
 
         return action_name
 
-    def generalize_action(self, action_name, parameters):
-        assert type(parameters) is dict
+    def generalize_action(self, action_name, parameters: dict):
         action_description = self.knowledge_base.actions[action_name]
         param_list = list()
         for parameter_spec in action_description["params"]:

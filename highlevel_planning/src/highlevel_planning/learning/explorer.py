@@ -10,6 +10,7 @@ from highlevel_planning.execution.es_sequential_execution import (
 from highlevel_planning.tools.util import get_combined_aabb
 from highlevel_planning.learning import logic_tools
 from highlevel_planning.learning.sequence_completion import complete_sequence
+from highlevel_planning.learning.precondition_discovery import precondition_discovery
 
 
 class Explorer:
@@ -78,7 +79,9 @@ class Explorer:
             closeby_objects = self._get_items_closeby(
                 goal_objects, distance_limit=0.5  # TODO move magic number to parameters
             )
-            res = self._explore_prepending_sequence(closeby_objects, sequences_tried)
+            res = self._explore_prepending_sequence(
+                closeby_objects + goal_objects, sequences_tried
+            )
         if not res:
             self.set_metrics_prefix("02_generalize")
             res = self._explore_generalized_action(goal_objects, sequences_tried)
@@ -230,13 +233,7 @@ class Explorer:
             p.restoreState(stateId=self.current_state_id)
 
             # Sample sequences until an abstractly feasible one was found
-            (
-                success,
-                completed_sequence,
-                completed_parameters,
-                precondition_sequence,
-                precondition_parameters,
-            ) = self._sample_feasible_sequence(
+            (success, completion_result) = self._sample_feasible_sequence(
                 sequences_tried,
                 seq_len,
                 given_seq=given_seq,
@@ -248,6 +245,14 @@ class Explorer:
                 print("Sampling failed. Abort searching in this sequence length.")
                 break
             counters["valid_sequences"] += 1
+
+            (
+                completed_sequence,
+                completed_parameters,
+                precondition_sequence,
+                precondition_parameters,
+                _,
+            ) = completion_result
 
             # Found a feasible action sequence. Now test it.
             preplan_success = execute_plan_sequentially(
@@ -277,20 +282,72 @@ class Explorer:
                 continue
             counters["goal_reached"] += 1
 
-            if given_seq is not None and given_params is not None:
-                # Generalize action
-                assert (
-                    len(completed_sequence) == 1
-                ), "If the given sequence is longer than 1, this code cannot deal with it yet"
-                self.pddl_extender.generalize_action(
-                    completed_sequence[0], completed_parameters[0]
-                )
+            # -----------------------------------------------
+
+            if len(completed_sequence) == 1:
+                if given_seq is not None and given_params is not None:
+                    # Generalize action
+                    assert (
+                        len(completed_sequence) == 1
+                    ), "If the given sequence is longer than 1, this code cannot deal with it yet"
+                    self.pddl_extender.generalize_action(
+                        completed_sequence[0], completed_parameters[0]
+                    )
+                else:
+                    # Save the successful sequence and parameters.
+                    self.pddl_extender.create_new_action(
+                        goals=self.knowledge_base.goals,
+                        meta_preconditions=None,
+                        sequence=completed_sequence,
+                        parameters=completed_parameters,
+                    )
             else:
-                # Save the successful sequence and parameters.
+                # Precondition discovery
+                precondition_candidates, precondition_actions = precondition_discovery(
+                    relevant_objects, completion_result, self
+                )
+                unique_actions = list(set(precondition_actions))
+                unique_actions.sort()
+
+                # Add actions the fulfill preconditions
+                effects_last_action = list()
+                last_included_action = -1
+                for action_idx in unique_actions:
+                    if action_idx == -1:
+                        continue
+                    start_idx = 0
+                    effects_this_action = list()
+                    try:
+                        while True:
+                            precond_idx = precondition_actions.index(
+                                action_idx, start_idx
+                            )
+                            effects_this_action.append(
+                                precondition_candidates[precond_idx]
+                            )
+                            start_idx = precond_idx + 1
+                    except ValueError:
+                        pass
+
+                    self.pddl_extender.create_new_action(
+                        goals=effects_this_action,
+                        meta_preconditions=effects_last_action,
+                        sequence=completed_sequence[
+                            last_included_action + 1 : action_idx + 1
+                        ],
+                        parameters=completed_parameters[
+                            last_included_action + 1 : action_idx + 1
+                        ],
+                    )
+                    last_included_action = action_idx
+                    effects_last_action = deepcopy(effects_this_action)
+
+                # Add action that reaches the goal
                 self.pddl_extender.create_new_action(
                     goals=self.knowledge_base.goals,
-                    sequence=completed_sequence,
-                    parameters=completed_parameters,
+                    meta_preconditions=effects_last_action,
+                    sequence=completed_sequence[last_included_action + 1 :],
+                    parameters=completed_parameters[last_included_action + 1 :],
                 )
 
             found_plan = True
@@ -355,13 +412,6 @@ class Explorer:
             completion_result = complete_sequence(seq, params, relevant_objects, self)
             if completion_result is False:
                 continue
-            (
-                completed_sequence,
-                completed_parameters,
-                precondition_sequence,
-                precondition_parameters,
-                _,
-            ) = completion_result
             # else:
             #     # TODO test if this is needed or if we can run this through the completion anyways
             #     completed_sequence = seq
@@ -375,13 +425,7 @@ class Explorer:
             #         break
             #     precondition_sequence, precondition_parameters = precondition_plan
             break
-        return (
-            success,
-            completed_sequence,
-            completed_parameters,
-            precondition_sequence,
-            precondition_parameters,
-        )
+        return success, completion_result
 
     def _sample_sequence(self, length, no_action_repetition=False):
         """
@@ -540,9 +584,6 @@ class Explorer:
             if len(fixed_parameters_full[action_idx]) > 0:
                 relevant_parameters.append(fixed_parameters_full[action_idx])
                 relevant_sequence.append(action_name)
-                break
-                # TODO this break can be removed once the algorithm is adapted to computing necessary actions between
-                # two actions in the sequence.
         return relevant_sequence, relevant_parameters
 
     def _get_items_goal(self, objects_only=False):

@@ -3,9 +3,14 @@ import pybullet as p
 from copy import deepcopy
 from itertools import product
 
+from highlevel_planning.execution.es_sequential_execution import (
+    execute_plan_sequentially,
+)
+
 
 def precondition_discovery(relevant_objects, completion_results, explorer):
     precondition_candidates = list()
+    precondition_actions = list()
 
     (
         completed_sequence,
@@ -26,7 +31,12 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
     pre_predicates = measure_predicates(relevant_predicates, explorer.knowledge_base)
 
     # Execute the pre-condition sequence
-    res = explorer.execute_plan(precondition_sequence, precondition_params)
+    res = execute_plan_sequentially(
+        precondition_sequence,
+        precondition_params,
+        explorer.skill_set,
+        explorer.knowledge_base,
+    )
     if not res:
         return False
 
@@ -42,11 +52,17 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
         explorer,
     )
     precondition_candidates.extend(new_side_effects)
+    precondition_actions.extend([-1] * len(new_side_effects))
 
     # Execute actions one by one, check for non-effect predicate changes
     for idx, action in enumerate(completed_sequence):
         pre_predicates = deepcopy(current_predicates)
-        res = explorer.execute_plan([action], [completed_parameters[idx]])
+        res = execute_plan_sequentially(
+            [action],
+            [completed_parameters[idx]],
+            explorer.skill_set,
+            explorer.knowledge_base,
+        )
         if not res:
             return False
         current_predicates = measure_predicates(
@@ -61,10 +77,29 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
             explorer,
         )
         precondition_candidates.extend(new_side_effects)
+        precondition_actions.extend([idx] * len(new_side_effects))
 
-    # TODO filter out goal attributes
+    # Filter out goals
+    candidates_to_remove = list()
+    for goal in explorer.knowledge_base.goals:
+        for idx, candidate in enumerate(precondition_candidates):
+            if tuple(goal[:2]) == tuple(candidate[:2]) and tuple(goal[2]) == tuple(
+                candidate[2]
+            ):
+                candidates_to_remove.append(idx)
 
-    return precondition_candidates
+    # Filter out side effects of last action
+    for idx, action_idx in enumerate(precondition_actions):
+        if action_idx == len(completed_sequence) - 1:
+            candidates_to_remove.append(idx)
+
+    candidates_to_remove = list(set(candidates_to_remove))
+    candidates_to_remove.sort(reverse=True)
+    for idx in candidates_to_remove:
+        del precondition_candidates[idx]
+        del precondition_actions[idx]
+
+    return precondition_candidates, precondition_actions
 
 
 def determine_relevant_predicates(relevant_objects, knowledge_base):
@@ -141,5 +176,5 @@ def detect_predicate_changes(
             continue
 
         # If we reach here, this is a candidate for the precondition we are trying to determine.
-        side_effects.append(predicate_def)
+        side_effects.append((predicate_def[0], new_predicates[idx], predicate_def[1]))
     return side_effects
