@@ -107,28 +107,14 @@ class Explorer:
     def _explore_demonstration(
         self, demo_sequence, demo_parameters, relevant_objects, sequences_tried
     ):
-        found_plan = False
-        self.knowledge_base.clear_temp()
-        sampling_counters = self.get_sampling_counters_dict()
-        for _ in range(self.config_params["max_sample_repetitions"]):
-            found_plan = self._sampling_loops(
-                sequences_tried,
-                sampling_counters,
-                seq_len=len(demo_sequence),
-                given_seq=demo_sequence,
-                given_params=demo_parameters,
-                relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions here
-                do_complete_sequence=True,
-            )
-            if found_plan:
-                break
-
-        # Store counters
-        for counter in sampling_counters:
-            self.add_metric(counter, sampling_counters[counter])
-
-        # Restore initial state
-        p.restoreState(stateId=self.current_state_id)
+        found_plan = self._sampling_loops_caller(
+            relevant_objects,
+            len(demo_sequence),
+            len(demo_sequence),
+            sequences_tried,
+            demo_sequence,
+            demo_parameters,
+        )
         return found_plan
 
     def _explore_prepending_sequence(self, relevant_objects, sequences_tried):
@@ -136,35 +122,22 @@ class Explorer:
         if not plan:
             return False
         sequence, parameters = plan
-
-        found_plan = False
-        self.knowledge_base.clear_temp()
-        sampling_counters = self.get_sampling_counters_dict()
-        min_sequence_length = len(sequence)
-        max_sequence_length = np.max(
-            (self.config_params["max_sequence_length"], len(sequence) + 1)
+        relevant_sequence, relevant_parameters = self._extract_goal_relevant_sequence(
+            sequence, parameters
         )
-        for _ in range(self.config_params["max_sample_repetitions"]):
-            for seq_len in range(min_sequence_length, max_sequence_length + 1):
-                found_plan = self._sampling_loops(
-                    sequences_tried,
-                    sampling_counters,
-                    seq_len,
-                    given_seq=sequence,
-                    given_params=parameters,
-                    relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions
-                )
-                if found_plan:
-                    break
-            if found_plan:
-                break
 
-        # Store counters
-        for counter in sampling_counters:
-            self.add_metric(counter, sampling_counters[counter])
-
-        # Restore initial state
-        p.restoreState(stateId=self.current_state_id)
+        min_sequence_length = len(relevant_sequence)
+        max_sequence_length = np.max(
+            (self.config_params["max_sequence_length"], len(relevant_sequence) + 1)
+        )
+        found_plan = self._sampling_loops_caller(
+            relevant_objects,
+            min_sequence_length,
+            max_sequence_length,
+            sequences_tried,
+            relevant_sequence,
+            relevant_parameters,
+        )
         return found_plan
 
     def _explore_generalized_action(self, relevant_objects, sequences_tried):
@@ -177,90 +150,55 @@ class Explorer:
             return False
         sequence, parameters = plan
 
-        # Extract parameters from plan
-        fixed_parameters_full = list()
-        for action_idx, action_name in enumerate(sequence):
-            action_description = self.knowledge_base.actions[action_name]
-            parameter_assignments = parameters[action_idx]
-            fixed_parameters_this_action = dict()
-            for effect in action_description["effects"]:
-                for goal in self.knowledge_base.goals:
-                    if goal[0] == effect[0] and goal[1] == effect[1]:
-                        goal_equals_effect = True
-                        for goal_param_idx, goal_param in enumerate(goal[2]):
-                            if (
-                                goal_param
-                                != parameter_assignments[effect[2][goal_param_idx]]
-                            ):
-                                goal_equals_effect = False
-                                break
-                        if goal_equals_effect:
-                            for effect_param_idx, effect_param in enumerate(effect[2]):
-                                if effect_param in fixed_parameters_this_action:
-                                    assert (
-                                        fixed_parameters_this_action[effect_param]
-                                        == goal[2][effect_param_idx]
-                                    )
-                                else:
-                                    fixed_parameters_this_action[effect_param] = goal[
-                                        2
-                                    ][effect_param_idx]
-            fixed_parameters_full.append(fixed_parameters_this_action)
-        assert len(fixed_parameters_full) == len(sequence)
+        relevant_sequence, relevant_parameters = self._extract_goal_relevant_sequence(
+            sequence, parameters
+        )
 
-        # Determine which actions are goal relevant and remove the rest
-        fixed_parameters = list()
-        relevant_sequence = list()
-        for action_idx, action_name in enumerate(sequence):
-            if len(fixed_parameters_full[action_idx]) > 0:
-                fixed_parameters.append(fixed_parameters_full[action_idx])
-                relevant_sequence.append(action_name)
-                break
-                # TODO this break can be removed once the algorithm is adapted to computing necessary actions between
-                # two actions in the sequence.
-
-        found_plan = False
-        self.knowledge_base.clear_temp()
-        sampling_counters = self.get_sampling_counters_dict()
         min_sequence_length = len(relevant_sequence)
         max_sequence_length = np.max(
             (self.config_params["max_sequence_length"], len(relevant_sequence))
         )
+        found_plan = self._sampling_loops_caller(
+            relevant_objects,
+            min_sequence_length,
+            max_sequence_length,
+            sequences_tried,
+            relevant_sequence,
+            relevant_parameters,
+        )
+        return found_plan
+
+    def _explore_goal_objects(self, sequences_tried, relevant_objects=None):
+        min_sequence_length = 1
+        max_sequence_length = self.config_params["max_sequence_length"]
+        found_plan = self._sampling_loops_caller(
+            relevant_objects, min_sequence_length, max_sequence_length, sequences_tried
+        )
+        return found_plan
+
+    # ----- Tools for sampling ------------------------------------
+
+    def _sampling_loops_caller(
+        self,
+        relevant_objects,
+        min_sequence_length,
+        max_sequence_length,
+        sequences_tried,
+        given_sequence=None,
+        given_parameters=None,
+    ):
+        found_plan = False
+        self.knowledge_base.clear_temp()
+        sampling_counters = self.get_sampling_counters_dict()
         for _ in range(self.config_params["max_sample_repetitions"]):
             for seq_len in range(min_sequence_length, max_sequence_length + 1):
                 found_plan = self._sampling_loops(
                     sequences_tried,
                     sampling_counters,
                     seq_len,
-                    given_seq=relevant_sequence,
-                    given_params=fixed_parameters,
+                    given_seq=given_sequence,
+                    given_params=given_parameters,
                     relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions
-                )
-                if found_plan:
-                    break
-            if found_plan:
-                break
-
-        # Store counters
-        for counter in sampling_counters:
-            self.add_metric(counter, sampling_counters[counter])
-
-        # Restore initial state
-        p.restoreState(stateId=self.current_state_id)
-        return found_plan
-
-    def _explore_goal_objects(self, sequences_tried, relevant_objects=None):
-        found_plan = False
-        self.knowledge_base.clear_temp()
-        sampling_counters = self.get_sampling_counters_dict()
-        for _ in range(self.config_params["max_sample_repetitions"]):
-            for seq_len in range(1, self.config_params["max_sequence_length"] + 1):
-                found_plan = self._sampling_loops(
-                    sequences_tried,
-                    sampling_counters,
-                    seq_len,
-                    relevant_objects=relevant_objects,
-                    do_complete_sequence=True,
                 )
                 if found_plan:
                     self.add_metric("successful_seq_len", seq_len)
@@ -274,10 +212,7 @@ class Explorer:
 
         # Restore initial state
         p.restoreState(stateId=self.current_state_id)
-        self.knowledge_base.clear_temp()
         return found_plan
-
-    # ----- Tools for sampling ------------------------------------
 
     def _sampling_loops(
         self,
@@ -415,32 +350,30 @@ class Explorer:
                 continue
             sequences_tried.add(sequence_tuple)
 
-            if given_seq is None or do_complete_sequence:
-                # Fill in the gaps of the sequence to make it feasible
-                completion_result = complete_sequence(
-                    seq, params, relevant_objects, self
-                )
-                if completion_result is False:
-                    continue
-                (
-                    completed_sequence,
-                    completed_parameters,
-                    precondition_sequence,
-                    precondition_parameters,
-                    _,
-                ) = completion_result
-            else:
-                # TODO test if this is needed or if we can run this through the completion anyways
-                completed_sequence = seq
-                completed_parameters = params
-                sequence_preconds = logic_tools.determine_sequence_preconds(
-                    self.knowledge_base, completed_sequence, completed_parameters
-                )
-                precondition_plan = self.knowledge_base.solve_temp(sequence_preconds)
-                if not precondition_plan:
-                    success = False
-                    break
-                precondition_sequence, precondition_parameters = precondition_plan
+            # if given_seq is None or do_complete_sequence:
+            # Fill in the gaps of the sequence to make it feasible
+            completion_result = complete_sequence(seq, params, relevant_objects, self)
+            if completion_result is False:
+                continue
+            (
+                completed_sequence,
+                completed_parameters,
+                precondition_sequence,
+                precondition_parameters,
+                _,
+            ) = completion_result
+            # else:
+            #     # TODO test if this is needed or if we can run this through the completion anyways
+            #     completed_sequence = seq
+            #     completed_parameters = params
+            #     sequence_preconds = logic_tools.determine_sequence_preconds(
+            #         self.knowledge_base, completed_sequence, completed_parameters
+            #     )
+            #     precondition_plan = self.knowledge_base.solve_temp(sequence_preconds)
+            #     if not precondition_plan:
+            #         success = False
+            #         break
+            #     precondition_sequence, precondition_parameters = precondition_plan
             break
         return (
             success,
@@ -548,6 +481,50 @@ class Explorer:
         return sample
 
     # ----- Other tools ------------------------------------
+
+    def _extract_goal_relevant_sequence(self, sequence, parameters):
+        # Extract parameters from plan
+        fixed_parameters_full = list()
+        for action_idx, action_name in enumerate(sequence):
+            action_description = self.knowledge_base.actions[action_name]
+            parameter_assignments = parameters[action_idx]
+            fixed_parameters_this_action = dict()
+            for effect in action_description["effects"]:
+                for goal in self.knowledge_base.goals:
+                    if goal[0] == effect[0] and goal[1] == effect[1]:
+                        goal_equals_effect = True
+                        for goal_param_idx, goal_param in enumerate(goal[2]):
+                            if (
+                                goal_param
+                                != parameter_assignments[effect[2][goal_param_idx]]
+                            ):
+                                goal_equals_effect = False
+                                break
+                        if goal_equals_effect:
+                            for effect_param_idx, effect_param in enumerate(effect[2]):
+                                if effect_param in fixed_parameters_this_action:
+                                    assert (
+                                        fixed_parameters_this_action[effect_param]
+                                        == goal[2][effect_param_idx]
+                                    )
+                                else:
+                                    fixed_parameters_this_action[effect_param] = goal[
+                                        2
+                                    ][effect_param_idx]
+            fixed_parameters_full.append(fixed_parameters_this_action)
+        assert len(fixed_parameters_full) == len(sequence)
+
+        # Determine which actions are goal relevant and remove the rest
+        relevant_parameters = list()
+        relevant_sequence = list()
+        for action_idx, action_name in enumerate(sequence):
+            if len(fixed_parameters_full[action_idx]) > 0:
+                relevant_parameters.append(fixed_parameters_full[action_idx])
+                relevant_sequence.append(action_name)
+                break
+                # TODO this break can be removed once the algorithm is adapted to computing necessary actions between
+                # two actions in the sequence.
+        return relevant_sequence, relevant_parameters
 
     def _get_items_goal(self, objects_only=False):
         """
