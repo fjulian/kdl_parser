@@ -251,7 +251,7 @@ class Explorer:
                 completed_parameters,
                 precondition_sequence,
                 precondition_parameters,
-                _,
+                key_actions,
             ) = completion_result
 
             # Found a feasible action sequence. Now test it.
@@ -309,45 +309,44 @@ class Explorer:
                 unique_actions = list(set(precondition_actions))
                 unique_actions.sort()
 
-                # Add actions the fulfill preconditions
+                # Add actions that fulfill preconditions
                 effects_last_action = list()
-                last_included_action = -1
-                for action_idx in unique_actions:
-                    if action_idx == -1:
+                next_first_action = 0
+                last_effect_idx = 0
+                for action_number in unique_actions:
+                    if action_number == -1 and len(unique_actions) > 1:
                         continue
-                    start_idx = 0
                     effects_this_action = list()
-                    try:
-                        while True:
-                            precond_idx = precondition_actions.index(
-                                action_idx, start_idx
-                            )
-                            effects_this_action.append(
-                                precondition_candidates[precond_idx]
-                            )
-                            start_idx = precond_idx + 1
-                    except ValueError:
-                        pass
+                    while True:
+                        if (
+                            last_effect_idx >= len(precondition_actions)
+                            or precondition_actions[last_effect_idx] > action_number
+                        ):
+                            break
+                        effects_this_action.append(
+                            precondition_candidates[last_effect_idx]
+                        )
+                        last_effect_idx += 1
+
+                    next_last_action = action_number + 1 if action_number >= 0 else 1
 
                     self.pddl_extender.create_new_action(
                         goals=effects_this_action,
                         meta_preconditions=effects_last_action,
-                        sequence=completed_sequence[
-                            last_included_action + 1 : action_idx + 1
-                        ],
+                        sequence=completed_sequence[next_first_action:next_last_action],
                         parameters=completed_parameters[
-                            last_included_action + 1 : action_idx + 1
+                            next_first_action:next_last_action
                         ],
                     )
-                    last_included_action = action_idx
+                    next_first_action = next_last_action
                     effects_last_action = deepcopy(effects_this_action)
 
                 # Add action that reaches the goal
                 self.pddl_extender.create_new_action(
                     goals=self.knowledge_base.goals,
                     meta_preconditions=effects_last_action,
-                    sequence=completed_sequence[last_included_action + 1 :],
-                    parameters=completed_parameters[last_included_action + 1 :],
+                    sequence=completed_sequence[next_first_action:],
+                    parameters=completed_parameters[next_first_action:],
                 )
 
             found_plan = True

@@ -93,6 +93,18 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
         if action_idx == len(completed_sequence) - 1:
             candidates_to_remove.append(idx)
 
+    # Filter out side effects that get cancelled out again
+    for idx, precondition in enumerate(precondition_candidates):
+        opposite = (precondition[0], not precondition[1], precondition[2])
+        try:
+            opposite_index = precondition_candidates.index(opposite, 0, idx)
+        except ValueError:
+            continue
+        candidates_to_remove.extend([idx, opposite_index])
+
+    # Filter out side effects that do not concern goal objects
+    # TODO think about if this makes sense. If yes, implement it.
+
     candidates_to_remove = list(set(candidates_to_remove))
     candidates_to_remove.sort(reverse=True)
     for idx in candidates_to_remove:
