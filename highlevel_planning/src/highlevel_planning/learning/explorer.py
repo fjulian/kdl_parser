@@ -229,9 +229,6 @@ class Explorer:
     ):
         found_plan = False
         for sample_idx in range(self.config_params["max_samples_per_sequence_length"]):
-            # Restore initial state
-            p.restoreState(stateId=self.current_state_id)
-
             # Sample sequences until an abstractly feasible one was found
             (success, completion_result) = self._sample_feasible_sequence(
                 sequences_tried,
@@ -246,44 +243,17 @@ class Explorer:
                 break
             counters["valid_sequences"] += 1
 
-            (
-                completed_sequence,
-                completed_parameters,
-                precondition_sequence,
-                precondition_parameters,
-                key_actions,
-            ) = completion_result
-
-            # Found a feasible action sequence. Now test it.
-            preplan_success = execute_plan_sequentially(
-                precondition_sequence,
-                precondition_parameters,
-                self.skill_set,
-                self.knowledge_base,
-            )
-            if not preplan_success:
+            test_success = self._test_completed_sequence(completion_result)
+            counters["preplan_success"] += test_success[0]
+            counters["plan_success"] += test_success[1]
+            counters["goal_reached"] += test_success[2]
+            if test_success[2] == 0:
                 continue
-            counters["preplan_success"] += 1
-
-            # Try actual plan
-            plan_success = execute_plan_sequentially(
-                completed_sequence,
-                completed_parameters,
-                self.skill_set,
-                self.knowledge_base,
-            )
-            if not plan_success:
-                continue
-            counters["plan_success"] += 1
-
-            # Check if the goal was reached
-            success = self.knowledge_base.test_goals()
-            if not success:
-                continue
-            counters["goal_reached"] += 1
 
             # -----------------------------------------------
 
+            completed_sequence = completion_result[0]
+            completed_parameters = completion_result[1]
             if len(completed_sequence) == 1:
                 if given_seq is not None and given_params is not None:
                     # Generalize action
@@ -302,51 +272,83 @@ class Explorer:
                         parameters=completed_parameters,
                     )
             else:
-                # Precondition discovery
-                precondition_candidates, precondition_actions = precondition_discovery(
-                    relevant_objects, completion_result, self
-                )
-                unique_actions = list(set(precondition_actions))
-                unique_actions.sort()
+                key_actions = completion_result[4]
+                if len(key_actions) > 2:
+                    raise NotImplementedError
 
-                # Add actions that fulfill preconditions
-                effects_last_action = list()
-                next_first_action = 0
-                last_effect_idx = 0
-                for action_number in unique_actions:
-                    if action_number == -1 and len(unique_actions) > 1:
-                        continue
-                    effects_this_action = list()
-                    while True:
-                        if (
-                            last_effect_idx >= len(precondition_actions)
-                            or precondition_actions[last_effect_idx] > action_number
-                        ):
-                            break
-                        effects_this_action.append(
-                            precondition_candidates[last_effect_idx]
-                        )
-                        last_effect_idx += 1
-
-                    next_last_action = action_number + 1 if action_number >= 0 else 1
-
-                    self.pddl_extender.create_new_action(
-                        goals=effects_this_action,
-                        meta_preconditions=effects_last_action,
-                        sequence=completed_sequence[next_first_action:next_last_action],
-                        parameters=completed_parameters[
-                            next_first_action:next_last_action
-                        ],
+                # Try to find actual key actions
+                i = 1
+                last_working_completion_result = completion_result
+                while True:
+                    # Idea for more than 2 key actions: shift foremost back if it is at least two before next one.
+                    # Otherwise shift next one back according to the same rule. If next one is the last one, eliminate
+                    # next one.
+                    # TODO implement this.
+                    if key_actions[0] + i > key_actions[1]:
+                        break
+                    elif key_actions[0] + i < key_actions[1]:
+                        modified_sequence = [
+                            completed_sequence[key_actions[0] + i],
+                            completed_sequence[key_actions[1]],
+                        ]
+                        modified_parameters = [
+                            completed_parameters[key_actions[0] + i],
+                            completed_parameters[key_actions[1]],
+                        ]
+                    else:
+                        modified_sequence = [completed_sequence[key_actions[1]]]
+                        modified_parameters = [completed_parameters[key_actions[1]]]
+                    modified_completion_result = complete_sequence(
+                        modified_sequence, modified_parameters, relevant_objects, self
                     )
-                    next_first_action = next_last_action
-                    effects_last_action = deepcopy(effects_this_action)
+                    if not modified_completion_result:
+                        i += 1
+                        continue
+                    test_success = self._test_completed_sequence(
+                        modified_completion_result
+                    )
+                    if not test_success[2]:
+                        i += 1
+                        continue
+                    last_working_completion_result = modified_completion_result
+                    i += 1
+
+                effects_last_action = list()
+                if len(last_working_completion_result[0]) > 1:
+                    # Precondition discovery
+                    precondition_candidates, precondition_actions = precondition_discovery(
+                        relevant_objects, last_working_completion_result, self
+                    )
+                    precondition_idx = 0
+                    for key_action_idx in range(len(key_actions) - 1):
+                        effects_this_action = list()
+                        while True:
+                            if (
+                                precondition_idx >= len(precondition_actions)
+                                or precondition_actions[precondition_idx]
+                                > key_actions[key_action_idx]
+                            ):
+                                break
+                            effects_this_action.append(
+                                precondition_candidates[precondition_idx]
+                            )
+                            precondition_idx += 1
+                        self.pddl_extender.create_new_action(
+                            goals=effects_this_action,
+                            meta_preconditions=effects_last_action,
+                            sequence=[completed_sequence[key_actions[key_action_idx]]],
+                            parameters=[
+                                completed_parameters[key_actions[key_action_idx]]
+                            ],
+                        )
+                        effects_last_action = deepcopy(effects_this_action)
 
                 # Add action that reaches the goal
                 self.pddl_extender.create_new_action(
                     goals=self.knowledge_base.goals,
                     meta_preconditions=effects_last_action,
-                    sequence=completed_sequence[next_first_action:],
-                    parameters=completed_parameters[next_first_action:],
+                    sequence=[completed_sequence[key_actions[-1]]],
+                    parameters=[completed_parameters[key_actions[-1]]],
                 )
 
             found_plan = True
@@ -377,10 +379,7 @@ class Explorer:
 
         failed_samples = 0
         success = True
-        completed_sequence = None
-        completed_parameters = None
-        precondition_sequence = None
-        precondition_parameters = None
+        completion_result = None
         while True:
             failed_samples += 1
             if failed_samples > self.config_params["max_failed_samples"]:
@@ -394,6 +393,7 @@ class Explorer:
                 fixed_params = pre_params + given_params
             else:
                 seq = given_seq
+                fixed_params = given_params
 
             try:
                 params, params_tuple = self._sample_parameters(
@@ -628,3 +628,45 @@ class Explorer:
                 if distance <= distance_limit:
                     closeby_objects.add(obj)
         return list(closeby_objects)
+
+    def _test_completed_sequence(self, completion_result: dict):
+        # Restore initial state
+        p.restoreState(stateId=self.current_state_id)
+
+        success = np.array([0, 0, 0])
+        (
+            completed_sequence,
+            completed_parameters,
+            precondition_sequence,
+            precondition_parameters,
+            key_actions,
+        ) = completion_result
+
+        # Found a feasible action sequence. Now test it.
+        preplan_success = execute_plan_sequentially(
+            precondition_sequence,
+            precondition_parameters,
+            self.skill_set,
+            self.knowledge_base,
+        )
+        if not preplan_success:
+            return success
+        success[0] = 1
+
+        # Try actual plan
+        plan_success = execute_plan_sequentially(
+            completed_sequence,
+            completed_parameters,
+            self.skill_set,
+            self.knowledge_base,
+        )
+        if not plan_success:
+            return success
+        success[1] = 1
+
+        # Check if the goal was reached
+        goal_success = self.knowledge_base.test_goals()
+        if not goal_success:
+            return success
+        success[2] = 1
+        return success
