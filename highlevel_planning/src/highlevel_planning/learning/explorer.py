@@ -140,6 +140,7 @@ class Explorer:
             sequences_tried,
             relevant_sequence,
             relevant_parameters,
+            planning_failed=False,
         )
         return found_plan
 
@@ -189,6 +190,7 @@ class Explorer:
         sequences_tried,
         given_sequence=None,
         given_parameters=None,
+        planning_failed=True,
     ):
         found_plan = False
         self.knowledge_base.clear_temp()
@@ -202,6 +204,7 @@ class Explorer:
                     given_seq=given_sequence,
                     given_params=given_parameters,
                     relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions
+                    planning_failed=planning_failed,
                 )
                 if found_plan:
                     self.add_metric("successful_seq_len", seq_len)
@@ -226,9 +229,13 @@ class Explorer:
         given_params=None,
         relevant_objects=None,
         do_complete_sequence=False,
+        planning_failed=True,
     ):
         found_plan = False
         for sample_idx in range(self.config_params["max_samples_per_sequence_length"]):
+            # Restore initial state
+            p.restoreState(stateId=self.current_state_id)
+
             # Sample sequences until an abstractly feasible one was found
             (success, completion_result) = self._sample_feasible_sequence(
                 sequences_tried,
@@ -344,12 +351,19 @@ class Explorer:
                         effects_last_action = deepcopy(effects_this_action)
 
                 # Add action that reaches the goal
-                self.pddl_extender.create_new_action(
-                    goals=self.knowledge_base.goals,
-                    meta_preconditions=effects_last_action,
-                    sequence=[completed_sequence[key_actions[-1]]],
-                    parameters=[completed_parameters[key_actions[-1]]],
-                )
+                if planning_failed:
+                    self.pddl_extender.create_new_action(
+                        goals=self.knowledge_base.goals,
+                        meta_preconditions=effects_last_action,
+                        sequence=[completed_sequence[key_actions[-1]]],
+                        parameters=[completed_parameters[key_actions[-1]]],
+                    )
+                else:
+                    self.pddl_extender.generalize_action(
+                        action_name=completed_sequence[key_actions[-1]],
+                        parameters=completed_parameters[key_actions[-1]],
+                        additional_preconditions=effects_last_action,
+                    )
 
             found_plan = True
             break

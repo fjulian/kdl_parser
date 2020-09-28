@@ -1,8 +1,13 @@
 import time
+from copy import deepcopy
+
+from typing import List
 
 from highlevel_planning.learning.logic_tools import (
     determine_sequence_effects,
     determine_sequence_preconds,
+    unparametrize_predicate,
+    invert_dict_1to1,
 )
 
 
@@ -14,6 +19,9 @@ class PDDLExtender(object):
     def create_new_action(self, goals, meta_preconditions, sequence, parameters):
         time_string = time.strftime("%y%m%d%H%M%S")
         action_name = sequence[0] + "-" + goals[0][0] + "-" + time_string
+
+        if meta_preconditions is None:
+            meta_preconditions = []
 
         # Compute parameters
         action_params = list()
@@ -66,7 +74,7 @@ class PDDLExtender(object):
                 if param_value not in already_retyped:
                     hidden_parameters[idx][param_name] = param_value
 
-        # Determine translation between old argument names and new ones
+        # Determine translation between meta action argument names and sub action argument names
         param_translator = [dict.fromkeys(param_dict) for param_dict in parameters]
         for idx, params in enumerate(parameters):
             for param_name, param_value in params.items():
@@ -81,7 +89,7 @@ class PDDLExtender(object):
             full_action_params.append((param_spec[0], param_spec[1], param_spec[0]))
 
         # Add non-generalizable parametrization
-        self._process_parameterizations(full_action_params, action_name)
+        self._add_parameterization(full_action_params, action_name)
 
         # Save action meta data
         self.knowledge_base.add_meta_action(
@@ -95,21 +103,44 @@ class PDDLExtender(object):
 
         return action_name
 
-    def generalize_action(self, action_name, parameters: dict):
-        action_description = self.knowledge_base.actions[action_name]
+    def generalize_action(
+        self, action_name: str, parameters: dict, additional_preconditions=None
+    ):
+        parameters = deepcopy(parameters)
+        time_string = time.strftime("%y%m%d%H%M%S")
+
+        new_description = deepcopy(self.knowledge_base.actions[action_name])
+        if additional_preconditions is not None:
+            inverted_params = invert_dict_1to1(parameters)
+            for additional_pred in additional_preconditions:
+                # Make sure that all parameters exist
+                for pred_param_value in additional_pred[2]:
+                    if pred_param_value not in inverted_params:
+                        original_types = self.knowledge_base.objects[pred_param_value]
+                        new_type = (
+                            f"{original_types[0]}-{pred_param_value}-{time_string}"
+                        )
+                        new_description["params"].append([pred_param_value, new_type])
+                        self.knowledge_base.add_type(new_type, original_types[0])
+                        self.knowledge_base.add_object(pred_param_value, new_type)
+                        parameters[pred_param_value] = pred_param_value
+                new_pred = unparametrize_predicate(additional_pred, parameters)
+                new_description["preconds"].append(new_pred)
+            self.knowledge_base.add_action(action_name, new_description, overwrite=True)
+
         param_list = list()
-        for parameter_spec in action_description["params"]:
+        for parameter_spec in new_description["params"]:
             parameter_name = parameter_spec[0]
             parameter_type = parameter_spec[1]
             parameter_value = parameters[parameter_name]
-            if not parameter_value in self.knowledge_base.objects:
+            if parameter_value not in self.knowledge_base.objects:
                 self.knowledge_base.make_permanent(parameter_value)
             if not self.knowledge_base.is_type(
                 object_to_check=parameter_value, type_query=parameter_type
             ):
                 self.knowledge_base.add_object(parameter_value, parameter_type)
             param_list.append((parameter_name, parameter_type, parameter_value))
-        self._process_parameterizations(param_list, action_name)
+        self._add_parameterization(param_list, action_name)
 
     def _retype_argument(self, arg, action_params, already_retyped, time_string):
         if arg not in already_retyped:
@@ -126,7 +157,7 @@ class PDDLExtender(object):
                 self.knowledge_base.add_object(arg, new_type)
             already_retyped.append(arg)
 
-    def _process_parameterizations(self, param_list: list, action_name: str):
+    def _add_parameterization(self, param_list: List[tuple], action_name: str):
         """
         [summary]
 
@@ -162,6 +193,42 @@ class PDDLExtender(object):
                 self.knowledge_base.parameterizations[action_name][object_params][
                     param[0]
                 ].add(param[2])
+
+    def _extend_parameterizations(
+        self, action_name: str, action_description, parameters
+    ):
+        """
+        If a new parameter is added a posteriori, this needs to be reflected in existing parameterizations.
+
+        Returns:
+
+        """
+        parameterizations_to_remove = list()
+        gt_parameter_name_list = [
+            param[0] for param in action_description["params"] if param[1] != "position"
+        ]
+        gt_parameter_type_list = [
+            param[1] for param in action_description["params"] if param[1] != "position"
+        ]
+        for parameterization in self.knowledge_base.parameterizations[action_name]:
+            parameter_name_list = [param[0] for param in parameterization]
+            if parameter_name_list != gt_parameter_name_list:
+                parameterizations_to_remove.append(parameterization)
+                new_parameterization = list(parameterization)
+                for i, gt_param in enumerate(gt_parameter_name_list):
+                    if new_parameterization[i][0] != gt_param:
+                        new_parameterization.insert(
+                            i,
+                            (gt_param, gt_parameter_type_list[i], parameters[gt_param]),
+                        )
+                        self.knowledge_base.parameterizations[action_name][
+                            new_parameterization
+                        ] = self.knowledge_base.parameterizations[
+                            action_name[parameterization]
+                        ]
+
+        for parameterization in parameterizations_to_remove:
+            del self.knowledge_base.parameterizations[action_name][parameterization]
 
     def create_new_predicates(self):
         pass

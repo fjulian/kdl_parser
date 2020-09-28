@@ -18,6 +18,16 @@ def parametrize_predicate_list(predicates, action_parameters):
     return parametrized_predicates
 
 
+def unparametrize_predicate(predicate, action_parameters):
+    assert len(predicate) == 3
+    inverted_params = invert_dict_1to1(action_parameters)
+    return (
+        predicate[0],
+        predicate[1],
+        tuple([inverted_params[param_value] for param_value in predicate[2]]),
+    )
+
+
 def determine_sequence_preconds(knowledge_base, sequence, parameters):
     seq_preconds = list()
     for action_idx, action_id in reversed(list(enumerate(sequence))):
@@ -139,6 +149,15 @@ def invert_dict(original_dict):
             inverted_dict[original_dict[key]].append(key)
     for val in inverted_dict:
         inverted_dict[val] = list(dict.fromkeys(inverted_dict[val]))
+    return inverted_dict
+
+
+def invert_dict_1to1(original_dict):
+    inverted_dict = dict()
+    for key in original_dict:
+        assert isinstance(key, str)
+        assert isinstance(original_dict[key], str)
+        inverted_dict[original_dict[key]] = key
     return inverted_dict
 
 
