@@ -11,6 +11,7 @@ from highlevel_planning.tools.util import get_combined_aabb
 from highlevel_planning.learning import logic_tools
 from highlevel_planning.learning.sequence_completion import complete_sequence
 from highlevel_planning.learning.precondition_discovery import precondition_discovery
+from highlevel_planning.learning.exploration_tools import get_items_closeby
 
 
 class Explorer:
@@ -76,8 +77,11 @@ class Explorer:
             self.add_metric("result", res)
         if not planning_failed and not res:
             self.set_metrics_prefix("02_prepend")
-            closeby_objects = self._get_items_closeby(
-                goal_objects, distance_limit=0.5  # TODO move magic number to parameters
+            closeby_objects = get_items_closeby(
+                goal_objects,
+                self.scene_objects,
+                self.robot_uid_,
+                distance_limit=0.5,  # TODO move magic number to parameters
             )
             res = self._explore_prepending_sequence(
                 closeby_objects + goal_objects, sequences_tried
@@ -89,8 +93,11 @@ class Explorer:
         for radius in radii:
             if not res:
                 self.set_metrics_prefix(f"03_rad{radius}")
-                closeby_objects = self._get_items_closeby(
-                    goal_objects, distance_limit=radius
+                closeby_objects = get_items_closeby(
+                    goal_objects,
+                    self.scene_objects,
+                    self.robot_uid_,
+                    distance_limit=radius,
                 )
                 self.add_metric("closeby_objects", closeby_objects)
                 res = self._explore_goal_objects(
@@ -612,36 +619,6 @@ class Explorer:
                 else:
                     item_list.append(arg)
         return item_list
-
-    def _get_items_closeby(self, goal_objects, distance_limit=0.5):
-        closeby_objects = set()
-        for obj in self.scene_objects:
-            if obj in goal_objects:
-                continue
-
-            obj_uid = self.scene_objects[obj].model.uid
-            ret = p.getClosestPoints(
-                self.robot_uid_, obj_uid, distance=1.2 * distance_limit
-            )
-            if len(ret) > 0:
-                distances = np.array([r[8] for r in ret])
-                distance = np.min(distances)
-                if distance <= distance_limit:
-                    closeby_objects.add(obj)
-                    continue
-
-            for goal_obj in goal_objects:
-                goal_obj_uid = self.scene_objects[goal_obj].model.uid
-                ret = p.getClosestPoints(
-                    obj_uid, goal_obj_uid, distance=1.2 * distance_limit
-                )
-                if len(ret) == 0:
-                    continue
-                distances = np.array([r[8] for r in ret])
-                distance = np.min(distances)
-                if distance <= distance_limit:
-                    closeby_objects.add(obj)
-        return list(closeby_objects)
 
     def _test_completed_sequence(self, completion_result: dict):
         # Restore initial state

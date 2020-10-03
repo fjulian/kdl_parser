@@ -1,10 +1,13 @@
 import numpy as np
 import pybullet as p
 from copy import deepcopy
-from itertools import product
 
 from highlevel_planning.execution.es_sequential_execution import (
     execute_plan_sequentially,
+)
+from highlevel_planning.learning.logic_tools import (
+    determine_relevant_predicates,
+    measure_predicates,
 )
 
 
@@ -17,7 +20,7 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
         completed_parameters,
         precondition_sequence,
         precondition_params,
-        key_action_indices,
+        _,
     ) = completion_results
 
     # Restore initial state
@@ -112,40 +115,6 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
         del precondition_actions[idx]
 
     return precondition_candidates, precondition_actions
-
-
-def determine_relevant_predicates(relevant_objects, knowledge_base):
-    """
-    Determine all predicates of objects involved in this action and objects that are close to them
-    """
-    predicate_descriptions = knowledge_base.predicate_funcs.descriptions
-    relevant_predicates = list()
-    for pred in predicate_descriptions:
-        parameters = predicate_descriptions[pred]
-
-        # Find possible parameter assignments
-        parameter_assignments = list()
-        for param_idx, param in enumerate(parameters):
-            assignments_this_param = list()
-            if param[1] == "robot":
-                assignments_this_param.append("robot1")
-            else:
-                for obj in relevant_objects:
-                    if knowledge_base.is_type(obj, param[1]):
-                        assignments_this_param.append(obj)
-            parameter_assignments.append(assignments_this_param)
-
-        for parametrization in product(*parameter_assignments):
-            relevant_predicates.append((pred, parametrization))
-    return relevant_predicates
-
-
-def measure_predicates(predicates, knowledge_base):
-    measurements = list()
-    for pred in predicates:
-        res = knowledge_base.predicate_funcs.call[pred[0]](*pred[1])
-        measurements.append(res)
-    return measurements
 
 
 def detect_predicate_changes(

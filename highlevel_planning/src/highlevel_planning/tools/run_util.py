@@ -105,6 +105,6 @@ def setup_knowledge_base(basedir, scene, robot, cfg, time_string):
 
     # Planning problem
     kb.populate_visible_objects(scene)
-    kb.check_predicates()
+    kb.check_predicates(scene.objects, robot.model.uid)
 
     return kb, preds

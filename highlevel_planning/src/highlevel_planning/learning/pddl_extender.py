@@ -120,10 +120,13 @@ class PDDLExtender(object):
                         new_type = (
                             f"{original_types[0]}-{pred_param_value}-{time_string}"
                         )
-                        new_description["params"].append([pred_param_value, new_type])
+                        new_description["params"].append(
+                            [pred_param_value, new_type]
+                        )  # TODO make sure that this parameter name does not yet exist
                         self.knowledge_base.add_type(new_type, original_types[0])
                         self.knowledge_base.add_object(pred_param_value, new_type)
                         parameters[pred_param_value] = pred_param_value
+                        inverted_params[pred_param_value] = pred_param_value
                 new_pred = unparametrize_predicate(additional_pred, parameters)
                 new_description["preconds"].append(new_pred)
             self.knowledge_base.add_action(action_name, new_description, overwrite=True)
@@ -141,6 +144,7 @@ class PDDLExtender(object):
                 self.knowledge_base.add_object(parameter_value, parameter_type)
             param_list.append((parameter_name, parameter_type, parameter_value))
         self._add_parameterization(param_list, action_name)
+        self._extend_parameterizations(action_name, new_description, parameters)
 
     def _retype_argument(self, arg, action_params, already_retyped, time_string):
         if arg not in already_retyped:
@@ -204,31 +208,46 @@ class PDDLExtender(object):
 
         """
         parameterizations_to_remove = list()
+        paramets = self.knowledge_base.parameterizations[action_name]
         gt_parameter_name_list = [
             param[0] for param in action_description["params"] if param[1] != "position"
         ]
         gt_parameter_type_list = [
             param[1] for param in action_description["params"] if param[1] != "position"
         ]
-        for parameterization in self.knowledge_base.parameterizations[action_name]:
+        for parameterization in paramets:
             parameter_name_list = [param[0] for param in parameterization]
             if parameter_name_list != gt_parameter_name_list:
                 parameterizations_to_remove.append(parameterization)
                 new_parameterization = list(parameterization)
                 for i, gt_param in enumerate(gt_parameter_name_list):
-                    if new_parameterization[i][0] != gt_param:
+                    if (
+                        len(new_parameterization) - 1 < i
+                        or new_parameterization[i][0] != gt_param
+                    ):
                         new_parameterization.insert(
                             i,
                             (gt_param, gt_parameter_type_list[i], parameters[gt_param]),
                         )
-                        self.knowledge_base.parameterizations[action_name][
-                            new_parameterization
-                        ] = self.knowledge_base.parameterizations[
-                            action_name[parameterization]
-                        ]
+
+                new_parameterization = tuple(new_parameterization)
+                if new_parameterization in paramets:
+                    for pos_param_name in self.knowledge_base.parameterizations[
+                        action_name
+                    ][parameterization]:
+                        if pos_param_name in paramets[new_parameterization]:
+                            paramets[new_parameterization][pos_param_name].update(
+                                paramets[parameterization][pos_param_name]
+                            )
+                        else:
+                            paramets[new_parameterization][pos_param_name] = paramets[
+                                parameterization
+                            ][pos_param_name]
+                else:
+                    paramets[new_parameterization] = paramets[parameterization]
 
         for parameterization in parameterizations_to_remove:
-            del self.knowledge_base.parameterizations[action_name][parameterization]
+            del paramets[parameterization]
 
     def create_new_predicates(self):
         pass

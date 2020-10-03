@@ -1,4 +1,5 @@
 from copy import deepcopy
+from itertools import product
 
 
 def parametrize_predicate(predicate, action_parameters):
@@ -196,3 +197,37 @@ def apply_effects_to_state(states, effects):
     for effect in effects:
         if effect[1]:
             states.append((effect[0],) + tuple(effect[2]))
+
+
+def determine_relevant_predicates(relevant_objects, knowledge_base):
+    """
+    Determine all predicates of objects involved in this action and objects that are close to them
+    """
+    predicate_descriptions = knowledge_base.predicate_funcs.descriptions
+    relevant_predicates = list()
+    for pred in predicate_descriptions:
+        parameters = predicate_descriptions[pred]
+
+        # Find possible parameter assignments
+        parameter_assignments = list()
+        for param_idx, param in enumerate(parameters):
+            assignments_this_param = list()
+            if param[1] == "robot":
+                assignments_this_param.append("robot1")
+            else:
+                for obj in relevant_objects:
+                    if knowledge_base.is_type(obj, param[1]):
+                        assignments_this_param.append(obj)
+            parameter_assignments.append(assignments_this_param)
+
+        for parametrization in product(*parameter_assignments):
+            relevant_predicates.append((pred, parametrization))
+    return relevant_predicates
+
+
+def measure_predicates(predicates, knowledge_base):
+    measurements = list()
+    for pred in predicates:
+        res = knowledge_base.predicate_funcs.call[pred[0]](*pred[1])
+        measurements.append(res)
+    return measurements
