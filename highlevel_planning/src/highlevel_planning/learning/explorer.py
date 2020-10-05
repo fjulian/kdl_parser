@@ -114,6 +114,7 @@ class Explorer:
     def _explore_demonstration(
         self, demo_sequence, demo_parameters, relevant_objects, sequences_tried
     ):
+        print("Exploring demonstration ...")
         found_plan = self._sampling_loops_caller(
             relevant_objects,
             len(demo_sequence),
@@ -125,6 +126,7 @@ class Explorer:
         return found_plan
 
     def _explore_prepending_sequence(self, relevant_objects, sequences_tried):
+        print("Exploring prepending sequence ...")
         plan = self.knowledge_base.solve()
         if not plan:
             return False
@@ -149,6 +151,8 @@ class Explorer:
         return found_plan
 
     def _explore_generalized_action(self, relevant_objects, sequences_tried):
+        print("Exploring generalizing action ...")
+
         # Check if an action with a similar effect already exists
         self.knowledge_base.clear_temp()
         for obj in relevant_objects:
@@ -177,7 +181,7 @@ class Explorer:
         return found_plan
 
     def _explore_goal_objects(self, sequences_tried, relevant_objects=None):
-        min_sequence_length = 1
+        print("Exploring goal objects ...")
         max_sequence_length = self.config_params["max_sequence_length"]
         found_plan = self._sampling_loops_caller(
             relevant_objects, min_sequence_length, max_sequence_length, sequences_tried
@@ -199,8 +203,10 @@ class Explorer:
         found_plan = False
         self.knowledge_base.clear_temp()
         sampling_counters = self.get_sampling_counters_dict()
-        for _ in range(self.config_params["max_sample_repetitions"]):
+        for rep_idx in range(self.config_params["max_sample_repetitions"]):
+            print(f"Repitition {rep_idx}")
             for seq_len in range(min_sequence_length, max_sequence_length + 1):
+                print(f"Sequence length {seq_len}")
                 found_plan = self._sampling_loops(
                     sequences_tried,
                     sampling_counters,
@@ -261,6 +267,7 @@ class Explorer:
             counters["goal_reached"] += test_success[2]
             if test_success[2] == 0:
                 continue
+            print("SUCCESS. Achieved goal, now extending symbolic description.")
 
             # -----------------------------------------------
             # Extend the symbolic description appropriately
@@ -484,7 +491,7 @@ class Explorer:
             objects_of_interest_dict[obj] = self.knowledge_base.objects[obj]
         objects_of_interest_dict["robot1"] = self.knowledge_base.objects["robot1"]
         types_by_parent = logic_tools.invert_dict(self.knowledge_base.types)
-        objects_by_type = logic_tools.invert_dict(objects_of_interest_dict)
+        objects_of_interest_by_type = logic_tools.invert_dict(objects_of_interest_dict)
 
         for idx_action, action in enumerate(sequence):
             parameter_samples.append(dict())
@@ -507,14 +514,25 @@ class Explorer:
                         objects_to_sample_from = self.knowledge_base.get_objects_by_type(
                             obj_type,
                             types_by_parent,
-                            objects_by_type,
+                            objects_of_interest_by_type,
                             visible_only=True,
                         )
                         if len(objects_to_sample_from) == 0:
-                            # No object of the desired type exists, sample new sequence
-                            raise NameError(
-                                "No object of desired type among objects of interest"
+                            # If no suitable object is in the objects of interest, check among all objects
+                            objects_all_by_type = logic_tools.invert_dict(
+                                self.knowledge_base.objects
                             )
+                            objects_to_sample_from = self.knowledge_base.get_objects_by_type(
+                                obj_type,
+                                types_by_parent,
+                                objects_all_by_type,
+                                visible_only=False,
+                            )
+                            if len(objects_to_sample_from) == 0:
+                                # No object of the desired type exists, sample new sequence
+                                raise NameError(
+                                    "No object of desired type among objects of interest"
+                                )
                         obj_sample = np.random.choice(list(objects_to_sample_from))
                 parameter_samples[idx_action][obj_name] = obj_sample
                 parameters_current_action.append(obj_sample)

@@ -46,8 +46,9 @@ class ScenePlanning1(SceneBase):
                 urdf_path_="duck_vhacd.urdf",
                 init_pos_=np.array([2.8, -0.25, 0.67]),
                 init_orient_=rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "x", 90.0),
+                init_scale_=0.8,
                 grasp_links_=[-1],
-                grasp_pos_={-1: [np.array([-0.02, 0.04, 0.0])]},
+                grasp_pos_={-1: [np.array([-0.015, 0.03, 0.0])]},
                 grasp_orient_={
                     -1: [rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "x", -90.0)]
                 },

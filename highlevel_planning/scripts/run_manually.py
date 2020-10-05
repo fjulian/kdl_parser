@@ -102,9 +102,9 @@ def grasp_example(
     # print(robot.get_wrist_force())
 
     # Place cube somewhere else
-    sk_place.place_object(
-        scene.objects[object_name].init_pos + np.array([0.0, 0.1, -0.09])
-    )
+    new_pos = scene.objects[object_name].init_pos + np.array([0.75, 0.0, 0.1])
+    sk_nav.move_to_pos(new_pos)
+    sk_place.place_object(new_pos)
 
 
 def navigate_with_cube(sk_nav, sk_grasp):
