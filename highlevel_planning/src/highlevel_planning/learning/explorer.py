@@ -68,20 +68,24 @@ class Explorer:
         goal_objects = self._get_items_goal()
         radii = self.config_params["radii"]
 
+        closeby_objects = get_items_closeby(
+            goal_objects,
+            self.scene_objects,
+            self.robot_uid_,
+            distance_limit=0.5,  # TODO move magic number to parameters
+        )
+
         res = False
         if demo_sequence is not None and demo_parameters is not None:
             self.set_metrics_prefix("01_demo")
             res = self._explore_demonstration(
-                demo_sequence, demo_parameters, goal_objects, sequences_tried
+                demo_sequence,
+                demo_parameters,
+                closeby_objects + goal_objects,
+                sequences_tried,
             )
         if not planning_failed and not res:
             self.set_metrics_prefix("02_prepend")
-            closeby_objects = get_items_closeby(
-                goal_objects,
-                self.scene_objects,
-                self.robot_uid_,
-                distance_limit=0.5,  # TODO move magic number to parameters
-            )
             res = self._explore_prepending_sequence(
                 closeby_objects + goal_objects, sequences_tried
             )

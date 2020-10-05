@@ -123,7 +123,10 @@ def main():
             # Exploration
             rep.report_before_exploration(kb, plan)
             success, metrics = xplorer.exploration(
-                planning_failed, state_id=initial_state_id
+                planning_failed,
+                demo_sequence,
+                demo_parameters,
+                state_id=initial_state_id,
             )
             rep.report_after_exploration(kb, metrics)
             if not success:
