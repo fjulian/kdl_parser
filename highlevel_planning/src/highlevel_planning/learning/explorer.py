@@ -182,6 +182,7 @@ class Explorer:
 
     def _explore_goal_objects(self, sequences_tried, relevant_objects=None):
         print("Exploring goal objects ...")
+        min_sequence_length = 1
         max_sequence_length = self.config_params["max_sequence_length"]
         found_plan = self._sampling_loops_caller(
             relevant_objects, min_sequence_length, max_sequence_length, sequences_tried

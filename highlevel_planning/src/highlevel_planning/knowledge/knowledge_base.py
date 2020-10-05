@@ -302,6 +302,9 @@ class KnowledgeBase:
 
             relevant_objects.update(goal[2])
 
+        if "robot1" in relevant_objects:
+            relevant_objects.remove("robot1")
+
         closeby_objects = get_items_closeby(
             relevant_objects, scene_objects, robot_uid, distance_limit=1.0
         )
