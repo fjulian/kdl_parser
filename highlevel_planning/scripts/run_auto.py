@@ -96,6 +96,7 @@ def main():
     while True:
         # Plan
         plan = kb.solve()
+        rep.report_after_planning(plan)
 
         # Execute
         if plan is False:
@@ -109,6 +110,7 @@ def main():
             res = execute_plan_sequentially(
                 sequence, parameters, skill_set, kb, verbose=True
             )
+            rep.report_after_execution(res)
             if res:
                 print("Reached goal successfully. Exiting.")
                 break
@@ -116,12 +118,14 @@ def main():
                 print("Failure during plan execution.")
 
         # Decide what happens next
-        choice = input(f"Choose next action: (a)bort, (e)xplore\n" f"Your choice: ")
+        choice = input(f"Choose next action: (a)bort, (e)xplore\nYour choice: ")
         if choice == "e":
             # Exploration
+            rep.report_before_exploration(kb, plan)
             success, metrics = xplorer.exploration(
                 planning_failed, state_id=initial_state_id
             )
+            rep.report_after_exploration(kb, metrics)
             if not success:
                 print("Exploration was not successful")
                 break

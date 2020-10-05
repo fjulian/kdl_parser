@@ -8,7 +8,7 @@ import pybullet as p
 
 class ScenePlanning1(SceneBase):
     def __init__(self, world, base_dir, restored_objects=None):
-        SceneBase.__init__(self, world, base_dir, restored_objects)
+        SceneBase.__init__(self, world, restored_objects)
 
         if restored_objects is None:
             self._world.add_plane()

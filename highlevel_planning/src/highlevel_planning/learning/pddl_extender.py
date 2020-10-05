@@ -207,18 +207,16 @@ class PDDLExtender(object):
         Returns:
 
         """
-        parameterizations_to_remove = list()
-        paramets = self.knowledge_base.parameterizations[action_name]
+        parameterization_replacements = dict()
         gt_parameter_name_list = [
             param[0] for param in action_description["params"] if param[1] != "position"
         ]
         gt_parameter_type_list = [
             param[1] for param in action_description["params"] if param[1] != "position"
         ]
-        for parameterization in paramets:
+        for parameterization in self.knowledge_base.parameterizations[action_name]:
             parameter_name_list = [param[0] for param in parameterization]
             if parameter_name_list != gt_parameter_name_list:
-                parameterizations_to_remove.append(parameterization)
                 new_parameterization = list(parameterization)
                 for i, gt_param in enumerate(gt_parameter_name_list):
                     if (
@@ -230,24 +228,48 @@ class PDDLExtender(object):
                             (gt_param, gt_parameter_type_list[i], parameters[gt_param]),
                         )
 
-                new_parameterization = tuple(new_parameterization)
-                if new_parameterization in paramets:
-                    for pos_param_name in self.knowledge_base.parameterizations[
-                        action_name
-                    ][parameterization]:
-                        if pos_param_name in paramets[new_parameterization]:
-                            paramets[new_parameterization][pos_param_name].update(
-                                paramets[parameterization][pos_param_name]
-                            )
-                        else:
-                            paramets[new_parameterization][pos_param_name] = paramets[
+                parameterization_replacements[parameterization] = tuple(
+                    new_parameterization
+                )
+
+        for parameterization in parameterization_replacements:
+            new_parameterization = parameterization_replacements[parameterization]
+            if (
+                new_parameterization
+                in self.knowledge_base.parameterizations[action_name]
+            ):
+                for pos_param_name in self.knowledge_base.parameterizations[
+                    action_name
+                ][parameterization]:
+                    if (
+                        pos_param_name
+                        in self.knowledge_base.parameterizations[action_name][
+                            new_parameterization
+                        ]
+                    ):
+                        self.knowledge_base.parameterizations[action_name][
+                            new_parameterization
+                        ][pos_param_name].update(
+                            self.knowledge_base.parameterizations[action_name][
                                 parameterization
                             ][pos_param_name]
-                else:
-                    paramets[new_parameterization] = paramets[parameterization]
+                        )
+                    else:
+                        self.knowledge_base.parameterizations[action_name][
+                            new_parameterization
+                        ][pos_param_name] = self.knowledge_base.parameterizations[
+                            action_name
+                        ][
+                            parameterization
+                        ][
+                            pos_param_name
+                        ]
+            else:
+                self.knowledge_base.parameterizations[action_name][
+                    new_parameterization
+                ] = self.knowledge_base.parameterizations[action_name][parameterization]
 
-        for parameterization in parameterizations_to_remove:
-            del paramets[parameterization]
+            del self.knowledge_base.parameterizations[action_name][parameterization]
 
     def create_new_predicates(self):
         pass

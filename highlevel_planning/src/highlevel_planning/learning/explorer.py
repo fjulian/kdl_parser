@@ -74,7 +74,6 @@ class Explorer:
             res = self._explore_demonstration(
                 demo_sequence, demo_parameters, goal_objects, sequences_tried
             )
-            self.add_metric("result", res)
         if not planning_failed and not res:
             self.set_metrics_prefix("02_prepend")
             closeby_objects = get_items_closeby(
@@ -87,12 +86,11 @@ class Explorer:
                 closeby_objects + goal_objects, sequences_tried
             )
         if not res:
-            self.set_metrics_prefix("02_generalize")
+            self.set_metrics_prefix("03_generalize")
             res = self._explore_generalized_action(goal_objects, sequences_tried)
-            self.add_metric("result", res)
         for radius in radii:
             if not res:
-                self.set_metrics_prefix(f"03_rad{radius}")
+                self.set_metrics_prefix(f"04_rad{radius}")
                 closeby_objects = get_items_closeby(
                     goal_objects,
                     self.scene_objects,
@@ -103,7 +101,6 @@ class Explorer:
                 res = self._explore_goal_objects(
                     sequences_tried, goal_objects + closeby_objects
                 )
-                self.add_metric("result", res)
         return res, self.metrics
 
     # ----- Different sampling strategies ------------------------------------
@@ -222,6 +219,7 @@ class Explorer:
         # Store counters
         for counter in sampling_counters:
             self.add_metric(counter, sampling_counters[counter])
+        self.add_metric("found_plan", found_plan)
 
         # Restore initial state
         p.restoreState(stateId=self.current_state_id)
@@ -265,6 +263,7 @@ class Explorer:
                 continue
 
             # -----------------------------------------------
+            # Extend the symbolic description appropriately
 
             completed_sequence = completion_result[0]
             completed_parameters = completion_result[1]
@@ -326,6 +325,10 @@ class Explorer:
                         continue
                     last_working_completion_result = modified_completion_result
                     i += 1
+
+                completed_sequence = last_working_completion_result[0]
+                completed_parameters = last_working_completion_result[1]
+                key_actions = last_working_completion_result[4]
 
                 effects_last_action = list()
                 if len(last_working_completion_result[0]) > 1:
