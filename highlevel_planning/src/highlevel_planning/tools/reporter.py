@@ -9,7 +9,13 @@ from highlevel_planning.tools.config import ConfigYaml
 
 
 class Reporter:
-    def __init__(self, basedir: str, config: ConfigYaml, time_string: str = None):
+    def __init__(
+        self,
+        basedir: str,
+        config: ConfigYaml,
+        time_string: str = None,
+        noninteractive: bool = False,
+    ):
         self.basedir = basedir
         self.data = dict()
         self.metrics = OrderedDict()
@@ -19,7 +25,10 @@ class Reporter:
         else:
             self.metrics["time"] = time_string
         print(f"Time string for reporting is {self.metrics['time']}")
-        self.metrics["description"] = input("Experiment description: ")
+        if noninteractive:
+            self.metrics["description"] = ""
+        else:
+            self.metrics["description"] = input("Experiment description: ")
         self.data["configuration"] = deepcopy(config._cfg)
 
         self.planning_idx = 0
@@ -80,8 +89,9 @@ class Reporter:
         savefile = os.path.join(savedir, f"{self.metrics['time']}_index.txt")
         with open(savefile, "w") as f:
             for key, value in self.metrics.items():
-                f.write(f"{key:36}: {value}\n")
+                f.write(f"{key:42}: {value}\n")
 
         # Write data
+        self.data["metrics"] = self.metrics
         with open(os.path.join(savedir, f"{self.metrics['time']}_data.pkl"), "wb") as f:
             pickle.dump(self.data, f)

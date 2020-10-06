@@ -3,6 +3,7 @@ import numpy as np
 import pybullet as p
 from collections import OrderedDict
 from copy import deepcopy
+import time
 
 from highlevel_planning.execution.es_sequential_execution import (
     execute_plan_sequentially,
@@ -51,10 +52,12 @@ class Explorer:
         demo_sequence=None,
         demo_parameters=None,
         state_id=None,
+        no_seed: bool = False,
     ):
         self.metrics = OrderedDict()
 
-        np.random.seed(0)
+        if not no_seed:
+            np.random.seed(0)
         sequences_tried = set()
 
         # Save the state the robot is currently in
@@ -113,6 +116,12 @@ class Explorer:
     def get_sampling_counters_dict():
         return OrderedDict.fromkeys(
             ("valid_sequences", "preplan_success", "plan_success", "goal_reached"), 0
+        )
+
+    @staticmethod
+    def get_timing_counters_dict():
+        return OrderedDict.fromkeys(
+            ("sampling", "sequence_completion", "execution", "domain_extension"), 0.0
         )
 
     def _explore_demonstration(
@@ -208,6 +217,7 @@ class Explorer:
         found_plan = False
         self.knowledge_base.clear_temp()
         sampling_counters = self.get_sampling_counters_dict()
+        sampling_timers = self.get_timing_counters_dict()
         for rep_idx in range(self.config_params["max_sample_repetitions"]):
             print(f"Repitition {rep_idx}")
             for seq_len in range(min_sequence_length, max_sequence_length + 1):
@@ -215,6 +225,7 @@ class Explorer:
                 found_plan = self._sampling_loops(
                     sequences_tried,
                     sampling_counters,
+                    sampling_timers,
                     seq_len,
                     given_seq=given_sequence,
                     given_params=given_parameters,
@@ -229,7 +240,9 @@ class Explorer:
 
         # Store counters
         for counter in sampling_counters:
-            self.add_metric(counter, sampling_counters[counter])
+            self.add_metric(f"#_{counter}", sampling_counters[counter])
+        for timer in sampling_timers:
+            self.add_metric(f"t_{timer}", sampling_timers[timer])
         self.add_metric("found_plan", found_plan)
 
         # Restore initial state
@@ -240,6 +253,7 @@ class Explorer:
         self,
         sequences_tried,
         counters,
+        sampling_timers,
         seq_len: int,
         given_seq=None,
         given_params=None,
@@ -256,6 +270,7 @@ class Explorer:
             (success, completion_result) = self._sample_feasible_sequence(
                 sequences_tried,
                 seq_len,
+                sampling_timers,
                 given_seq=given_seq,
                 given_params=given_params,
                 relevant_objects=relevant_objects,
@@ -266,7 +281,9 @@ class Explorer:
                 break
             counters["valid_sequences"] += 1
 
+            tic = time.time()
             test_success = self._test_completed_sequence(completion_result)
+            sampling_timers["execution"] += time.time() - tic
             counters["preplan_success"] += test_success[0]
             counters["plan_success"] += test_success[1]
             counters["goal_reached"] += test_success[2]
@@ -277,6 +294,7 @@ class Explorer:
             # -----------------------------------------------
             # Extend the symbolic description appropriately
 
+            tic = time.time()
             completed_sequence = completion_result[0]
             completed_parameters = completion_result[1]
             if len(completed_sequence) == 1:
@@ -386,7 +404,7 @@ class Explorer:
                         parameters=completed_parameters[key_actions[-1]],
                         additional_preconditions=effects_last_action,
                     )
-
+            sampling_timers["domain_extension"] += time.time() - tic
             found_plan = True
             break
 
@@ -396,6 +414,7 @@ class Explorer:
         self,
         sequences_tried: set,
         sequence_length: int,
+        sampling_timers: OrderedDict,
         given_seq: list = None,
         given_params: list = None,
         relevant_objects=None,
@@ -422,6 +441,7 @@ class Explorer:
                 success = False
                 break
 
+            tic = time.time()
             if len(given_seq) < sequence_length:
                 pre_seq = self._sample_sequence(sequence_length - len(given_seq))
                 seq = pre_seq + given_seq
@@ -439,12 +459,16 @@ class Explorer:
                 continue
             sequence_tuple = (tuple(seq), tuple(params_tuple))
             if sequence_tuple in sequences_tried:
+                sampling_timers["sampling"] += time.time() - tic
                 continue
             sequences_tried.add(sequence_tuple)
+            sampling_timers["sampling"] += time.time() - tic
 
             # if given_seq is None or do_complete_sequence:
             # Fill in the gaps of the sequence to make it feasible
+            tic = time.time()
             completion_result = complete_sequence(seq, params, relevant_objects, self)
+            sampling_timers["sequence_completion"] += time.time() - tic
             if completion_result is False:
                 continue
             # else:

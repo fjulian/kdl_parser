@@ -42,11 +42,13 @@ def print_plan(sequence, parameters):
 
 
 def main():
-    # Seed RNGs
-    np.random.seed(0)
-
     # Command line arguments
     args = run_util.parse_arguments()
+
+    # Seed RNGs
+    if not args.no_seed:
+        print("Seeding RNG")
+        np.random.seed(0)
 
     if args.method == "direct" and args.reuse_objects:
         raise RuntimeError("Cannot reload objects when in direct mode.")
@@ -60,7 +62,7 @@ def main():
 
     time_now = datetime.now()
     time_string = time_now.strftime("%y%m%d-%H%M%S")
-    rep = Reporter(BASEDIR, cfg, time_string)
+    rep = Reporter(BASEDIR, cfg, time_string, args.noninteractive)
     atexit.register(exit_handler, rep)
 
     # Populate simulation
@@ -107,7 +109,8 @@ def main():
             planning_failed = False
             sequence, parameters = plan
             print_plan(sequence, parameters)
-            input("Press enter to run...")
+            if not args.noninteractive:
+                input("Press enter to run...")
             res = execute_plan_sequentially(
                 sequence, parameters, skill_set, kb, verbose=True
             )
@@ -119,7 +122,10 @@ def main():
                 print("Failure during plan execution.")
 
         # Decide what happens next
-        choice = input(f"Choose next action: (a)bort, (e)xplore\nYour choice: ")
+        if not args.noninteractive:
+            choice = input(f"Choose next action: (a)bort, (e)xplore\nYour choice: ")
+        else:
+            choice = "e"
         if choice == "e":
             # Exploration
             rep.report_before_exploration(kb, plan)
@@ -128,6 +134,7 @@ def main():
                 demo_sequence,
                 demo_parameters,
                 state_id=initial_state_id,
+                no_seed=args.no_seed,
             )
             rep.report_after_exploration(kb, metrics)
             if not success:

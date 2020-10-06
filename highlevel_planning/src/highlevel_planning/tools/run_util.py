@@ -32,6 +32,14 @@ def parse_arguments():
         help="determines in which mode to connect to pybullet. Can be 'gui', 'direct' or 'shared'.",
         default="gui",
     )
+    parser.add_argument(
+        "-n", "--noninteractive", action="store_true", help="skip user prompts."
+    )
+    parser.add_argument(
+        "--no-seed",
+        action="store_true",
+        help="if given, RNGs are not initialized with a random seed.",
+    )
     args = parser.parse_args()
     return args
 
