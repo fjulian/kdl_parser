@@ -235,6 +235,7 @@ class Explorer:
                 if found_plan:
                     self.add_metric("successful_seq_len", seq_len)
                     break
+                sequences_tried.clear()
             if found_plan:
                 break
 
