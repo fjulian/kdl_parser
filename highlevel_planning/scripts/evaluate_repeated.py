@@ -25,13 +25,18 @@ def summarize_experiment(basedir, name_string):
     num_runs = len(files)
     success_label = ["found_plan"]
     success_count = 0
-    num_seq_samples = list()
-    num_preplan_exec_success = list()
-    num_plan_exec_success = list()
-    time_sampling = list()
-    time_sequence_completion = list()
-    time_execution = list()
-    time_domain_extension = list()
+    summary_data = dict.fromkeys(
+        [
+            "num_seq_samples",
+            "num_preplan_exec_success",
+            "num_plan_exec_success",
+            "time_sampling",
+            "time_sequence_completion",
+            "time_execution",
+            "time_domain_extension",
+        ],
+        [],
+    )
     for i in range(num_runs):
         with open(os.path.join(raw_data_dir, files[i]), "rb") as f:
             data = pickle.load(f)
@@ -47,25 +52,26 @@ def summarize_experiment(basedir, name_string):
                 break
         if success:
             label_prefix = this_success_label[: -(len("_found_plan"))]
-            num_seq_samples.append(metrics[f"{label_prefix}_#_valid_sequences"])
-            num_preplan_exec_success.append(
+            summary_data["num_seq_samples"].append(
+                metrics[f"{label_prefix}_#_valid_sequences"]
+            )
+            summary_data["num_preplan_exec_success"].append(
                 metrics[f"{label_prefix}_#_preplan_success"]
             )
-            num_plan_exec_success.append(metrics[f"{label_prefix}_#_plan_success"])
-            time_sampling.append(metrics[f"{label_prefix}_t_sampling"])
-            time_sequence_completion.append(
+            summary_data["num_plan_exec_success"].append(
+                metrics[f"{label_prefix}_#_plan_success"]
+            )
+            summary_data["time_sampling"].append(metrics[f"{label_prefix}_t_sampling"])
+            summary_data["time_sequence_completion"].append(
                 metrics[f"{label_prefix}_t_sequence_completion"]
             )
-            time_execution.append(metrics[f"{label_prefix}_t_execution"])
-            time_domain_extension.append(metrics[f"{label_prefix}_t_domain_extension"])
-    mean_num_seq_samples = np.mean(num_seq_samples)
-    mean_num_preplan_exec_success = np.mean(num_preplan_exec_success)
-    mean_num_plan_exec_success = np.mean(num_plan_exec_success)
-    mean_time_sampling = np.mean(time_sampling)
-    mean_time_sequence_completion = np.mean(time_sequence_completion)
-    mean_time_execution = np.mean(time_execution)
-    mean_time_domain_extension = np.mean(time_domain_extension)
-    return num_seq_samples
+            summary_data["time_execution"].append(
+                metrics[f"{label_prefix}_t_execution"]
+            )
+            summary_data["time_domain_extension"].append(
+                metrics[f"{label_prefix}_t_domain_extension"]
+            )
+    return summary_data, success_count
 
 
 if __name__ == "__main__":
@@ -78,17 +84,34 @@ if __name__ == "__main__":
         "Experiments",
         "Repeated",
     )
-    experiment_string = ["201006-122200", "201006-143900"]
-    titles = ["(a)", "(b)"]
-    all_data = list()
+    experiment_string = ["201006-122200", "201006-143900", "201006-193900"]
+    titles = ["(a)", "(b)", "(c)"]
+    num_seq_samples_data = list()
     for i in range(len(experiment_string)):
-        this_data = summarize_experiment(basedir, experiment_string[i])
-        # this_data = np.array(this_data).reshape((-1,1))
-        all_data.append(this_data)
+        summary, success_cnt = summarize_experiment(basedir, experiment_string[i])
+        print("==================================================")
+        print(f"Experiment ID: {experiment_string[i]}")
+        print(f"Success count: {success_cnt}")
+        print(f"Mean num seq samples: {np.mean(summary['num_seq_samples'])}")
+        num_seq_samples_data.append(summary["num_seq_samples"])
 
-    fig1, ax1 = plt.subplots()
+    # Font sizes
+    parameters = {
+        "axes.labelsize": 18,
+        # "axes.titlesize": 25,
+        "xtick.labelsize": 15,
+        "ytick.labelsize": 15,
+    }
+    plt.rcParams.update(parameters)
+
+    fig1, ax1 = plt.subplots(figsize=(7, 4))
     # ax1.set_title("Number of sampled sequences")
-    ax1.boxplot(all_data, vert=False, labels=titles, notch=True)
+    ax1.boxplot(
+        num_seq_samples_data, vert=False, labels=titles, notch=False, widths=0.65
+    )
+    # ax1.set_aspect(20)
     plt.xlabel("Number of sampled sequences [-]")
+    plt.ylabel("Experiment ID")
     plt.grid()
+
     plt.show()
