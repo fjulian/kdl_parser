@@ -2,10 +2,17 @@ import pickle
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 
-def summarize_experiment(basedir, name_string):
-    raw_data_dir = os.path.join(basedir, name_string, "Data")
+def sum_metrics(metrics, label_prefixes, label_string):
+    return np.sum(
+        [metrics[f"{label_prefix}_{label_string}"] for label_prefix in label_prefixes]
+    )
+
+
+def summarize_experiment(base_dir, name_string, success_label):
+    raw_data_dir = os.path.join(base_dir, name_string)
     files = os.listdir(raw_data_dir)
 
     files.sort()
@@ -19,11 +26,7 @@ def summarize_experiment(basedir, name_string):
     for idx in rm_idx:
         del files[idx]
 
-    with open(os.path.join(raw_data_dir, files[0]), "rb") as f:
-        data = pickle.load(f)
-
     num_runs = len(files)
-    success_label = ["found_plan"]
     success_count = 0
     summary_data = dict.fromkeys(
         [
@@ -34,42 +37,49 @@ def summarize_experiment(basedir, name_string):
             "time_sequence_completion",
             "time_execution",
             "time_domain_extension",
-        ],
-        [],
+        ]
     )
+    for key in summary_data:
+        summary_data[key] = list()
     for i in range(num_runs):
         with open(os.path.join(raw_data_dir, files[i]), "rb") as f:
             data = pickle.load(f)
         metrics = data["metrics"]
         success = False
-        this_success_label = None
+        this_success_labels = list()
         for key in metrics:
             found_success_label = [key.find(l) > -1 for l in success_label]
-            if np.all(np.array(found_success_label)) and metrics[key]:
-                success = True
-                this_success_label = key
-                success_count += 1
-                break
+            if np.all(np.array(found_success_label)):
+                this_success_labels.append(key)
+                if metrics[key]:
+                    success = True
+                    success_count += 1
+                    break
         if success:
-            label_prefix = this_success_label[: -(len("_found_plan"))]
+            label_prefixes = [
+                label[: -(len("_found_plan"))] for label in this_success_labels
+            ]
+
             summary_data["num_seq_samples"].append(
-                metrics[f"{label_prefix}_#_valid_sequences"]
+                sum_metrics(metrics, label_prefixes, "#_valid_sequences")
             )
             summary_data["num_preplan_exec_success"].append(
-                metrics[f"{label_prefix}_#_preplan_success"]
+                sum_metrics(metrics, label_prefixes, "#_preplan_success")
             )
             summary_data["num_plan_exec_success"].append(
-                metrics[f"{label_prefix}_#_plan_success"]
+                sum_metrics(metrics, label_prefixes, "#_plan_success")
             )
-            summary_data["time_sampling"].append(metrics[f"{label_prefix}_t_sampling"])
+            summary_data["time_sampling"].append(
+                sum_metrics(metrics, label_prefixes, "t_sampling")
+            )
             summary_data["time_sequence_completion"].append(
-                metrics[f"{label_prefix}_t_sequence_completion"]
+                sum_metrics(metrics, label_prefixes, "t_sequence_completion")
             )
             summary_data["time_execution"].append(
-                metrics[f"{label_prefix}_t_execution"]
+                sum_metrics(metrics, label_prefixes, "t_execution")
             )
             summary_data["time_domain_extension"].append(
-                metrics[f"{label_prefix}_t_domain_extension"]
+                sum_metrics(metrics, label_prefixes, "t_domain_extension")
             )
     return summary_data, success_count
 
@@ -84,15 +94,26 @@ if __name__ == "__main__":
         "Experiments",
         "Repeated",
     )
-    experiment_string = ["201006-122200", "201006-143900", "201006-193900"]
-    titles = ["(a)", "(b)", "(c)"]
+    experiment_string = [
+        "201006-122200",
+        "201006-143900",
+        "201006-193900",
+        # "201008-125800",
+        # "201008-133700",
+        "201009-104000",
+    ]
+    experiment_success_label = ["found_plan"]
+    titles = ["(a)", "(b)", "(c)", "(d)"]
     num_seq_samples_data = list()
     for i in range(len(experiment_string)):
-        summary, success_cnt = summarize_experiment(basedir, experiment_string[i])
+        summary, success_cnt = summarize_experiment(
+            basedir, experiment_string[i], experiment_success_label
+        )
         print("==================================================")
         print(f"Experiment ID: {experiment_string[i]}")
         print(f"Success count: {success_cnt}")
-        print(f"Mean num seq samples: {np.mean(summary['num_seq_samples'])}")
+        for key in summary:
+            print(f"{key} mean (std): {np.mean(summary[key])} ({np.std(summary[key])})")
         num_seq_samples_data.append(summary["num_seq_samples"])
 
     # Font sizes
@@ -104,10 +125,14 @@ if __name__ == "__main__":
     }
     plt.rcParams.update(parameters)
 
-    fig1, ax1 = plt.subplots(figsize=(7, 4))
+    fig1, ax1 = plt.subplots(figsize=(7, 3))
     # ax1.set_title("Number of sampled sequences")
     ax1.boxplot(
-        num_seq_samples_data, vert=False, labels=titles, notch=False, widths=0.65
+        list(reversed(num_seq_samples_data)),
+        vert=False,
+        labels=list(reversed(titles)),
+        notch=False,
+        widths=0.65,
     )
     # ax1.set_aspect(20)
     plt.xlabel("Number of sampled sequences [-]")
@@ -115,3 +140,11 @@ if __name__ == "__main__":
     plt.grid()
 
     plt.show()
+
+    time_now = datetime.now()
+    time_string = time_now.strftime("%y%m%d-%H%M%S")
+
+    fig1.savefig(
+        os.path.join(basedir, "Output", f"{time_string}_boxplot.pdf"),
+        bbox_inches="tight",
+    )

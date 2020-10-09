@@ -186,7 +186,7 @@ def parse_plan(plan, actions):
     return sequence, parameters
 
 
-def apply_effects_to_state(states, effects):
+def apply_effects_to_state(states: set, effects):
     states_to_remove = list()
     for effect in effects:
         for state in states:
@@ -196,7 +196,7 @@ def apply_effects_to_state(states, effects):
         states.remove(state)
     for effect in effects:
         if effect[1]:
-            states.append((effect[0],) + tuple(effect[2]))
+            states.add((effect[0],) + tuple(effect[2]))
 
 
 def determine_relevant_predicates(relevant_objects, knowledge_base):

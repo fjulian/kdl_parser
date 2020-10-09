@@ -52,9 +52,9 @@ class KnowledgeBase:
         # ]
         # self.goals = [("on", True, ("container2", "cube1"))]
         # self.goals = [("on", True, ("container2", "lego"))]
-        self.goals = [("inside", True, ("container1", "cube1"))]
+        # self.goals = [("inside", True, ("container1", "cube1"))]
         # self.goals = [("inside", True, ("container1", "lego"))]
-        # self.goals = [("inside", True, ("container1", "duck"))]
+        self.goals = [("inside", True, ("container1", "duck"))]
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()

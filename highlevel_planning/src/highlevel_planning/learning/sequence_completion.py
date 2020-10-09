@@ -8,12 +8,9 @@ def complete_sequence(sequence, parameters, relevant_objects, explorer):
     key_action_indices = [0] * len(sequence)
 
     # Determine initial state
-    states = [
-        ("at", "origin", "robot1"),
-        ("in-reach", "origin", "robot1"),
-        ("empty-hand", "robot1"),
-    ]
-    # TODO determine the initial state automatically
+    states = explorer.knowledge_base.initial_state_predicates.union(
+        explorer.knowledge_base.object_predicates
+    )
 
     for action_idx, action_name in enumerate(sequence):
         action_description = explorer.knowledge_base.actions[action_name]
