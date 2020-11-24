@@ -1,18 +1,26 @@
 import numpy as np
 import pybullet as p
 from copy import deepcopy
-from itertools import product
+
+from highlevel_planning.execution.es_sequential_execution import (
+    execute_plan_sequentially,
+)
+from highlevel_planning.learning.logic_tools import (
+    determine_relevant_predicates,
+    measure_predicates,
+)
 
 
 def precondition_discovery(relevant_objects, completion_results, explorer):
     precondition_candidates = list()
+    precondition_actions = list()
 
     (
         completed_sequence,
         completed_parameters,
         precondition_sequence,
         precondition_params,
-        key_action_indices,
+        _,
     ) = completion_results
 
     # Restore initial state
@@ -26,7 +34,12 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
     pre_predicates = measure_predicates(relevant_predicates, explorer.knowledge_base)
 
     # Execute the pre-condition sequence
-    res = explorer.execute_plan(precondition_sequence, precondition_params)
+    res = execute_plan_sequentially(
+        precondition_sequence,
+        precondition_params,
+        explorer.skill_set,
+        explorer.knowledge_base,
+    )
     if not res:
         return False
 
@@ -42,11 +55,17 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
         explorer,
     )
     precondition_candidates.extend(new_side_effects)
+    precondition_actions.extend([-1] * len(new_side_effects))
 
     # Execute actions one by one, check for non-effect predicate changes
     for idx, action in enumerate(completed_sequence):
         pre_predicates = deepcopy(current_predicates)
-        res = explorer.execute_plan([action], [completed_parameters[idx]])
+        res = execute_plan_sequentially(
+            [action],
+            [completed_parameters[idx]],
+            explorer.skill_set,
+            explorer.knowledge_base,
+        )
         if not res:
             return False
         current_predicates = measure_predicates(
@@ -61,44 +80,41 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
             explorer,
         )
         precondition_candidates.extend(new_side_effects)
+        precondition_actions.extend([idx] * len(new_side_effects))
 
-    # TODO filter out goal attributes
+    # Filter out goals
+    candidates_to_remove = list()
+    for goal in explorer.knowledge_base.goals:
+        for idx, candidate in enumerate(precondition_candidates):
+            if tuple(goal[:2]) == tuple(candidate[:2]) and tuple(goal[2]) == tuple(
+                candidate[2]
+            ):
+                candidates_to_remove.append(idx)
 
-    return precondition_candidates
+    # Filter out side effects of last action
+    for idx, action_idx in enumerate(precondition_actions):
+        if action_idx == len(completed_sequence) - 1:
+            candidates_to_remove.append(idx)
 
+    # Filter out side effects that get cancelled out again
+    for idx, precondition in enumerate(precondition_candidates):
+        opposite = (precondition[0], not precondition[1], precondition[2])
+        try:
+            opposite_index = precondition_candidates.index(opposite, 0, idx)
+        except ValueError:
+            continue
+        candidates_to_remove.extend([idx, opposite_index])
 
-def determine_relevant_predicates(relevant_objects, knowledge_base):
-    """
-    Determine all predicates of objects involved in this action and objects that are close to them
-    """
-    predicate_descriptions = knowledge_base.predicate_funcs.descriptions
-    relevant_predicates = list()
-    for pred in predicate_descriptions:
-        parameters = predicate_descriptions[pred]
+    # Filter out side effects that do not concern goal objects
+    # TODO think about if this makes sense. If yes, implement it.
 
-        # Find possible parameter assignments
-        parameter_assignments = list()
-        for param_idx, param in enumerate(parameters):
-            assignments_this_param = list()
-            if param[1] == "robot":
-                assignments_this_param.append("robot1")
-            else:
-                for obj in relevant_objects:
-                    if knowledge_base.is_type(obj, param[1]):
-                        assignments_this_param.append(obj)
-            parameter_assignments.append(assignments_this_param)
+    candidates_to_remove = list(set(candidates_to_remove))
+    candidates_to_remove.sort(reverse=True)
+    for idx in candidates_to_remove:
+        del precondition_candidates[idx]
+        del precondition_actions[idx]
 
-        for parametrization in product(*parameter_assignments):
-            relevant_predicates.append((pred, parametrization))
-    return relevant_predicates
-
-
-def measure_predicates(predicates, knowledge_base):
-    measurements = list()
-    for pred in predicates:
-        res = knowledge_base.predicate_funcs.call[pred[0]](*pred[1])
-        measurements.append(res)
-    return measurements
+    return precondition_candidates, precondition_actions
 
 
 def detect_predicate_changes(
@@ -141,5 +157,5 @@ def detect_predicate_changes(
             continue
 
         # If we reach here, this is a candidate for the precondition we are trying to determine.
-        side_effects.append(predicate_def)
+        side_effects.append((predicate_def[0], new_predicates[idx], predicate_def[1]))
     return side_effects

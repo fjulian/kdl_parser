@@ -1,5 +1,5 @@
 class SceneBase:
-    def __init__(self, world, base_dir, restored_objects=None):
+    def __init__(self, world, restored_objects=None):
         self._world = world
 
         if restored_objects is not None:

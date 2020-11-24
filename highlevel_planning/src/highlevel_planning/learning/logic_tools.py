@@ -1,4 +1,5 @@
 from copy import deepcopy
+from itertools import product
 
 
 def parametrize_predicate(predicate, action_parameters):
@@ -16,6 +17,16 @@ def parametrize_predicate_list(predicates, action_parameters):
         parametrized_predicate = parametrize_predicate(predicate, action_parameters)
         parametrized_predicates.append(parametrized_predicate)
     return parametrized_predicates
+
+
+def unparametrize_predicate(predicate, action_parameters):
+    assert len(predicate) == 3
+    inverted_params = invert_dict_1to1(action_parameters)
+    return (
+        predicate[0],
+        predicate[1],
+        tuple([inverted_params[param_value] for param_value in predicate[2]]),
+    )
 
 
 def determine_sequence_preconds(knowledge_base, sequence, parameters):
@@ -142,6 +153,15 @@ def invert_dict(original_dict):
     return inverted_dict
 
 
+def invert_dict_1to1(original_dict):
+    inverted_dict = dict()
+    for key in original_dict:
+        assert isinstance(key, str)
+        assert isinstance(original_dict[key], str)
+        inverted_dict[original_dict[key]] = key
+    return inverted_dict
+
+
 def parse_plan(plan, actions):
     sequence = list()
     parameters = list()
@@ -166,7 +186,7 @@ def parse_plan(plan, actions):
     return sequence, parameters
 
 
-def apply_effects_to_state(states, effects):
+def apply_effects_to_state(states: set, effects):
     states_to_remove = list()
     for effect in effects:
         for state in states:
@@ -176,4 +196,38 @@ def apply_effects_to_state(states, effects):
         states.remove(state)
     for effect in effects:
         if effect[1]:
-            states.append((effect[0],) + tuple(effect[2]))
+            states.add((effect[0],) + tuple(effect[2]))
+
+
+def determine_relevant_predicates(relevant_objects, knowledge_base):
+    """
+    Determine all predicates of objects involved in this action and objects that are close to them
+    """
+    predicate_descriptions = knowledge_base.predicate_funcs.descriptions
+    relevant_predicates = list()
+    for pred in predicate_descriptions:
+        parameters = predicate_descriptions[pred]
+
+        # Find possible parameter assignments
+        parameter_assignments = list()
+        for param_idx, param in enumerate(parameters):
+            assignments_this_param = list()
+            if param[1] == "robot":
+                assignments_this_param.append("robot1")
+            else:
+                for obj in relevant_objects:
+                    if knowledge_base.is_type(obj, param[1]):
+                        assignments_this_param.append(obj)
+            parameter_assignments.append(assignments_this_param)
+
+        for parametrization in product(*parameter_assignments):
+            relevant_predicates.append((pred, parametrization))
+    return relevant_predicates
+
+
+def measure_predicates(predicates, knowledge_base):
+    measurements = list()
+    for pred in predicates:
+        res = knowledge_base.predicate_funcs.call[pred[0]](*pred[1])
+        measurements.append(res)
+    return measurements

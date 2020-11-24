@@ -2,6 +2,7 @@ import numpy as np
 import os
 import atexit
 from datetime import datetime
+import pybullet as p
 
 # Simulation
 from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
@@ -10,7 +11,9 @@ from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
 from highlevel_planning.skills.navigate import SkillNavigate
 from highlevel_planning.skills.grasping import SkillGrasping
 from highlevel_planning.skills.placing import SkillPlacing
-from highlevel_planning.execution.es_sequential_execution import SequentialExecution
+from highlevel_planning.execution.es_sequential_execution import (
+    execute_plan_sequentially,
+)
 
 # Learning
 from highlevel_planning.learning.explorer import Explorer
@@ -30,12 +33,22 @@ def exit_handler(rep: Reporter):
     rep.write_result_file()
 
 
-def main():
-    # Seed RNGs
-    np.random.seed(0)
+def print_plan(sequence, parameters):
+    print("---------------------------------------------------")
+    print("Found plan:")
+    for idx, seq_item in enumerate(sequence):
+        print(f"{seq_item} {parameters[idx]}")
+    print("---------------------------------------------------")
 
+
+def main():
     # Command line arguments
     args = run_util.parse_arguments()
+
+    # Seed RNGs
+    if not args.no_seed:
+        print("Seeding RNG")
+        np.random.seed(0)
 
     if args.method == "direct" and args.reuse_objects:
         raise RuntimeError("Cannot reload objects when in direct mode.")
@@ -49,7 +62,7 @@ def main():
 
     time_now = datetime.now()
     time_string = time_now.strftime("%y%m%d-%H%M%S")
-    rep = Reporter(BASEDIR, cfg, time_string)
+    rep = Reporter(BASEDIR, cfg, time_string, args.noninteractive)
     atexit.register(exit_handler, rep)
 
     # Populate simulation
@@ -74,64 +87,63 @@ def main():
     xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg)
 
     # Define a demonstration to guide exploration
-    demo_sequence = ["place", "place"]
-    demo_parameters = [{"obj": "lid1"}, {"obj": "cube1"}]
+    demo_sequence, demo_parameters = None, None
+    # demo_sequence = ["place", "place"]
+    # demo_parameters = [{"obj": "lid1"}, {"obj": "duck"}]
 
     # ---------------------------------------------------------------
 
-    # Run planner
-    plan = kb.solve()
-    rep.report_before_exploration(kb, plan)
+    # Store initial state
+    initial_state_id = p.saveState()
 
-    if plan is False:
-        print("No plan found, start exploration")
-        success, metrics = xplorer.exploration()
-        rep.report_after_exploration(kb, metrics)
-        if not success:
-            print("Exploration was not successful")
-            return
-
-        # Run planner again
+    while True:
+        # Plan
         plan = kb.solve()
         rep.report_after_planning(plan)
+
+        # Execute
         if plan is False:
-            print("Planner failed despite exploration")
-            return
-    sequence, parameters = plan
-
-    if len(sequence) == 0:
-        print("Nothing to do.")
-        return
-    print("---------------------------------------------------")
-    print("Found plan:")
-    for idx, seq_item in enumerate(sequence):
-        print("".join((seq_item, " ", str(parameters[idx]))))
-    print("---------------------------------------------------")
-    # input("Press enter to run...")
-
-    # -----------------------------------
-
-    # Set up execution system
-    es = SequentialExecution(skill_set, sequence, parameters, kb)
-
-    # Run
-    try:
-        index = 1
-        while True:
-            print("------------- Iteration {} ---------------".format(index))
-            es.print_status()
-            success, plan_finished, error_messages = es.step()
-            if not success:
-                print("Error messages:")
-                for msg in error_messages:
-                    print(msg)
-                raise RuntimeError("Error during execution of current step. Aborting.")
-            index += 1
-            if plan_finished:
-                print("Plan finished. Exiting.")
+            planning_failed = True
+            print("No plan found.")
+        else:
+            planning_failed = False
+            sequence, parameters = plan
+            print_plan(sequence, parameters)
+            if not args.noninteractive:
+                input("Press enter to run...")
+            res = execute_plan_sequentially(
+                sequence, parameters, skill_set, kb, verbose=True
+            )
+            rep.report_after_execution(res)
+            if res:
+                print("Reached goal successfully. Exiting.")
                 break
-    except KeyboardInterrupt:
-        pass
+            else:
+                print("Failure during plan execution.")
+
+        # Decide what happens next
+        if not args.noninteractive:
+            choice = input(f"Choose next action: (a)bort, (e)xplore\nYour choice: ")
+        else:
+            choice = "e"
+        if choice == "e":
+            # Exploration
+            rep.report_before_exploration(kb, plan)
+            success, metrics = xplorer.exploration(
+                planning_failed,
+                demo_sequence,
+                demo_parameters,
+                state_id=initial_state_id,
+                no_seed=args.no_seed,
+            )
+            rep.report_after_exploration(kb, metrics)
+            if not success:
+                print("Exploration was not successful")
+                break
+        else:
+            if choice != "a":
+                print("Invalid choice, aborting.")
+            break
 
 
 if __name__ == "__main__":

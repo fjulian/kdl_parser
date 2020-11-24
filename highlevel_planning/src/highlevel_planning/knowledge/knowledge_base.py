@@ -3,6 +3,11 @@ from copy import deepcopy
 from os import path, makedirs
 from highlevel_planning.pddl_interface.pddl_file_if import PDDLFileInterface
 from highlevel_planning.pddl_interface import planner_interface
+from highlevel_planning.learning.logic_tools import (
+    determine_relevant_predicates,
+    measure_predicates,
+)
+from highlevel_planning.learning.exploration_tools import get_items_closeby
 
 
 def check_path_exists(path_to_check):
@@ -33,10 +38,10 @@ class KnowledgeBase:
         # Problem definition
         self.objects = dict()
         self.visible_objects = set()
-        self.object_predicates = list()
-        self.initial_state_predicates = list()
+        self.object_predicates = set()
+        self.initial_state_predicates = set()
         # self.goals = list()
-        # self.goals = [("in-hand", True, ("cube1", "robot1"))]
+        # self.goals = [("in-hand", True, ("duck", "robot1"))]
         # self.goals = [("at", True, ("container1", "robot1"))]
         # self.goals = [("at", True, ("cupboard", "robot1"))]
         # self.goals = [("on", True, ("cupboard", "cube1"))]
@@ -46,8 +51,10 @@ class KnowledgeBase:
         #     ("at", True, ("container1", "robot1")),
         # ]
         # self.goals = [("on", True, ("container2", "cube1"))]
-        self.goals = [("on", True, ("container2", "lego"))]
-        # self.goals = [("inside", True, ("container1", "cube1"))]
+        # self.goals = [("on", True, ("container2", "lego"))]
+        self.goals = [("inside", True, ("container1", "cube1"))]
+        # self.goals = [("inside", True, ("container1", "lego"))]
+        # self.goals = [("inside", True, ("container1", "duck"))]
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()
@@ -69,7 +76,7 @@ class KnowledgeBase:
 
         # Temporary variables (e.g. for exploration)
         self._temp_objects = dict()
-        self._temp_object_predicates = list()
+        self._temp_object_predicates = set()
         self._temp_generalized_objects = list()
 
     def duplicate(self, original):
@@ -209,7 +216,7 @@ class KnowledgeBase:
         self.pddl_if.write_pddl(
             self,
             self.objects,
-            self.object_predicates + self.initial_state_predicates,
+            self.object_predicates.union(self.initial_state_predicates),
             self.goals,
         )
         return planner_interface.pddl_planner(
@@ -253,15 +260,13 @@ class KnowledgeBase:
 
     def add_meta_action(
         self,
-        name,
-        sequence,
+        name: str,
+        sequence: list,
         parameters,
         param_translator,
         hidden_parameters,
         description,
     ):
-        assert type(name) is str
-        assert type(sequence) is list
         self.meta_actions[name] = {
             "seq": sequence,
             "params": parameters,
@@ -278,35 +283,53 @@ class KnowledgeBase:
                 return False
         return True
 
-    def check_predicates(self):
+    def check_predicates(self, scene_objects, robot_uid):
         """
         If predicates need to be initialized when the system is launched, this can be done here.
         """
 
         if self.predicate_funcs.empty_hand("robot1"):
-            self.initial_state_predicates.append(("empty-hand", "robot1"))
-        self.initial_state_predicates.append(("in-reach", "origin", "robot1"))
-        self.initial_state_predicates.append(("at", "origin", "robot1"))
+            self.initial_state_predicates.add(("empty-hand", "robot1"))
+        self.initial_state_predicates.add(("in-reach", "origin", "robot1"))
+        self.initial_state_predicates.add(("at", "origin", "robot1"))
 
         # Check any predicates in relation with the goal
+        relevant_objects = set()
         for goal in self.goals:
             if self.predicate_funcs.call[goal[0]](*goal[2]):
                 pred_tuple = (goal[0],) + goal[2]
-                self.initial_state_predicates.append(pred_tuple)
+                self.initial_state_predicates.add(pred_tuple)
+
+            relevant_objects.update(goal[2])
+
+        if "robot1" in relevant_objects:
+            relevant_objects.remove("robot1")
+
+        closeby_objects = get_items_closeby(
+            relevant_objects, scene_objects, robot_uid, distance_limit=1.0
+        )
+        relevant_objects.update(closeby_objects)
+
+        relevant_predicates = determine_relevant_predicates(relevant_objects, self)
+        measured_predicates = measure_predicates(relevant_predicates, self)
+        for i in range(len(relevant_predicates)):
+            if measured_predicates[i]:
+                pred_tuple = (relevant_predicates[i][0],) + relevant_predicates[i][1]
+                self.initial_state_predicates.add(pred_tuple)
 
     def populate_visible_objects(self, scene):
         # TODO maybe move this into a separate dummy perception module
         for obj in scene.objects:
             self.add_object(obj, "item")
             if self.predicate_funcs.call["has-grasp"](obj):
-                self.object_predicates.append(("has-grasp", obj))
+                self.object_predicates.add(("has-grasp", obj))
 
         # Add "objects" that are always visible
         for object_name in self.objects:
             for object_type in self.objects[object_name]:
                 if self.type_x_child_of_y(object_type, "position"):
                     self.add_object(object_name, "position")
-                    self.object_predicates.append(("has-grasp", object_name))
+                    self.object_predicates.add(("has-grasp", object_name))
                     break
 
     def type_x_child_of_y(self, x, y):
@@ -378,7 +401,7 @@ class KnowledgeBase:
         else:
             self._temp_objects[object_name] = [object_type]
             if self.is_type(object_name, "position"):
-                self._temp_object_predicates.append(("has-grasp", object_name))
+                self._temp_object_predicates.add(("has-grasp", object_name))
         if object_value is not None:
             self.lookup_table[object_name] = object_value
         return object_name
@@ -394,7 +417,7 @@ class KnowledgeBase:
         del self._temp_objects[obj_name]
         for pred in self._temp_object_predicates:
             if obj_name in pred:
-                self.object_predicates.append(pred)
+                self.object_predicates.add(pred)
 
     def joined_objects(self):
         objects = deepcopy(self._temp_objects)
@@ -412,7 +435,9 @@ class KnowledgeBase:
         self.pddl_if_temp.write_pddl(
             self,
             objects,
-            self.object_predicates + self._temp_object_predicates + initial_predicates,
+            self.object_predicates.union(self._temp_object_predicates).union(
+                initial_predicates
+            ),
             goals,
             self._temp_generalized_objects,
         )
@@ -428,5 +453,5 @@ class KnowledgeBase:
             if obj in self.lookup_table:
                 del self.lookup_table[obj]
         self._temp_objects.clear()
-        del self._temp_object_predicates[:]
+        self._temp_object_predicates.clear()
         del self._temp_generalized_objects[:]

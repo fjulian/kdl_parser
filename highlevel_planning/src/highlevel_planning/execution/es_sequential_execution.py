@@ -3,6 +3,30 @@ from highlevel_planning.tools.util import SkillExecutionError
 from highlevel_planning.learning.logic_tools import parametrize_predicate
 
 
+def execute_plan_sequentially(
+    sequence, parameters, skill_set, knowledge_base, verbose=False
+):
+    if len(sequence) == 0:
+        print("Nothing to do.")
+        return True
+    es = SequentialExecution(skill_set, sequence, parameters, knowledge_base)
+    es.setup()
+    index = 1
+    while True:
+        if verbose:
+            print("------------- Iteration {} ---------------".format(index))
+            es.print_status()
+            index += 1
+        success, plan_finished, msgs = es.step()
+        if not success and verbose:
+            print("Error messages:")
+            for msg in msgs:
+                print(msg)
+        if plan_finished or not success:
+            break
+    return success
+
+
 class SequentialExecution(ExecutionSystem):
     def __init__(self, skill_set, sequence, parameters, knowledge_base):
         self.ticking = False

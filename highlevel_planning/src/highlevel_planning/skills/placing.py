@@ -70,7 +70,8 @@ class SkillPlacing:
 
             # Go back to pre-place-pose
             if not collision_during_pre:
-                self.robot.transition_cartesian(pos_pre, orient.as_quat())
+                # self.robot.transition_cartesian(pos_pre, orient.as_quat())
+                self.robot.transition_cmd_to(pos_pre_joints)
             else:
                 self.robot.to_start()
         except IKError:

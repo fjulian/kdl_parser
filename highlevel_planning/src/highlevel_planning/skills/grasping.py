@@ -1,7 +1,7 @@
 import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from highlevel_planning.tools.util import SkillExecutionError
+from highlevel_planning.tools.util import SkillExecutionError, IKError
 
 
 class SkillGrasping:
@@ -84,7 +84,10 @@ class SkillGrasping:
         self.robot._world.step_seconds(0.5)
 
         # Go to grasp pose
-        self.robot.transition_cartesian(pos, orient)
+        try:
+            self.robot.transition_cartesian(pos, orient)
+        except IKError:
+            return False
 
         self.robot._world.step_seconds(0.2)
         self.robot.close_gripper()

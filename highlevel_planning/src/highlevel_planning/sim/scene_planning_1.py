@@ -8,7 +8,7 @@ import pybullet as p
 
 class ScenePlanning1(SceneBase):
     def __init__(self, world, base_dir, restored_objects=None):
-        SceneBase.__init__(self, world, base_dir, restored_objects)
+        SceneBase.__init__(self, world, restored_objects)
 
         if restored_objects is None:
             self._world.add_plane()
@@ -46,8 +46,9 @@ class ScenePlanning1(SceneBase):
                 urdf_path_="duck_vhacd.urdf",
                 init_pos_=np.array([2.8, -0.25, 0.67]),
                 init_orient_=rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "x", 90.0),
+                init_scale_=0.8,
                 grasp_links_=[-1],
-                grasp_pos_={-1: [np.array([-0.02, 0.04, 0.0])]},
+                grasp_pos_={-1: [np.array([-0.015, 0.03, 0.0])]},
                 grasp_orient_={
                     -1: [rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "x", -90.0)]
                 },
@@ -91,8 +92,9 @@ class ScenePlanning1(SceneBase):
         SceneBase.add_objects(self)
 
         # Set object-specific properties
-        p.changeDynamics(
-            self.objects["lid1"].model.uid,
-            self.objects["lid1"].model.link_name_to_index["handle"],
-            lateralFriction=1.0,
-        )
+        if "lid1" in self.objects:
+            p.changeDynamics(
+                self.objects["lid1"].model.uid,
+                self.objects["lid1"].model.link_name_to_index["handle"],
+                lateralFriction=1.0,
+            )
