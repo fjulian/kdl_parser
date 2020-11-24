@@ -128,8 +128,21 @@
       </geometry>
     </visual>
     <collision>
+      <origin rpy="0 1.5707963267948966 0" xyz="-0.075 0 0.06"/>
       <geometry>
-        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/collision/link0.stl"/>
+        <cylinder length="0.03" radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.06 0 0.06"/>
+      <geometry>
+        <sphere radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.09 0 0.06"/>
+      <geometry>
+        <sphere radius="0.06"/>
       </geometry>
     </collision>
   </link>
@@ -145,8 +158,21 @@
       </geometry>
     </visual>
     <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.1915"/>
       <geometry>
-        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/collision/link1.stl"/>
+        <cylinder length="0.2830" radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.333"/>
+      <geometry>
+        <sphere radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.05"/>
+      <geometry>
+        <sphere radius="0.06"/>
       </geometry>
     </collision>
   </link>
@@ -170,8 +196,21 @@
       </geometry>
     </visual>
     <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/collision/link2.stl"/>
+        <cylinder length="0.12" radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.06"/>
+      <geometry>
+        <sphere radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.06"/>
+      <geometry>
+        <sphere radius="0.06"/>
       </geometry>
     </collision>
   </link>
@@ -195,8 +234,21 @@
       </geometry>
     </visual>
     <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.145"/>
       <geometry>
-        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/collision/link3.stl"/>
+        <cylinder length="0.15" radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.22"/>
+      <geometry>
+        <sphere radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.07"/>
+      <geometry>
+        <sphere radius="0.06"/>
       </geometry>
     </collision>
   </link>
@@ -220,8 +272,21 @@
       </geometry>
     </visual>
     <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/collision/link4.stl"/>
+        <cylinder length="0.12" radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.06"/>
+      <geometry>
+        <sphere radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.06"/>
+      <geometry>
+        <sphere radius="0.06"/>
       </geometry>
     </collision>
   </link>
@@ -245,8 +310,39 @@
       </geometry>
     </visual>
     <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.26"/>
       <geometry>
-        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/collision/link5.stl"/>
+        <cylinder length="0.1" radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.31"/>
+      <geometry>
+        <sphere radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.21"/>
+      <geometry>
+        <sphere radius="0.06"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.08 -0.13"/>
+      <geometry>
+        <cylinder length="0.14" radius="0.025"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.08 -0.06"/>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.08 -0.20"/>
+      <geometry>
+        <sphere radius="0.025"/>
       </geometry>
     </collision>
   </link>
@@ -270,8 +366,21 @@
       </geometry>
     </visual>
     <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.03"/>
       <geometry>
-        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/collision/link6.stl"/>
+        <cylinder length="0.08" radius="0.05"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.01"/>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.07"/>
+      <geometry>
+        <sphere radius="0.05"/>
       </geometry>
     </collision>
   </link>
@@ -295,8 +404,21 @@
       </geometry>
     </visual>
     <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.01"/>
       <geometry>
-        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/collision/link7.stl"/>
+        <cylinder length="0.14" radius="0.04"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0.08"/>
+      <geometry>
+        <sphere radius="0.04"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 -0.06"/>
+      <geometry>
+        <sphere radius="0.04"/>
       </geometry>
     </collision>
   </link>
@@ -308,12 +430,30 @@
     <axis xyz="0 0 1"/>
     <limit effort="12" lower="-2.8973" upper="2.8973" velocity="2.6100"/>
   </joint>
-  <link name="panda_link8"/>
+  <link name="panda_link8">
+    <!-- <collision>
+        <origin xyz="0.0424 0.0424 -0.0250" rpy="${pi} ${pi/2} ${pi/2}"/>
+        <geometry>
+          <cylinder radius="${0.03+safety_distance}"  length="0.01" />
+        </geometry>
+      </collision>
+      <collision>
+        <origin xyz="0.0424 0.0424 -0.02" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${0.03+safety_distance}"  />
+        </geometry>
+      </collision>
+      <collision>
+        <origin xyz="0.0424 0.0424 -0.03" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${0.03+safety_distance}"  />
+        </geometry>
+      </collision> -->
+  </link>
   <joint name="panda_joint8" type="fixed">
     <origin rpy="0 0 0" xyz="0 0 0.107"/>
     <parent link="panda_link7"/>
     <child link="panda_link8"/>
-    <axis xyz="0 0 0"/>
   </joint>
   <joint name="panda_hand_joint" type="fixed">
     <parent link="panda_link8"/>
@@ -351,13 +491,43 @@
       <geometry>
         <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/visual/hand.dae"/>
       </geometry>
-      <!-- <origin xyz="0 0 0" rpy="0 0 0" /> -->
     </visual>
     <collision>
+      <origin rpy="0 1.5707963267948966 1.5707963267948966" xyz="0 0 0.04"/>
       <geometry>
-        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/collision/hand.stl"/>
+        <cylinder length="0.1" radius="0.04"/>
       </geometry>
     </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 -0.05 0.04"/>
+      <geometry>
+        <sphere radius="0.04"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0.05 0.04"/>
+      <geometry>
+        <sphere radius="0.04"/>
+      </geometry>
+    </collision>
+    <!-- <collision>
+        <origin xyz="0 0 0.1" rpy="0 ${pi/2} ${pi/2}"/>
+        <geometry>
+          <cylinder radius="${0.02+safety_distance}" length="0.1" />
+        </geometry>
+      </collision>
+      <collision>
+        <origin xyz="0 -0.05 0.1" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${0.02+safety_distance}"  />
+        </geometry>
+      </collision>
+      <collision>
+        <origin xyz="0 0.05 0.1" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${0.02+safety_distance}"  />
+        </geometry>
+      </collision> -->
   </link>
   <link name="panda_leftfinger">
     <inertial>
@@ -372,7 +542,7 @@
     </visual>
     <collision>
       <geometry>
-        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/collision/finger.stl"/>
+        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/visual/finger.dae"/>
       </geometry>
     </collision>
   </link>
@@ -391,7 +561,7 @@
     <collision>
       <origin rpy="0 0 3.141592653589793" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/collision/finger.stl"/>
+        <mesh filename="/home/fjulian/Code/ros_manipulation_ws/src/moma/submodules/franka_ros/franka_description/meshes/visual/finger.dae"/>
       </geometry>
     </collision>
   </link>
