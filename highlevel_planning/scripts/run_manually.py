@@ -63,12 +63,12 @@ def drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene):
 def grasp_example(
     sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1", link_idx=0
 ):
-    # Run move skill
+    # Run nav skill
     sk_nav.move_to_object(object_name)
 
-    print("empty hand:")
-    robot._world.step_seconds(1.0)
-    print(robot.get_wrist_force_torque())
+    # print("empty hand:")
+    # robot._world.step_seconds(1.0)
+    # print(robot.get_wrist_force_torque())
 
     # Grasp the object
     sk_grasp.grasp_object(object_name, link_idx=link_idx, grasp_id=0)
@@ -102,9 +102,12 @@ def grasp_example(
     # print(robot.get_wrist_force())
 
     # Place cube somewhere else
-    new_pos = scene.objects[object_name].init_pos + np.array([0.75, 0.0, 0.1])
+    new_pos = scene.objects[object_name].init_pos + np.array([0.2, 0.4, 0.05])
     sk_nav.move_to_pos(new_pos)
     sk_place.place_object(new_pos)
+
+    robot.to_start()
+    robot._world.step_seconds(1.0)
 
 
 def navigate_with_cube(sk_nav, sk_grasp):
@@ -166,6 +169,8 @@ def main():
     sk_move = SkillMove(scene, robot, 0.02, robot._world.T_s)
 
     # ---------- Run examples -----------
+
+    robot._world.step_seconds(5)
 
     # drawer_example(sk_grasp, sk_nav, robot, robot._world)
 
