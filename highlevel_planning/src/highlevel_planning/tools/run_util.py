@@ -44,6 +44,16 @@ def parse_arguments():
     return args
 
 
+def save_pybullet_sim(args, savedir, scene, robot=None):
+    robot_mdl = robot.model if robot is not None else None
+    if not args.reuse_objects:
+        if not os.path.isdir(savedir):
+            os.makedirs(savedir)
+        with open(os.path.join(savedir, "objects.pkl"), "wb") as output:
+            pickle.dump((scene.objects, robot_mdl), output)
+        p.saveBullet(os.path.join(savedir, "state.bullet"))
+
+
 def restore_pybullet_sim(savedir, args):
     objects = None
     robot_mdl = None
@@ -53,7 +63,7 @@ def restore_pybullet_sim(savedir, args):
     return objects, robot_mdl
 
 
-def setup_pybullet_world(scene_object, basedir, savedir, objects, args, cfg, robot_mdl):
+def setup_pybullet_world(scene_object, basedir, savedir, objects, args):
     # Create world
     world = WorldPybullet(
         style=args.method,
@@ -63,22 +73,16 @@ def setup_pybullet_world(scene_object, basedir, savedir, objects, args, cfg, rob
     )
     scene = scene_object(world, basedir, restored_objects=objects)
 
+    return scene, world
+
+
+def setup_robot(world, cfg, basedir, robot_mdl):
     # Spawn robot
     robot = RobotArmPybullet(world, cfg, basedir, robot_mdl)
     robot.reset()
-
     robot.to_start()
     world.step_seconds(0.5)
-
-    # Save world
-    if not args.reuse_objects:
-        if not os.path.isdir(savedir):
-            os.makedirs(savedir)
-        with open(os.path.join(savedir, "objects.pkl"), "wb") as output:
-            pickle.dump((scene.objects, robot.model), output)
-        p.saveBullet(os.path.join(savedir, "state.bullet"))
-
-    return robot, scene
+    return robot
 
 
 def setup_knowledge_base(basedir, scene, robot, cfg, time_string):

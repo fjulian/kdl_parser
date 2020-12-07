@@ -158,9 +158,13 @@ def main():
     cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
     # Create world
-    robot, scene = run_util.setup_pybullet_world(
-        ScenePlanning1, BASEDIR, savedir, objects, args, cfg, robot_mdl
+    scene, world = run_util.setup_pybullet_world(
+        ScenePlanning1, BASEDIR, savedir, objects, args
     )
+    robot = run_util.setup_robot(world, cfg, BASEDIR, robot_mdl)
+
+    # Save state
+    run_util.save_pybullet_sim(args, savedir, scene, robot)
 
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot, cfg)
