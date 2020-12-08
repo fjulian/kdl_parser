@@ -11,13 +11,15 @@ class Application:
         self.feet = None
         self.meters = None
         self.running = tk.BooleanVar()
+        self.pred_name = tk.StringVar()
+        self.pred_args = tk.StringVar()
 
-        rospy.loginfo("Waiting for server ...")
-        get_srv = rospy.ServiceProxy("sim_status", Trigger)
-        get_srv.wait_for_service()
-        res = get_srv(TriggerRequest())
-        self.running.set(res.success)
-        rospy.loginfo("Got sim status, setting up window")
+        # rospy.loginfo("Waiting for server ...")
+        # get_srv = rospy.ServiceProxy("sim_status", Trigger)
+        # get_srv.wait_for_service()
+        # res = get_srv(TriggerRequest())
+        # self.running.set(res.success)
+        # rospy.loginfo("Got sim status, setting up window")
 
         self.set_srv = rospy.ServiceProxy("sim_switch", SetBool)
 
@@ -31,42 +33,36 @@ class Application:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
 
-        # self.feet = tk.StringVar()
-        # feet_entry = ttk.Entry(mainframe, width=7, textvariable=self.feet)
-        # feet_entry.grid(column=2, row=1, sticky=(tk.W, tk.E))
-        #
-        # self.meters = tk.StringVar()
-        # ttk.Label(mainframe, textvariable=self.meters).grid(
-        #     column=2, row=2, sticky=(tk.W, tk.E)
-        # )
-
+        ttk.Label(mainframe, text="Simulation status:").grid(
+            column=1, row=3, sticky=tk.W
+        )
         ttk.Label(mainframe, textvariable=self.running).grid(
-            column=1, row=2, sticky=(tk.W,)
+            column=2, row=3, sticky=(tk.W,)
         )
 
-        ttk.Button(mainframe, text="Run", command=self._run_sim).grid(
-            column=1, row=1, sticky=tk.W
-        )
-        ttk.Button(mainframe, text="Stop", command=self._stop_sim).grid(
-            column=2, row=1, sticky=tk.W
-        )
+        ttk.Button(mainframe, text="Run", command=self._run_sim).grid(column=1, row=1)
+        ttk.Button(mainframe, text="Stop", command=self._stop_sim).grid(column=2, row=1)
 
-        # ttk.Label(mainframe, text="feet").grid(column=3, row=1, sticky=tk.W)
-        # ttk.Label(mainframe, text="is equivalent to").grid(column=1, row=2, sticky=tk.E)
-        # ttk.Label(mainframe, text="meters").grid(column=3, row=2, sticky=tk.W)
+        ttk.Label(mainframe, text="Predicate name:").grid(column=1, row=4, sticky=tk.W)
+        ttk.Entry(mainframe, width=8, textvariable=self.pred_name).grid(
+            column=2, row=4, sticky=tk.W
+        )
+        ttk.Label(mainframe, text="Predicate arguments:").grid(column=1, row=5)
+        ttk.Entry(mainframe, width=12, textvariable=self.pred_args).grid(
+            column=2, row=5, sticky=tk.W
+        )
+        ttk.Button(
+            mainframe, text="Snapshot +", command=lambda: self._snapshot(True)
+        ).grid(column=1, row=6)
+        ttk.Button(
+            mainframe, text="Snapshot -", command=lambda: self._snapshot(False)
+        ).grid(column=2, row=6)
 
         for child in mainframe.winfo_children():
             child.grid_configure(padx=5, pady=5)
 
         # feet_entry.focus()
         self.root.bind("<Return>", self._run_sim)
-
-    def calculate(self, *args):
-        try:
-            value = float(self.feet.get())
-            self.meters.set(int(0.3048 * value * 10000.0 + 0.5) / 10000.0)
-        except ValueError:
-            pass
 
     def _run_sim(self, *args):
         print("Sent run command")
@@ -83,6 +79,11 @@ class Application:
             raise RuntimeError
         self.running.set(False)
         self.root.bind("<Return>", self._run_sim)
+
+    def _snapshot(self, val):
+        print(f"hey {val}")
+        # self.pred_name.set("")
+        # self.pred_args.set("")
 
     def mainloop(self):
         self.root.mainloop()
