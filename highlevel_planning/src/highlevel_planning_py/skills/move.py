@@ -1,10 +1,10 @@
 import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from highlevel_planning.tools.util import homogenous_trafo, invert_hom_trafo
+from highlevel_planning_py.tools.util import homogenous_trafo, invert_hom_trafo
 from matplotlib import pyplot as plt
 
-from highlevel_planning.tools.util import IKError
+from highlevel_planning_py.tools.util import IKError
 
 EPS = 1e-6
 DEBUG = True

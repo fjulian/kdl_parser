@@ -1,5 +1,5 @@
-from highlevel_planning.skills.grasping import SkillGrasping
-from highlevel_planning.tools.util import get_combined_aabb, SkillExecutionError
+from highlevel_planning_py.skills.grasping import SkillGrasping
+from highlevel_planning_py.tools.util import get_combined_aabb, SkillExecutionError
 import pybullet as p
 import numpy as np
 

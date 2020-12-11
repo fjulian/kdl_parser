@@ -4,11 +4,11 @@ import pybullet as p
 import pickle
 import numpy as np
 
-from highlevel_planning.sim.world import WorldPybullet
-from highlevel_planning.sim.robot_arm import RobotArmPybullet
-from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
-from highlevel_planning.skills import pddl_descriptions
-from highlevel_planning.knowledge.predicates import Predicates
+from highlevel_planning_py.sim.world import WorldPybullet
+from highlevel_planning_py.sim.robot_arm import RobotArmPybullet
+from highlevel_planning_py.knowledge.knowledge_base import KnowledgeBase
+from highlevel_planning_py.skills import pddl_descriptions
+from highlevel_planning_py.knowledge.predicates import Predicates
 
 
 def parse_arguments():

@@ -1,7 +1,7 @@
 import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from highlevel_planning.tools.util import SkillExecutionError, IKError
+from highlevel_planning_py.tools.util import SkillExecutionError, IKError
 
 
 class SkillGrasping:

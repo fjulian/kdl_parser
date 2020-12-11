@@ -3,7 +3,7 @@ import pybullet as p
 import numpy as np
 from math import pi as m_pi
 import math
-from highlevel_planning.tools.util import (
+from highlevel_planning_py.tools.util import (
     IKError,
     quat_from_mat,
     homogenous_trafo,
