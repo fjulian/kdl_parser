@@ -1,12 +1,12 @@
-from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
-from highlevel_planning.sim.scene_move_skill import SceneMoveSkill
-from highlevel_planning.skills.navigate import SkillNavigate
-from highlevel_planning.skills.grasping import SkillGrasping
-from highlevel_planning.skills.placing import SkillPlacing
-from highlevel_planning.skills.move import SkillMove
-from highlevel_planning.knowledge.predicates import Predicates
-from highlevel_planning.tools.config import ConfigYaml
-from highlevel_planning.tools import run_util
+from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
+from highlevel_planning_py.sim.scene_move_skill import SceneMoveSkill
+from highlevel_planning_py.skills.navigate import SkillNavigate
+from highlevel_planning_py.skills.grasping import SkillGrasping
+from highlevel_planning_py.skills.placing import SkillPlacing
+from highlevel_planning_py.skills.move import SkillMove
+from highlevel_planning_py.knowledge.predicates import Predicates
+from highlevel_planning_py.tools.config import ConfigYaml
+from highlevel_planning_py.tools import run_util
 
 import pybullet as p
 import numpy as np
@@ -171,6 +171,14 @@ def main():
     sk_place = SkillPlacing(scene, robot)
     sk_nav = SkillNavigate(scene, robot)
     sk_move = SkillMove(scene, robot, 0.02, robot._world.T_s)
+
+    bbox = np.array(p.getAABB(robot.model.uid))
+    for link in robot.model.link_name_to_index:
+        this_box = np.array(
+            p.getAABB(robot.model.uid, robot.model.link_name_to_index[link])
+        )
+        bbox[0, :] = np.minimum(bbox[0, :], this_box[0, :])
+        bbox[1, :] = np.maximum(bbox[1, :], this_box[1, :])
 
     # ---------- Run examples -----------
 

@@ -1,5 +1,5 @@
 import pybullet as p
-from highlevel_planning.tools.util import ObjectInfo
+from highlevel_planning_py.tools.util import ObjectInfo
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import os

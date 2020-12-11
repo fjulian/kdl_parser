@@ -38,7 +38,7 @@ class SimServer:
         )
 
         # Predicate learning
-        self.pdm = PredicateDataManager(BASEDIR)
+        self.pdm = PredicateDataManager(BASEDIR, scene)
 
         # GUI services
         self.run_srv = rospy.Service("sim_switch", SetBool, self._set_run_callback)

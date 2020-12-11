@@ -1,5 +1,5 @@
-from highlevel_planning.sim.scene_base import SceneBase
-from highlevel_planning.sim.cupboard import Cupboard
+from highlevel_planning_py.sim.scene_base import SceneBase
+from highlevel_planning_py.sim.cupboard import Cupboard
 
 
 class SceneMoveSkill(SceneBase):

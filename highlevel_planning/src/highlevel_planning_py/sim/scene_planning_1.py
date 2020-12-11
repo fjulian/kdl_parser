@@ -1,8 +1,8 @@
 import numpy as np
 import os
-from highlevel_planning.tools.util import rotate_orient, ObjectInfo
-from highlevel_planning.sim.scene_base import SceneBase
-from highlevel_planning.sim.cupboard import Cupboard
+from highlevel_planning_py.tools.util import rotate_orient, ObjectInfo
+from highlevel_planning_py.sim.scene_base import SceneBase
+from highlevel_planning_py.sim.cupboard import Cupboard
 import pybullet as p
 
 
