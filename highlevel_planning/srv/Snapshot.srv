@@ -1,0 +1,6 @@
+string pred_name
+string pred_args
+bool label
+---
+bool success
+string message

@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 import rospy
 from std_srvs.srv import SetBool, SetBoolRequest, Trigger, TriggerRequest
+from highlevel_planning.srv import Snapshot, SnapshotRequest
 
 
 class Application:
@@ -22,6 +23,7 @@ class Application:
         # rospy.loginfo("Got sim status, setting up window")
 
         self.set_srv = rospy.ServiceProxy("sim_switch", SetBool)
+        self.trigger_srv = rospy.ServiceProxy("sim_snapshot", Snapshot)
 
         self.setup_window()
 
@@ -81,9 +83,13 @@ class Application:
         self.root.bind("<Return>", self._run_sim)
 
     def _snapshot(self, val):
-        print(f"hey {val}")
-        # self.pred_name.set("")
-        # self.pred_args.set("")
+        res = self.trigger_srv(
+            SnapshotRequest(
+                pred_name=self.pred_name.get(),
+                pred_args=self.pred_args.get(),
+                label=val,
+            )
+        )
 
     def mainloop(self):
         self.root.mainloop()

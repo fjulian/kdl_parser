@@ -6,6 +6,8 @@ from highlevel_planning.skills.move import SkillMove
 from highlevel_planning.knowledge.predicates import Predicates
 from highlevel_planning.tools.config import ConfigYaml
 from highlevel_planning.tools import run_util
+from highlevel_planning.learning.predicate_learning import PredicateDataManager
+from highlevel_planning.srv import Snapshot, SnapshotResponse
 
 import pybullet as p
 import numpy as np
@@ -35,8 +37,15 @@ class SimServer:
             ScenePlanning1, BASEDIR, savedir, objects, args
         )
 
+        # Predicate learning
+        self.pdm = PredicateDataManager(BASEDIR)
+
+        # GUI services
         self.run_srv = rospy.Service("sim_switch", SetBool, self._set_run_callback)
         self.status_srv = rospy.Service("sim_status", Trigger, self._get_run_callback)
+        self.snapshot_srv = rospy.Service(
+            "sim_snapshot", Snapshot, self._trigger_snapshot_callback
+        )
 
     def _set_run_callback(self, req):
         self.running = req.data
@@ -45,6 +54,11 @@ class SimServer:
 
     def _get_run_callback(self, req):
         res = TriggerResponse(success=self.running)
+        return res
+
+    def _trigger_snapshot_callback(self, req):
+        success = self.pdm.take_snapshot(req.pred_name, req.pred_args, req.label)
+        res = SnapshotResponse(success=success)
         return res
 
     def loop(self):
