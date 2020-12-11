@@ -1,12 +1,12 @@
-from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
-from highlevel_planning.skills.navigate import SkillNavigate
-from highlevel_planning.skills.grasping import SkillGrasping
-from highlevel_planning.skills.placing import SkillPlacing
-from highlevel_planning.skills.move import SkillMove
-from highlevel_planning.knowledge.predicates import Predicates
-from highlevel_planning.tools.config import ConfigYaml
-from highlevel_planning.tools import run_util
-from highlevel_planning.learning.predicate_learning import PredicateDataManager
+from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
+from highlevel_planning_py.skills.navigate import SkillNavigate
+from highlevel_planning_py.skills.grasping import SkillGrasping
+from highlevel_planning_py.skills.placing import SkillPlacing
+from highlevel_planning_py.skills.move import SkillMove
+from highlevel_planning_py.knowledge.predicates import Predicates
+from highlevel_planning_py.tools.config import ConfigYaml
+from highlevel_planning_py.tools import run_util
+from highlevel_planning_py.learning.predicate_learning import PredicateDataManager
 from highlevel_planning.srv import Snapshot, SnapshotResponse
 
 import pybullet as p
