@@ -1,3 +1,4 @@
+HlpGuiCommand command
 string pred_name
 string pred_args
 bool label

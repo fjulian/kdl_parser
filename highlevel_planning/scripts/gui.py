@@ -1,8 +1,8 @@
-# from tkinter import *
 import tkinter as tk
 from tkinter import ttk
 import rospy
 from std_srvs.srv import SetBool, SetBoolRequest, Trigger, TriggerRequest
+from highlevel_planning.msg import HlpGuiCommand
 from highlevel_planning.srv import Snapshot, SnapshotRequest
 
 
@@ -54,11 +54,17 @@ class Application:
             column=2, row=5, sticky=tk.W
         )
         ttk.Button(
-            mainframe, text="Snapshot +", command=lambda: self._snapshot(True)
+            mainframe, text="+ Demonstration", command=lambda: self._snapshot(0, True)
         ).grid(column=1, row=6)
+        # ttk.Button(
+        #     mainframe, text="Snapshot -", command=lambda: self._snapshot(0, False)
+        # ).grid(column=2, row=6)
         ttk.Button(
-            mainframe, text="Snapshot -", command=lambda: self._snapshot(False)
+            mainframe, text="Build rules", command=lambda: self._snapshot(1)
         ).grid(column=2, row=6)
+        ttk.Button(mainframe, text="Classify", command=lambda: self._snapshot(2)).grid(
+            column=3, row=6
+        )
 
         for child in mainframe.winfo_children():
             child.grid_configure(padx=5, pady=5)
@@ -82,12 +88,14 @@ class Application:
         self.running.set(False)
         self.root.bind("<Return>", self._run_sim)
 
-    def _snapshot(self, val):
+    def _snapshot(self, cmd, label=True):
+        cmd_msg = HlpGuiCommand(cmd)
         res = self.trigger_srv(
             SnapshotRequest(
+                command=cmd_msg,
                 pred_name=self.pred_name.get(),
                 pred_args=self.pred_args.get(),
-                label=val,
+                label=label,
             )
         )
 

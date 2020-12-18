@@ -6,7 +6,10 @@ from highlevel_planning_py.skills.move import SkillMove
 from highlevel_planning_py.knowledge.predicates import Predicates
 from highlevel_planning_py.tools.config import ConfigYaml
 from highlevel_planning_py.tools import run_util
-from highlevel_planning_py.learning.predicate_learning import PredicateDataManager
+from highlevel_planning_py.learning.predicate_learning import (
+    PredicateDataManager,
+    PredicateLearner,
+)
 from highlevel_planning.srv import Snapshot, SnapshotResponse
 
 import pybullet as p
@@ -39,12 +42,13 @@ class SimServer:
 
         # Predicate learning
         self.pdm = PredicateDataManager(BASEDIR, scene)
+        self.pl = PredicateLearner(self.pdm)
 
         # GUI services
         self.run_srv = rospy.Service("sim_switch", SetBool, self._set_run_callback)
         self.status_srv = rospy.Service("sim_status", Trigger, self._get_run_callback)
         self.snapshot_srv = rospy.Service(
-            "sim_snapshot", Snapshot, self._trigger_snapshot_callback
+            "sim_snapshot", Snapshot, self._snapshot_callback
         )
 
     def _set_run_callback(self, req):
@@ -56,9 +60,21 @@ class SimServer:
         res = TriggerResponse(success=self.running)
         return res
 
-    def _trigger_snapshot_callback(self, req):
+    def _snapshot_callback(self, req):
+        cmd = req.command.cmd
         pred_args = self._process_args(req.pred_args)
-        success = self.pdm.capture_demonstration(req.pred_name, pred_args, req.label)
+        if cmd == 0:
+            success = self.pdm.capture_demonstration(
+                req.pred_name, pred_args, req.label
+            )
+        elif cmd == 1:
+            success = self.pl.build_rules(req.pred_name, relative_arg=0)
+        elif cmd == 2:
+            success = self.pl.classify(req.pred_name, pred_args, relative_arg=0)
+        elif cmd == 3:
+            success = self.pl.inquire()
+        else:
+            success = False
         res = SnapshotResponse(success=success)
         return res
 
