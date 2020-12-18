@@ -21,7 +21,55 @@ class PredicateDataManager:
         os.makedirs(self.pred_dir, exist_ok=True)
         atexit.register(self._save_pred_data)
 
-    def extract_features(self, obj_name):
+    def capture_demonstration(self, name: str, arguments: list, label: bool):
+        data_exists = True
+        if name not in self.data:
+            data_exists = self._load_pred_data(name)
+            if not data_exists:
+                self.meta_data[name] = dict.fromkeys(["num_args"])
+                self.data[name] = pd.DataFrame()
+
+        all_features = self.take_snapshot(arguments)
+
+        self.data[name] = pd.concat(
+            (self.data[name], all_features), axis=0, ignore_index=True
+        )
+        if data_exists:
+            assert self.meta_data[name]["num_args"] == len(arguments)
+            assert self.meta_data[name]["num_features"] == len(
+                self.data[name].columns
+            ) / len(arguments)
+        else:
+            self.meta_data[name]["num_args"] = len(arguments)
+            self.meta_data[name]["num_features"] = len(self.data[name].columns) / len(
+                arguments
+            )
+
+        return True
+
+    def take_snapshot(self, arguments: list):
+        all_features = list()
+        for arg in arguments:
+            features = self._extract_features(arg)
+            all_features.append(features[0])
+            all_features.append(features[1][0, :])
+            all_features.append(features[1][1, :])
+        all_features = np.array(all_features).reshape((1, -1))
+
+        cols = []
+        for i in range(len(arguments)):
+            cols.extend([f"a{i + 1}_com_x", f"a{i + 1}_com_y", f"a{i + 1}_com_z"])
+            cols.extend(
+                [f"a{i + 1}_bb_min_x", f"a{i + 1}_bb_min_y", f"a{i + 1}_bb_min_z"]
+            )
+            cols.extend(
+                [f"a{i + 1}_bb_max_x", f"a{i + 1}_bb_max_y", f"a{i + 1}_bb_max_z"]
+            )
+
+        all_features = pd.DataFrame(all_features, columns=cols)
+        return all_features
+
+    def _extract_features(self, obj_name):
         obj_uid = self.scene.objects[obj_name].model.uid
         link2idx = self.scene.objects[obj_name].model.link_name_to_index
         aabb = np.array(p.getAABB(obj_uid))
@@ -32,45 +80,6 @@ class PredicateDataManager:
 
         com = np.mean(aabb, 0)
         return com, aabb
-
-    def take_snapshot(self, name: str, raw_args: str, label: bool):
-        data_exists = True
-        if name not in self.data:
-            data_exists = self._load_pred_data(name)
-            if not data_exists:
-                self.meta_data[name] = dict.fromkeys(["num_args"])
-
-        arguments = raw_args.split(",")
-        for i, a in enumerate(arguments):
-            arguments[i] = a.strip()
-
-        all_features = list()
-        for arg in arguments:
-            features = self.extract_features(arg)
-            all_features.append(features[0])
-            all_features.append(features[1][0, :])
-            all_features.append(features[1][1, :])
-        all_features = np.array(all_features).reshape((1, -1))
-
-        if data_exists:
-            assert self.meta_data[name]["num_args"] == len(arguments)
-            current_length = self.data[name].shape[0]
-            self.data[name].loc[current_length, :] = all_features
-        else:
-            self.meta_data[name]["num_args"] = len(arguments)
-            cols = []
-            for i in range(len(arguments)):
-                cols.extend([f"a{i+1}_com_x", f"a{i+1}_com_y", f"a{i+1}_com_z"])
-                cols.extend(
-                    [f"a{i + 1}_bb_min_x", f"a{i + 1}_bb_min_y", f"a{i + 1}_bb_min_z"]
-                )
-                cols.extend(
-                    [f"a{i + 1}_bb_max_x", f"a{i + 1}_bb_max_y", f"a{i + 1}_bb_max_z"]
-                )
-            self.meta_data[name]["num_features"] = len(cols)
-            self.data[name] = pd.DataFrame(all_features, columns=cols)
-
-        return True
 
     def _get_file_name(self, name):
         return os.path.join(self.pred_dir, f"{name}.pkl")
@@ -96,33 +105,62 @@ class PredicateDataManager:
 
 
 class PredicateLearner:
-    def __init__(self, data: pd.DataFrame, meta_data=None):
-        self.data = data
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        pdm: PredicateDataManager,
+        meta_data=None,
+        relative_arg: int = 0,
+    ):
+        self.data = data.copy(deep=True)
         self.meta_data = meta_data
+        self.relative_arg = relative_arg
+        self.pdm = pdm
 
-    def build_rules(self, relative_arg: int = 0):
+        self.relative_arg_selector, self.non_relative_args_selector = (
+            self.preprocess_data()
+        )
+
+        self.upper_rules_forall = None
+        self.lower_rules_forall = None
+
+    def preprocess_data(self):
         if self.meta_data["num_args"] < 2:
             return False
-
         non_relative_args = list(range(self.meta_data["num_args"]))
-        non_relative_args.remove(relative_arg)
+        non_relative_args.remove(self.relative_arg)
         non_relative_args_selector = list()
         for arg in non_relative_args:
             non_relative_args_selector.extend(
                 np.array(range(self.meta_data["num_features"]))
                 + arg * self.meta_data["num_features"]
             )
-        relative_args_selector = (
+        relative_arg_selector = (
             np.array(range(self.meta_data["num_features"]))
-            + relative_arg * self.meta_data["num_features"]
+            + self.relative_arg * self.meta_data["num_features"]
         )
+
+        origin_arg = non_relative_args[0]
+        origin_arg_selector = (
+            np.array(range(self.meta_data["num_features"]))
+            + origin_arg * self.meta_data["num_features"]
+        )
+
+        for i in range(3):
+            self.data.iloc[:, i::3] = self.data.iloc[:, i::3].subtract(
+                self.data.iloc[:, origin_arg_selector[i]], axis=0
+            )
+
+        return relative_arg_selector, non_relative_args_selector
+
+    def build_rules(self):
 
         # Find upper and lower bounds
         upper_bounds = {i: pd.DataFrame() for i in range(3)}
         lower_bounds = {i: pd.DataFrame() for i in range(3)}
-        for selector in relative_args_selector:
+        for selector in self.relative_arg_selector:
             axis_idx = selector % 3
-            this_non_relative_selector = non_relative_args_selector[axis_idx::3]
+            this_non_relative_selector = self.non_relative_args_selector[axis_idx::3]
 
             # Check upper bounds
             this_upper_bounds = self.data.iloc[:, this_non_relative_selector].gt(
@@ -146,3 +184,13 @@ class PredicateLearner:
             lower_bounds[axis_idx] = pd.concat(
                 [lower_bounds[axis_idx], this_lower_bounds], axis=1
             )
+
+        # Extract candidates for rules that hold over all data
+        self.upper_rules_forall = {i: upper_bounds[i].all(axis=0) for i in upper_bounds}
+        self.lower_rules_forall = {i: lower_bounds[i].all(axis=0) for i in lower_bounds}
+
+    def classify(self, arguments):
+        pass
+
+    def inquire(self):
+        pass

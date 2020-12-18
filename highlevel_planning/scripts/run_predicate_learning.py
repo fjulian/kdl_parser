@@ -57,9 +57,17 @@ class SimServer:
         return res
 
     def _trigger_snapshot_callback(self, req):
-        success = self.pdm.take_snapshot(req.pred_name, req.pred_args, req.label)
+        pred_args = self._process_args(req.pred_args)
+        success = self.pdm.capture_demonstration(req.pred_name, pred_args, req.label)
         res = SnapshotResponse(success=success)
         return res
+
+    @staticmethod
+    def _process_args(raw_args):
+        arguments = raw_args.split(",")
+        for i, a in enumerate(arguments):
+            arguments[i] = a.strip()
+        return arguments
 
     def loop(self):
         if self.running:
