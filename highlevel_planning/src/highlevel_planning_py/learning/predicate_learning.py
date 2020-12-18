@@ -67,6 +67,7 @@ class PredicateDataManager:
                 cols.extend(
                     [f"a{i + 1}_bb_max_x", f"a{i + 1}_bb_max_y", f"a{i + 1}_bb_max_z"]
                 )
+            self.meta_data[name]["num_features"] = len(cols)
             self.data[name] = pd.DataFrame(all_features, columns=cols)
 
         return True
@@ -92,3 +93,56 @@ class PredicateDataManager:
             with open(filename, "wb") as f:
                 pickle.dump(content, f)
         print("Predicate data saved")
+
+
+class PredicateLearner:
+    def __init__(self, data: pd.DataFrame, meta_data=None):
+        self.data = data
+        self.meta_data = meta_data
+
+    def build_rules(self, relative_arg: int = 0):
+        if self.meta_data["num_args"] < 2:
+            return False
+
+        non_relative_args = list(range(self.meta_data["num_args"]))
+        non_relative_args.remove(relative_arg)
+        non_relative_args_selector = list()
+        for arg in non_relative_args:
+            non_relative_args_selector.extend(
+                np.array(range(self.meta_data["num_features"]))
+                + arg * self.meta_data["num_features"]
+            )
+        relative_args_selector = (
+            np.array(range(self.meta_data["num_features"]))
+            + relative_arg * self.meta_data["num_features"]
+        )
+
+        # Find upper and lower bounds
+        upper_bounds = {i: pd.DataFrame() for i in range(3)}
+        lower_bounds = {i: pd.DataFrame() for i in range(3)}
+        for selector in relative_args_selector:
+            axis_idx = selector % 3
+            this_non_relative_selector = non_relative_args_selector[axis_idx::3]
+
+            # Check upper bounds
+            this_upper_bounds = self.data.iloc[:, this_non_relative_selector].gt(
+                self.data.iloc[:, selector], axis="index"
+            )
+            renamer = dict()
+            for col in this_upper_bounds.columns:
+                renamer[col] = f"{self.data.columns[selector]}<{col}"
+            this_upper_bounds.rename(columns=renamer, inplace=True)
+            upper_bounds[axis_idx] = pd.concat(
+                [upper_bounds[axis_idx], this_upper_bounds], axis=1
+            )
+
+            # Check lower bounds
+            this_lower_bounds = self.data.iloc[:, this_non_relative_selector].lt(
+                self.data.iloc[:, selector], axis="index"
+            )
+            for col in renamer:
+                renamer[col] = renamer[col].replace("<", ">")
+            this_lower_bounds.rename(columns=renamer, inplace=True)
+            lower_bounds[axis_idx] = pd.concat(
+                [lower_bounds[axis_idx], this_lower_bounds], axis=1
+            )
