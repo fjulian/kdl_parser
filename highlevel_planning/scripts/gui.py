@@ -14,13 +14,14 @@ class Application:
         self.running = tk.BooleanVar()
         self.pred_name = tk.StringVar()
         self.pred_args = tk.StringVar()
+        self.rel_arg = tk.IntVar()
 
-        # rospy.loginfo("Waiting for server ...")
-        # get_srv = rospy.ServiceProxy("sim_status", Trigger)
-        # get_srv.wait_for_service()
-        # res = get_srv(TriggerRequest())
-        # self.running.set(res.success)
-        # rospy.loginfo("Got sim status, setting up window")
+        rospy.loginfo("Waiting for server ...")
+        get_srv = rospy.ServiceProxy("sim_status", Trigger)
+        get_srv.wait_for_service()
+        res = get_srv(TriggerRequest())
+        self.running.set(res.success)
+        rospy.loginfo("Got sim status, setting up window")
 
         self.set_srv = rospy.ServiceProxy("sim_switch", SetBool)
         self.trigger_srv = rospy.ServiceProxy("sim_snapshot", Snapshot)
@@ -53,17 +54,21 @@ class Application:
         ttk.Entry(mainframe, width=12, textvariable=self.pred_args).grid(
             column=2, row=5, sticky=tk.W
         )
+        ttk.Label(mainframe, text="Relative predicate:").grid(column=1, row=6)
+        ttk.Entry(mainframe, width=12, textvariable=self.rel_arg).grid(
+            column=2, row=6, sticky=tk.W
+        )
         ttk.Button(
             mainframe, text="+ Demonstration", command=lambda: self._snapshot(0, True)
-        ).grid(column=1, row=6)
+        ).grid(column=1, row=7)
         # ttk.Button(
         #     mainframe, text="Snapshot -", command=lambda: self._snapshot(0, False)
         # ).grid(column=2, row=6)
         ttk.Button(
             mainframe, text="Build rules", command=lambda: self._snapshot(1)
-        ).grid(column=2, row=6)
+        ).grid(column=2, row=7)
         ttk.Button(mainframe, text="Classify", command=lambda: self._snapshot(2)).grid(
-            column=3, row=6
+            column=3, row=7
         )
 
         for child in mainframe.winfo_children():
@@ -95,6 +100,7 @@ class Application:
                 command=cmd_msg,
                 pred_name=self.pred_name.get(),
                 pred_args=self.pred_args.get(),
+                relative_arg=self.rel_arg.get(),
                 label=label,
             )
         )

@@ -1,6 +1,7 @@
 HlpGuiCommand command
 string pred_name
 string pred_args
+uint8 relative_arg
 bool label
 ---
 bool success

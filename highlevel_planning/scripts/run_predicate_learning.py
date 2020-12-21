@@ -1,9 +1,4 @@
 from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
-from highlevel_planning_py.skills.navigate import SkillNavigate
-from highlevel_planning_py.skills.grasping import SkillGrasping
-from highlevel_planning_py.skills.placing import SkillPlacing
-from highlevel_planning_py.skills.move import SkillMove
-from highlevel_planning_py.knowledge.predicates import Predicates
 from highlevel_planning_py.tools.config import ConfigYaml
 from highlevel_planning_py.tools import run_util
 from highlevel_planning_py.learning.predicate_learning import (
@@ -12,11 +7,7 @@ from highlevel_planning_py.learning.predicate_learning import (
 )
 from highlevel_planning.srv import Snapshot, SnapshotResponse
 
-import pybullet as p
-import numpy as np
-from scipy.spatial.transform import Rotation as R
 import os
-import tkinter as tk
 import rospy
 from std_srvs.srv import SetBool, SetBoolResponse, Trigger, TriggerResponse
 
@@ -68,11 +59,13 @@ class SimServer:
                 req.pred_name, pred_args, req.label
             )
         elif cmd == 1:
-            success = self.pl.build_rules(req.pred_name, relative_arg=0)
+            success = self.pl.build_rules(req.pred_name, relative_arg=req.relative_arg)
         elif cmd == 2:
-            success = self.pl.classify(req.pred_name, pred_args, relative_arg=0)
+            success = self.pl.classify(
+                req.pred_name, pred_args, relative_arg=req.relative_arg
+            )
         elif cmd == 3:
-            success = self.pl.inquire()
+            success = self.pl.inquire(req.pred_name, relative_arg=req.relative_arg)
         else:
             success = False
         res = SnapshotResponse(success=success)

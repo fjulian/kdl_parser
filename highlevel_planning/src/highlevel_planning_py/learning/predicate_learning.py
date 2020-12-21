@@ -4,7 +4,7 @@ import pandas as pd
 import atexit
 import pybullet as p
 import numpy as np
-
+import rospy
 
 # To show dataframes:
 # pd.options.display.max_columns=20
@@ -70,11 +70,13 @@ class PredicateDataManager:
         return all_features
 
     def get_meta_data(self, pred_name):
-        self._check_exists(pred_name)
+        if not self._check_exists(pred_name):
+            raise ValueError
         return self._meta_data[pred_name]
 
     def get_data(self, pred_name):
-        self._check_exists(pred_name)
+        if not self._check_exists(pred_name):
+            raise ValueError
         return self._data[pred_name]
 
     def _check_exists(self, pred_name):
@@ -164,9 +166,28 @@ class PredicateLearner:
         gt_relative_arg, lt_relative_arg = self._compare_values(
             processed_sample, rule_data
         )
-        print("hi")
+        for i in range(3):
+            assert (
+                gt_relative_arg[i].columns == rule_data.upper_rules_forall[i].index
+            ).all()
+            assert (
+                lt_relative_arg[i].columns == rule_data.lower_rules_forall[i].index
+            ).all()
+            assert gt_relative_arg[i].shape[0] == 1 and gt_relative_arg[i].shape[0] == 1
+            assert lt_relative_arg[i].shape[0] == 1 and lt_relative_arg[i].shape[0] == 1
 
-    def inquire(self):
+        result = True
+        for i in range(3):
+            result &= (
+                gt_relative_arg[i]
+                .iloc[0, :][rule_data.upper_rules_forall[i] == True]
+                .all()
+            )
+        rospy.loginfo(f"Classification result: {result}")
+        return result
+
+    def inquire(self, pred_name: str, relative_arg: int = 0):
+        self._prepare_data(pred_name, relative_arg)
         return True
 
     def _prepare_data(self, pred_name: str, relative_arg: int):
