@@ -192,3 +192,9 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+
+add_custom_command(OUTPUT box_panda_hand_pb.urdf
+                    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/data/models/parse_xacros.bash
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/models)
+add_custom_target(ParseXacros ALL DEPENDS box_panda_hand_pb.urdf)
