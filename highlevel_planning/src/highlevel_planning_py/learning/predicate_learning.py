@@ -91,9 +91,9 @@ class PredicateDataManager:
         link2idx = self.scene.objects[obj_name].model.link_name_to_index
         aabb = np.array(p.getAABB(obj_uid))
         for link in link2idx:
-            tmp = np.array(obj_uid, link2idx[link])
+            tmp = np.array(p.getAABB(obj_uid, link2idx[link]))
             aabb[0, :] = np.minimum(aabb[0, :], tmp[0, :])
-            aabb[1, :] = np.minimum(aabb[1, :], tmp[1, :])
+            aabb[1, :] = np.maximum(aabb[1, :], tmp[1, :])
 
         com = np.mean(aabb, 0)
         return com, aabb
@@ -156,6 +156,21 @@ class PredicateLearner:
             i: lt_relative_arg[i].all(axis=0) for i in lt_relative_arg
         }
 
+        rospy.loginfo("Rules found:")
+        rule_labels = list()
+        for i in range(3):
+            rule_labels.extend(
+                rule_data.upper_rules_forall[i].index[
+                    rule_data.upper_rules_forall[i] == True
+                ]
+            )
+            rule_labels.extend(
+                rule_data.lower_rules_forall[i].index[
+                    rule_data.lower_rules_forall[i] == True
+                ]
+            )
+        rospy.loginfo(rule_labels)
+
     def classify(self, pred_name: str, arguments: list, relative_arg: int = 0):
         self._prepare_data(pred_name, relative_arg)
         rule_data = self.data[pred_name]
@@ -167,23 +182,40 @@ class PredicateLearner:
             processed_sample, rule_data
         )
         for i in range(3):
-            assert (
-                gt_relative_arg[i].columns == rule_data.upper_rules_forall[i].index
-            ).all()
-            assert (
-                lt_relative_arg[i].columns == rule_data.lower_rules_forall[i].index
-            ).all()
-            assert gt_relative_arg[i].shape[0] == 1 and gt_relative_arg[i].shape[0] == 1
-            assert lt_relative_arg[i].shape[0] == 1 and lt_relative_arg[i].shape[0] == 1
+            assert gt_relative_arg[i].shape[0] == 1 and lt_relative_arg[i].shape[0] == 1
+            gt_relative_arg[i] = gt_relative_arg[i].iloc[0, :]
+            lt_relative_arg[i] = lt_relative_arg[i].iloc[0, :]
+
+            assert np.all(
+                gt_relative_arg[i].index == rule_data.upper_rules_forall[i].index
+            )
+            assert np.all(
+                lt_relative_arg[i].index == rule_data.lower_rules_forall[i].index
+            )
 
         result = True
+        broken_rules = list()
         for i in range(3):
-            result &= (
-                gt_relative_arg[i]
-                .iloc[0, :][rule_data.upper_rules_forall[i] == True]
-                .all()
+            upper_rules = rule_data.upper_rules_forall[i]
+            result &= gt_relative_arg[i][upper_rules == True].all()
+            broken_rules.extend(
+                upper_rules.index[
+                    gt_relative_arg[i].ne(upper_rules)
+                    & upper_rules.where(upper_rules == True)
+                ]
+            )
+            lower_rules = rule_data.lower_rules_forall[i]
+            result &= lt_relative_arg[i][lower_rules == True].all()
+            broken_rules.extend(
+                lower_rules.index[
+                    lt_relative_arg[i].ne(lower_rules)
+                    & lower_rules.where(lower_rules == True)
+                ]
             )
         rospy.loginfo(f"Classification result: {result}")
+        if not result:
+            rospy.loginfo("Broken rules:")
+            rospy.loginfo(broken_rules)
         return result
 
     def inquire(self, pred_name: str, relative_arg: int = 0):
