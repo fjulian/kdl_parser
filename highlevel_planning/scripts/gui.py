@@ -54,7 +54,7 @@ class Application:
         ttk.Entry(mainframe, width=12, textvariable=self.pred_args).grid(
             column=2, row=5, sticky=tk.W
         )
-        ttk.Label(mainframe, text="Relative predicate:").grid(column=1, row=6)
+        ttk.Label(mainframe, text="Relative argument:").grid(column=1, row=6)
         ttk.Entry(mainframe, width=12, textvariable=self.rel_arg).grid(
             column=2, row=6, sticky=tk.W
         )
