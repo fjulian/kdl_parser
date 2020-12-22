@@ -70,6 +70,9 @@ class Application:
         ttk.Button(mainframe, text="Classify", command=lambda: self._snapshot(2)).grid(
             column=3, row=7
         )
+        ttk.Button(mainframe, text="Inquire", command=lambda: self._snapshot(3)).grid(
+            column=1, row=8
+        )
 
         for child in mainframe.winfo_children():
             child.grid_configure(padx=5, pady=5)

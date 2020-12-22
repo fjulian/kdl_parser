@@ -65,7 +65,9 @@ class SimServer:
                 req.pred_name, pred_args, relative_arg=req.relative_arg
             )
         elif cmd == 3:
-            success = self.pl.inquire(req.pred_name, relative_arg=req.relative_arg)
+            success = self.pl.inquire(
+                req.pred_name, pred_args, relative_arg=req.relative_arg
+            )
         else:
             success = False
         res = SnapshotResponse(success=success)

@@ -181,6 +181,8 @@ class PredicateLearner:
         gt_relative_arg, lt_relative_arg = self._compare_values(
             processed_sample, rule_data
         )
+
+        # Check that data is compatible with sample
         for i in range(3):
             assert gt_relative_arg[i].shape[0] == 1 and lt_relative_arg[i].shape[0] == 1
             gt_relative_arg[i] = gt_relative_arg[i].iloc[0, :]
@@ -193,6 +195,7 @@ class PredicateLearner:
                 lt_relative_arg[i].index == rule_data.lower_rules_forall[i].index
             )
 
+        # Check that rules match, record any rules that are broken
         result = True
         broken_rules = list()
         for i in range(3):
@@ -218,9 +221,49 @@ class PredicateLearner:
             rospy.loginfo(broken_rules)
         return result
 
-    def inquire(self, pred_name: str, relative_arg: int = 0):
+    def inquire(self, pred_name: str, arguments: list, relative_arg: int = 0):
         self._prepare_data(pred_name, relative_arg)
+        rule_data = self.data[pred_name]
+
+        sample = self.pdm.take_snapshot(arguments)
+        relative_arg_dimensions = sample.iloc[:, rule_data.relative_arg_selector]
+        for i in range(3):
+            sample.iloc[:, rule_data.relative_arg_selector[i::3]] = sample.iloc[
+                :, rule_data.relative_arg_selector[i::3]
+            ].subtract(sample.iloc[:, rule_data.relative_arg_selector[i]], axis=0)
+
+        holding_rules = rule_data.upper_rules_forall[0][
+            rule_data.upper_rules_forall[0] == True
+        ]
+
+        upper_values = pd.DataFrame(index=holding_rules.index)
+        upper_values.insert(
+            0,
+            "rel",
+            list(map(lambda x: self._get_arg_value(x, sample, 0), upper_values.index)),
+        )
+        upper_values.insert(
+            1,
+            "abs",
+            list(map(lambda x: self._get_arg_value(x, sample, 1), upper_values.index)),
+        )
+        upper_values.insert(
+            2, "diff", upper_values.loc[:, "abs"].subtract(upper_values.loc[:, "rel"])
+        )
+        upper_values.sort_values(by="diff", inplace=True)
+
         return True
+
+    @staticmethod
+    def _get_arg_value(value_str: str, sample, arg_pos: int):
+        if "<" in value_str:
+            value_str_split = value_str.split("<")
+        elif ">" in value_str:
+            value_str_split = value_str.split(">")
+        else:
+            raise RuntimeError
+        value_str_select = value_str_split[arg_pos]
+        return sample.loc[0, value_str_select]
 
     def _prepare_data(self, pred_name: str, relative_arg: int):
         if pred_name not in self.data:
