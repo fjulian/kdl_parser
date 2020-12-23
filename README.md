@@ -1,6 +1,8 @@
 
 ## Setup Instructions
 
+Tested on Ubuntu 20.04 with ROS Melodic.
+
 ### ROS workspace
 
 This package needs to be built in a ROS workspace. The same workspace should contain ASL's `moma` repository:
@@ -27,8 +29,6 @@ First of all, install some apt packages using
 ./install_requirements.sh
 ```
 
-If an error message comes up when building `trac_ik`, complaining about the header `nlopt.hpp` missing, it helps to install nlopt from source: https://github.com/stevengj/nlopt.
-
 ### Install Development Code
 
 To make the python package available, just build the package:
@@ -36,6 +36,8 @@ To make the python package available, just build the package:
 ```
 catkin build -DCMAKE_BUILD_TYPE=Release highlevel_planning
 ```
+
+If an error message comes up when building `trac_ik`, complaining about the header `nlopt.hpp` missing, it helps to install nlopt from source: https://github.com/stevengj/nlopt.
 
 ### Set up virtualenv
 
@@ -52,8 +54,6 @@ There are two options: using the physics client GUI that comes with pybullet or 
 For the first option (recommended), no additional setup needs to be done after installing pybullet in the virtual environment.
 
 For the second option, you need to clone and build bullet3 [according to the instructions](https://github.com/bulletphysics/bullet3). It boils down to simply executing the shell script `./build_cmake_pybullet_double.sh` which comes with the repo. Afterwards, the binary is located in the directory `bullet3/build_cmake/examples/ExampleBrowser`. When launching it for the first time, the correct mode "Physics Server" needs to be selected in the left pane. At subsequent launches, this mode will be automatically selected (it gets saved to the file `0_Bullet3Demo.txt`, located in the same folder as the binary).
-
-Depending on which option is selected, the initialization of the simulator interface needs to be adapted in the file `src/sim/world.py`.
 
 ## Run
 
@@ -73,7 +73,7 @@ And the GUI in another:
 python highlevel_planning/scripts/gui.py
 ```
 
-After starting the simulation (press "Run"), you can rearrange objects using drag and drop. If you want to send a certain arrangement as a training sample, enter predicate name, arguments, and the argument that is to be considered relative (i.e. the one that can be modified to achieve the predicate), e.g.:
+After starting the simulation (press "Run"), you can rearrange objects using drag and drop. If you want to send a certain arrangement as a training sample, enter predicate name, arguments, and the argument that is to be considered relative (i.e. the one that can be modified to achieve the predicate. Should always be the same.), e.g.:
 
 - Name: `on`
 - Arguments: `table,cube1`
@@ -82,6 +82,8 @@ After starting the simulation (press "Run"), you can rearrange objects using dra
 Once, you're happy with the training examples, press "Build rules" to generate the rules.
 
 Then, after rearranging the objects, you can let the system classify the current situation by pressing "Classify". Monitor the terminal output of the server of the result.
+
+To let the system ask for the label of a certain state of its choosing, press "inquire" while the simulation is running. Afterwards, if the predicate holds in the new state, press "confirm" and otherwise "deny". 
 
 ## Other
 
