@@ -26,6 +26,8 @@ class Application:
         self.set_srv = rospy.ServiceProxy("sim_switch", SetBool)
         self.trigger_srv = rospy.ServiceProxy("sim_snapshot", Snapshot)
 
+        self.confirm_button = None
+        self.deny_button = None
         self.setup_window()
 
     def setup_window(self):
@@ -73,6 +75,20 @@ class Application:
         ttk.Button(mainframe, text="Inquire", command=lambda: self._snapshot(3)).grid(
             column=1, row=8
         )
+        self.confirm_button = ttk.Button(
+            mainframe,
+            text="Confirm",
+            state=tk.DISABLED,
+            command=lambda: self._snapshot(4, True),
+        )
+        self.confirm_button.grid(column=2, row=8)
+        self.deny_button = ttk.Button(
+            mainframe,
+            text="Deny",
+            state=tk.DISABLED,
+            command=lambda: self._snapshot(4, False),
+        )
+        self.deny_button.grid(column=3, row=8)
 
         for child in mainframe.winfo_children():
             child.grid_configure(padx=5, pady=5)
@@ -97,6 +113,19 @@ class Application:
         self.root.bind("<Return>", self._run_sim)
 
     def _snapshot(self, cmd, label=True):
+        if cmd == 3:
+            if self.confirm_button["state"] == "normal":
+                rospy.logwarn(
+                    "Previous inquiry still open, please reply to that one first."
+                )
+                return
+            else:
+                self.confirm_button["state"] = "normal"
+                self.deny_button["state"] = "normal"
+        elif cmd == 4:
+            self.confirm_button["state"] = "disabled"
+            self.deny_button["state"] = "disabled"
+
         cmd_msg = HlpGuiCommand(cmd)
         res = self.trigger_srv(
             SnapshotRequest(
@@ -107,6 +136,8 @@ class Application:
                 label=label,
             )
         )
+
+        rospy.loginfo("Sent command")
 
     def mainloop(self):
         self.root.mainloop()

@@ -22,6 +22,8 @@ class PredicateDataManager:
         atexit.register(self._save_pred_data)
 
     def capture_demonstration(self, name: str, arguments: list, label: bool):
+        if not label:
+            return False
         data_exists = True
         if name not in self._data:
             data_exists = self._load_pred_data(name)
@@ -79,6 +81,17 @@ class PredicateDataManager:
             raise ValueError
         return self._data[pred_name]
 
+    def set_object_position(self, object_name, desired_com_pos):
+        object_uid = self.scene.objects[object_name].model.uid
+        pos, orient = p.getBasePositionAndOrientation(object_uid)
+        pos, orient = np.array(pos), np.array(orient)
+        com, aabb = self._extract_features(object_name)
+        diff_base_com = pos - com
+
+        desired_base_pos = desired_com_pos + diff_base_com
+
+        p.resetBasePositionAndOrientation(object_uid, desired_base_pos, orient)
+
     def _check_exists(self, pred_name):
         if pred_name not in self._data:
             exists = self._load_pred_data(pred_name)
@@ -132,12 +145,17 @@ class RuleData:
         self.origin_arg = None
         self.upper_rules_forall = None
         self.lower_rules_forall = None
+        self.rules_inquired = (
+            dict()
+        )  # if the value for a rule is true, the rule was confirmed
 
 
 class PredicateLearner:
     def __init__(self, pdm: PredicateDataManager):
         self.pdm = pdm
         self.data = dict()
+
+        self.open_inquiry = None
 
     def build_rules(self, pred_name: str, relative_arg: int = 0):
         self._prepare_data(pred_name, relative_arg)
@@ -222,37 +240,126 @@ class PredicateLearner:
         return result
 
     def inquire(self, pred_name: str, arguments: list, relative_arg: int = 0):
+        if self.open_inquiry is not None:
+            rospy.logwarn("Last inquiry was not answered yet. Abort.")
+            return False
+
         self._prepare_data(pred_name, relative_arg)
         rule_data = self.data[pred_name]
 
         sample = self.pdm.take_snapshot(arguments)
-        relative_arg_dimensions = sample.iloc[:, rule_data.relative_arg_selector]
         for i in range(3):
             sample.iloc[:, rule_data.relative_arg_selector[i::3]] = sample.iloc[
                 :, rule_data.relative_arg_selector[i::3]
             ].subtract(sample.iloc[:, rule_data.relative_arg_selector[i]], axis=0)
 
-        holding_rules = rule_data.upper_rules_forall[0][
-            rule_data.upper_rules_forall[0] == True
-        ]
+        maximum_diff = -1
+        maximum_rule = ""
+        lower_values, maximum_diff, maximum_rule = self._get_values_from_rules(
+            rule_data.lower_rules_forall,
+            sample,
+            maximum_diff,
+            maximum_rule,
+            rule_data.rules_inquired,
+        )
+        upper_values, maximum_diff, maximum_rule = self._get_values_from_rules(
+            rule_data.upper_rules_forall,
+            sample,
+            maximum_diff,
+            maximum_rule,
+            rule_data.rules_inquired,
+        )
 
-        upper_values = pd.DataFrame(index=holding_rules.index)
-        upper_values.insert(
-            0,
-            "rel",
-            list(map(lambda x: self._get_arg_value(x, sample, 0), upper_values.index)),
+        # Generate sample that we want labeled
+        axis_labels = ["_x", "_y", "_z"]
+        axis_samples = np.array([0.0, 0.0, 0.0])
+        for i in range(3):
+            if axis_labels[i] in maximum_rule:
+                if "<" in maximum_rule:
+                    lb_idx = list(upper_values[i].index).index(maximum_rule)
+                    lb_com = upper_values[i].loc[maximum_rule, "abs"]
+                    ub_com = (
+                        upper_values[i].iloc[lb_idx + 1, 1]
+                        if lb_idx < upper_values[i].shape[0]
+                        else lb_com + 0.3
+                    )
+                else:
+                    ub_idx = list(lower_values[i].index).index(maximum_rule)
+                    ub_com = lower_values[i].loc[maximum_rule, "abs"]
+                    lb_com = (
+                        lower_values[i].iloc[ub_idx + 1, 1]
+                        if ub_idx < lower_values[i].shape[0]
+                        else ub_com - 0.3
+                    )
+            else:
+                ub_com = upper_values[i].iloc[0, 1]
+                lb_com = lower_values[i].iloc[0, 1]
+            axis_samples[i] = np.random.uniform(lb_com, ub_com)
+        self.pdm.set_object_position(arguments[relative_arg], axis_samples)
+        self.open_inquiry = maximum_rule
+        rospy.loginfo(
+            f"Testing if rule {maximum_rule} holds. Does the predicate hold in this state?"
         )
-        upper_values.insert(
-            1,
-            "abs",
-            list(map(lambda x: self._get_arg_value(x, sample, 1), upper_values.index)),
-        )
-        upper_values.insert(
-            2, "diff", upper_values.loc[:, "abs"].subtract(upper_values.loc[:, "rel"])
-        )
-        upper_values.sort_values(by="diff", inplace=True)
-
         return True
+
+    def process_inquire_result(self, label: bool, pred_name: str, arguments: list):
+        if self.open_inquiry is None:
+            rospy.logwarn("No inquiry is currently open.")
+            return False
+        rule_data = self.data[pred_name]
+        rule_data.rules_inquired[self.open_inquiry] = not label
+        axis_labels = ["_x", "_y", "_z"]
+        axis_idx = None
+        for i in range(3):
+            if axis_labels[i] in self.open_inquiry:
+                axis_idx = i
+                break
+        if label:
+            if "<" in self.open_inquiry:
+                rule_data.upper_rules_forall[axis_idx].loc[self.open_inquiry] = False
+            else:
+                rule_data.lower_rules_forall[axis_idx].loc[self.open_inquiry] = False
+            rospy.loginfo("Thanks for the input. Updated rule set.")
+            self.pdm.capture_demonstration(pred_name, arguments, label)
+        self.open_inquiry = None
+        return True
+
+    def _get_values_from_rules(
+        self, rules, sample, maximum_diff, maximum_rule, rules_inquired
+    ):
+        values = {i: None for i in range(3)}
+        for i in range(3):
+            this_holding_rules = rules[i][rules[i] == True]
+
+            values[i] = pd.DataFrame(index=this_holding_rules.index)
+            tmp_rel = list(
+                map(lambda x: self._get_arg_value(x, sample, 0), values[i].index)
+            )
+            values[i].insert(0, "rel", tmp_rel)
+            tmp_abs = list(
+                map(lambda x: self._get_arg_value(x, sample, 1), values[i].index)
+            )
+            values[i].insert(1, "abs", tmp_abs)
+
+            values[i] = values[i].subtract(values[i].iloc[:, 0], axis=0)
+
+            asc = True if "<" in values[i].index[0] else False
+            values[i].sort_values(by="abs", inplace=True, ascending=asc)
+
+            tmp_diff = values[i].loc[:, "abs"].diff(periods=-1)
+            if asc:
+                tmp_diff *= -1
+            tmp_diff.iloc[-1] = 0
+            values[i].insert(2, "diff", tmp_diff)
+
+            for j, diff in enumerate(values[i].loc[:, "diff"]):
+                tmp_rule = values[i].index[j]
+                if tmp_rule not in rules_inquired:
+                    if diff > maximum_diff:
+                        maximum_diff = diff
+                        maximum_rule = tmp_rule
+                    break
+        return values, maximum_diff, maximum_rule
 
     @staticmethod
     def _get_arg_value(value_str: str, sample, arg_pos: int):
