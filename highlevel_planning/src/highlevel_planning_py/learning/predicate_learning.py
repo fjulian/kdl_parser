@@ -38,13 +38,13 @@ class PredicateDataManager:
         )
         if data_exists:
             assert self._meta_data[name]["num_args"] == len(arguments)
-            assert self._meta_data[name]["num_features"] == len(
-                self._data[name].columns
-            ) / len(arguments)
+            assert self._meta_data[name]["num_features"] == int(
+                len(self._data[name].columns) / len(arguments)
+            )
         else:
             self._meta_data[name]["num_args"] = len(arguments)
-            self._meta_data[name]["num_features"] = len(self._data[name].columns) / len(
-                arguments
+            self._meta_data[name]["num_features"] = int(
+                len(self._data[name].columns) / len(arguments)
             )
 
         return True
@@ -156,6 +156,7 @@ class PredicateLearner:
         self.data = dict()
 
         self.open_inquiry = None
+        atexit.register(self._save_data)
 
     def build_rules(self, pred_name: str, relative_arg: int = 0):
         self._prepare_data(pred_name, relative_arg)
@@ -174,7 +175,14 @@ class PredicateLearner:
             i: lt_relative_arg[i].all(axis=0) for i in lt_relative_arg
         }
 
-        rospy.loginfo("Rules found:")
+        # Set rules that were previously demonstrated through inquiries
+        for confirmed_rule in rule_data.rules_inquired:
+            if rule_data.rules_inquired[confirmed_rule]:
+                assert self._get_value_given_rule(rule_data, confirmed_rule)
+            else:
+                self._set_value_given_rule(rule_data, confirmed_rule, False)
+
+        # Count and summarize rules
         rule_labels = list()
         for i in range(3):
             rule_labels.extend(
@@ -187,11 +195,15 @@ class PredicateLearner:
                     rule_data.lower_rules_forall[i] == True
                 ]
             )
+        rospy.loginfo(f"Rules found ({len(rule_labels)}):")
         rospy.loginfo(rule_labels)
 
     def classify(self, pred_name: str, arguments: list, relative_arg: int = 0):
         self._prepare_data(pred_name, relative_arg)
         rule_data = self.data[pred_name]
+
+        if rule_data.upper_rules_forall is None or rule_data.lower_rules_forall is None:
+            self.build_rules(pred_name, relative_arg)
 
         sample = self.pdm.take_snapshot(arguments)
         processed_sample = self.preprocess_data(sample, rule_data)
@@ -308,21 +320,59 @@ class PredicateLearner:
             return False
         rule_data = self.data[pred_name]
         rule_data.rules_inquired[self.open_inquiry] = not label
-        axis_labels = ["_x", "_y", "_z"]
-        axis_idx = None
-        for i in range(3):
-            if axis_labels[i] in self.open_inquiry:
-                axis_idx = i
-                break
         if label:
-            if "<" in self.open_inquiry:
-                rule_data.upper_rules_forall[axis_idx].loc[self.open_inquiry] = False
-            else:
-                rule_data.lower_rules_forall[axis_idx].loc[self.open_inquiry] = False
+            self._set_value_given_rule(rule_data, self.open_inquiry, False)
             rospy.loginfo("Thanks for the input. Updated rule set.")
             self.pdm.capture_demonstration(pred_name, arguments, label)
         self.open_inquiry = None
         return True
+
+    def _load_data(self, name: str):
+        assert name not in self.data
+        filename = self._get_file_name(name)
+        if os.path.isfile(filename):
+            with open(filename, "rb") as f:
+                content = pickle.load(f)
+                self.data[name] = content[0]
+            return True
+        return False
+
+    def _save_data(self):
+        for name in self.data:
+            filename = self._get_file_name(name)
+            content = (self.data[name],)
+            with open(filename, "wb") as f:
+                pickle.dump(content, f)
+        print("Rule data saved")
+
+    def _get_file_name(self, name):
+        return os.path.join(self.pdm.pred_dir, f"{name}_rules.pkl")
+
+    @staticmethod
+    def _set_value_given_rule(rule_data: RuleData, rule: str, value: bool):
+        axis_labels = ["_x", "_y", "_z"]
+        axis_idx = None
+        for i in range(3):
+            if axis_labels[i] in rule:
+                axis_idx = i
+                break
+        if "<" in rule:
+            rule_data.upper_rules_forall[axis_idx].loc[rule] = value
+        else:
+            rule_data.lower_rules_forall[axis_idx].loc[rule] = value
+
+    @staticmethod
+    def _get_value_given_rule(rule_data: RuleData, rule: str):
+        axis_labels = ["_x", "_y", "_z"]
+        axis_idx = None
+        for i in range(3):
+            if axis_labels[i] in rule:
+                axis_idx = i
+                break
+        if "<" in rule:
+            return rule_data.upper_rules_forall[axis_idx].loc[rule]
+        else:
+            return rule_data.lower_rules_forall[axis_idx].loc[rule]
 
     def _get_values_from_rules(
         self, rules, sample, maximum_diff, maximum_rule, rules_inquired
@@ -374,13 +424,14 @@ class PredicateLearner:
 
     def _prepare_data(self, pred_name: str, relative_arg: int):
         if pred_name not in self.data:
-            new_rule_data = RuleData()
-            new_rule_data.meta_data = self.pdm.get_meta_data(pred_name)
-            new_rule_data.relative_arg = relative_arg
+            if not self._load_data(pred_name):
+                new_rule_data = RuleData()
+                new_rule_data.meta_data = self.pdm.get_meta_data(pred_name)
+                new_rule_data.relative_arg = relative_arg
 
-            self.setup_selectors(new_rule_data)
+                self.setup_selectors(new_rule_data)
 
-            self.data[pred_name] = new_rule_data
+                self.data[pred_name] = new_rule_data
 
         self.data[pred_name].processed_data = self.preprocess_data(
             self.pdm.get_data(pred_name), self.data[pred_name]
