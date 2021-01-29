@@ -5,14 +5,14 @@ from collections import OrderedDict
 from copy import deepcopy
 import time
 
-from highlevel_planning.execution.es_sequential_execution import (
+from highlevel_planning_py.execution.es_sequential_execution import (
     execute_plan_sequentially,
 )
-from highlevel_planning.tools.util import get_combined_aabb
-from highlevel_planning.learning import logic_tools
-from highlevel_planning.learning.sequence_completion import complete_sequence
-from highlevel_planning.learning.precondition_discovery import precondition_discovery
-from highlevel_planning.learning.exploration_tools import get_items_closeby
+from highlevel_planning_py.tools.util import get_combined_aabb
+from highlevel_planning_py.learning import logic_tools
+from highlevel_planning_py.learning.sequence_completion import complete_sequence
+from highlevel_planning_py.learning.precondition_discovery import precondition_discovery
+from highlevel_planning_py.learning.exploration_tools import get_items_closeby
 
 
 class Explorer:

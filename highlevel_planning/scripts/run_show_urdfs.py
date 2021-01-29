@@ -1,4 +1,4 @@
-from highlevel_planning.sim.world import WorldPybullet
+from highlevel_planning_py.sim.world import WorldPybullet
 
 import pybullet as p
 

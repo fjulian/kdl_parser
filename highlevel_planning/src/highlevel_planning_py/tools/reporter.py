@@ -4,8 +4,8 @@ from collections import OrderedDict
 from datetime import datetime
 from copy import deepcopy
 
-from highlevel_planning.knowledge.knowledge_base import KnowledgeBase
-from highlevel_planning.tools.config import ConfigYaml
+from highlevel_planning_py.knowledge.knowledge_base import KnowledgeBase
+from highlevel_planning_py.tools.config import ConfigYaml
 
 
 class Reporter:

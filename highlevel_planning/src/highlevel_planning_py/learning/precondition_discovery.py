@@ -2,10 +2,10 @@ import numpy as np
 import pybullet as p
 from copy import deepcopy
 
-from highlevel_planning.execution.es_sequential_execution import (
+from highlevel_planning_py.execution.es_sequential_execution import (
     execute_plan_sequentially,
 )
-from highlevel_planning.learning.logic_tools import (
+from highlevel_planning_py.learning.logic_tools import (
     determine_relevant_predicates,
     measure_predicates,
 )

@@ -1,4 +1,4 @@
-from highlevel_planning.learning import logic_tools
+from highlevel_planning_py.learning import logic_tools
 from copy import deepcopy
 
 

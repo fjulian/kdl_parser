@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from typing import List
 
-from highlevel_planning.learning.logic_tools import (
+from highlevel_planning_py.learning.logic_tools import (
     determine_sequence_effects,
     determine_sequence_preconds,
     unparametrize_predicate,
