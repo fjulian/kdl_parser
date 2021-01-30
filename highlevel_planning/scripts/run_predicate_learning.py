@@ -1,7 +1,7 @@
 from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
 from highlevel_planning_py.tools.config import ConfigYaml
 from highlevel_planning_py.tools import run_util
-from highlevel_planning_py.learning.predicate_learning import (
+from highlevel_planning_py.predicate_learning.predicate_learning import (
     PredicateDataManager,
     PredicateLearner,
 )

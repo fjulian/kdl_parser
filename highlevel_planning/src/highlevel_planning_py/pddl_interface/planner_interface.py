@@ -1,6 +1,6 @@
 import subprocess
 import os
-from highlevel_planning_py.learning.logic_tools import parse_plan
+from highlevel_planning_py.exploration.logic_tools import parse_plan
 
 
 def pddl_planner(domain_file, problem_file, action_specs, base_dir, debug_print=False):

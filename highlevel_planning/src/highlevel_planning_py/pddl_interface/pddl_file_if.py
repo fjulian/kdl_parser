@@ -2,7 +2,7 @@ from datetime import datetime
 from os import path
 from copy import deepcopy
 
-from highlevel_planning_py.learning.logic_tools import invert_dict
+from highlevel_planning_py.exploration.logic_tools import invert_dict
 
 
 def add_type(type_dict, new_type, parent_type=None):

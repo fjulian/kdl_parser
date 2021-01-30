@@ -1,6 +1,6 @@
 from highlevel_planning_py.execution.es import ExecutionSystem
 from highlevel_planning_py.tools.util import SkillExecutionError
-from highlevel_planning_py.learning.logic_tools import parametrize_predicate
+from highlevel_planning_py.exploration.logic_tools import parametrize_predicate
 
 
 def execute_plan_sequentially(

@@ -9,10 +9,12 @@ from highlevel_planning_py.execution.es_sequential_execution import (
     execute_plan_sequentially,
 )
 from highlevel_planning_py.tools.util import get_combined_aabb
-from highlevel_planning_py.learning import logic_tools
-from highlevel_planning_py.learning.sequence_completion import complete_sequence
-from highlevel_planning_py.learning.precondition_discovery import precondition_discovery
-from highlevel_planning_py.learning.exploration_tools import get_items_closeby
+from highlevel_planning_py.exploration import logic_tools
+from highlevel_planning_py.exploration.sequence_completion import complete_sequence
+from highlevel_planning_py.exploration.precondition_discovery import (
+    precondition_discovery,
+)
+from highlevel_planning_py.exploration.exploration_tools import get_items_closeby
 
 
 class Explorer:

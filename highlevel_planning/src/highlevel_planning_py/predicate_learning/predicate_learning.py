@@ -27,9 +27,7 @@ class PredicateDataManager:
         os.makedirs(self.demo_dir, exist_ok=True)
         atexit.register(self._save_pred_data)
 
-    def capture_demonstration(
-        self, name: str, arguments: list, label: bool, scene: SceneBase
-    ):
+    def capture_demonstration(self, name: str, arguments: list, label: bool):
         time_now = datetime.now()
         time_string = time_now.strftime("%y%m%d-%H%M%S")
 
@@ -37,7 +35,7 @@ class PredicateDataManager:
         os.makedirs(this_demo_dir, exist_ok=False)
 
         # Save pickle
-        save_data = (name, arguments, label, scene.objects)
+        save_data = (name, arguments, label, self.scene.objects)
         with open(os.path.join(this_demo_dir, "demo.pkl"), "wb") as output:
             pickle.dump(save_data, output)
 

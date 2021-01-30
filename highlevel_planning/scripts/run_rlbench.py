@@ -13,8 +13,8 @@ from highlevel_planning.skills.placing import SkillPlacing
 from highlevel_planning.execution.es_sequential_execution import SequentialExecution
 
 # Learning
-from highlevel_planning.learning.explorer import Explorer
-from highlevel_planning.learning.pddl_extender import PDDLExtender
+from highlevel_planning.exploration.explorer import Explorer
+from highlevel_planning.exploration.pddl_extender import PDDLExtender
 
 # Other
 from highlevel_planning.tools.config import ConfigYaml

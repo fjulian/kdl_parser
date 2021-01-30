@@ -16,8 +16,8 @@ from highlevel_planning_py.execution.es_sequential_execution import (
 )
 
 # Learning
-from highlevel_planning_py.learning.explorer import Explorer
-from highlevel_planning_py.learning.pddl_extender import PDDLExtender
+from highlevel_planning_py.exploration.explorer import Explorer
+from highlevel_planning_py.exploration.pddl_extender import PDDLExtender
 
 # Other
 from highlevel_planning_py.tools.config import ConfigYaml

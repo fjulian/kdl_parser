@@ -3,11 +3,11 @@ from copy import deepcopy
 from os import path, makedirs
 from highlevel_planning_py.pddl_interface.pddl_file_if import PDDLFileInterface
 from highlevel_planning_py.pddl_interface import planner_interface
-from highlevel_planning_py.learning.logic_tools import (
+from highlevel_planning_py.exploration.logic_tools import (
     determine_relevant_predicates,
     measure_predicates,
 )
-from highlevel_planning_py.learning.exploration_tools import get_items_closeby
+from highlevel_planning_py.exploration.exploration_tools import get_items_closeby
 
 
 def check_path_exists(path_to_check):
