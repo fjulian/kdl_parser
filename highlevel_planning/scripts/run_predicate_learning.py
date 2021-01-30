@@ -20,16 +20,14 @@ class SimServer:
         self.running = False
 
         # Load existing simulation data if desired
-        savedir = os.path.join(BASEDIR, "data", "sim")
-        objects, robot_mdl = run_util.restore_pybullet_sim(savedir, args)
+        # savedir = os.path.join(BASEDIR, "data", "sim")
+        # objects, robot_mdl = run_util.restore_pybullet_sim(savedir, args)
 
         # Load config file
-        cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
+        # cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
 
         # Create world
-        scene, self.world = run_util.setup_pybullet_world(
-            ScenePlanning1, BASEDIR, savedir, objects, args
-        )
+        scene, self.world = run_util.setup_pybullet_world(ScenePlanning1, BASEDIR, args)
 
         # Predicate learning
         self.pdm = PredicateDataManager(BASEDIR, scene)

@@ -63,7 +63,7 @@ def restore_pybullet_sim(savedir, args):
     return objects, robot_mdl
 
 
-def setup_pybullet_world(scene_object, basedir, savedir, objects, args):
+def setup_pybullet_world(scene_object, basedir, args, savedir=None, objects=None):
     # Create world
     world = WorldPybullet(
         style=args.method,

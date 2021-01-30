@@ -40,7 +40,7 @@ def main():
 
     # Populate simulation
     robot, scene = run_util.setup_pybullet_world(
-        ScenePlanning1, BASEDIR, savedir, objects, args, cfg, robot_mdl
+        ScenePlanning1, BASEDIR, args, savedir, objects
     )
 
     # -----------------------------------

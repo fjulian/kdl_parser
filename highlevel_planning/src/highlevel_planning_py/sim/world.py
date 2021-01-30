@@ -62,15 +62,15 @@ class _Model:
             globalScaling=scale,
             physicsClientId=self._physics_client,
         )
-        self.name = p.getBodyInfo(self.uid)
+        self.name = p.getBodyInfo(self.uid, physicsClientId=self._physics_client)
 
-        for i in range(p.getNumJoints(self.uid)):
-            info = p.getJointInfo(self.uid, i)
+        for i in range(p.getNumJoints(self.uid, physicsClientId=self._physics_client)):
+            info = p.getJointInfo(self.uid, i, physicsClientId=self._physics_client)
             name = info[12] if type(info[12]) is str else info[12].decode("utf-8")
             self.link_name_to_index[name] = i
 
     def remove(self):
-        p.removeBody(self.uid)
+        p.removeBody(self.uid, physicsClientId=self._physics_client)
 
 
 class WorldPybullet(World):
@@ -80,25 +80,28 @@ class WorldPybullet(World):
             assert savedir is not None
 
         if style == "gui":
-            self.physics_client = p.connect(p.GUI)
+            self.client_id = p.connect(p.GUI)
         elif style == "shared":
-            self.physics_client = p.connect(p.SHARED_MEMORY)
+            self.client_id = p.connect(p.SHARED_MEMORY)
         elif style == "direct":
-            self.physics_client = p.connect(p.DIRECT)
+            self.client_id = p.connect(p.DIRECT)
         else:
             raise ValueError
 
         if load_objects:
-            p.resetSimulation(self.physics_client)
+            p.resetSimulation(self.client_id)
         else:
-            p.restoreState(fileName=os.path.join(savedir, "state.bullet"))
-            p.removeAllUserDebugItems()
+            p.restoreState(
+                fileName=os.path.join(savedir, "state.bullet"),
+                clientServerId=self.client_id,
+            )
+            p.removeAllUserDebugItems(physicsClientId=self.client_id)
 
-        p.setGravity(0, 0, -9.81, self.physics_client)
+        p.setGravity(0, 0, -9.81, self.client_id)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
     def add_model(self, path, position, orientation, scale=1.0):
-        model = _Model(self.physics_client)
+        model = _Model(self.client_id)
         model.load(path, position, orientation, scale)
         return model
 
@@ -107,9 +110,9 @@ class WorldPybullet(World):
 
     def draw_cross(self, point):
         if len(self.cross_uid) > 0:
-            p.removeUserDebugItem(self.cross_uid[0])
-            p.removeUserDebugItem(self.cross_uid[1])
-            p.removeUserDebugItem(self.cross_uid[2])
+            p.removeUserDebugItem(self.cross_uid[0], physicsClientId=self.client_id)
+            p.removeUserDebugItem(self.cross_uid[1], physicsClientId=self.client_id)
+            p.removeUserDebugItem(self.cross_uid[2], physicsClientId=self.client_id)
         start1 = point - np.array([0.1, 0.0, 0.0])
         end1 = point + np.array([0.1, 0.0, 0.0])
         start2 = point - np.array([0.0, 0.1, 0.0])
@@ -166,4 +169,4 @@ class WorldPybullet(World):
 
     def close(self):
         print("Closing world")
-        p.disconnect(self.physics_client)
+        p.disconnect(self.client_id)
