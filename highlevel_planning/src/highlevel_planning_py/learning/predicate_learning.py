@@ -5,6 +5,10 @@ import atexit
 import pybullet as p
 import numpy as np
 import rospy
+from datetime import datetime
+
+from highlevel_planning_py.sim.scene_base import SceneBase
+
 
 # To show dataframes:
 # pd.options.display.max_columns=20
@@ -18,34 +22,58 @@ class PredicateDataManager:
         self._data = dict()
         self._meta_data = dict()
         self.pred_dir = os.path.join(basedir, "data", "predicates")
+        self.demo_dir = os.path.join(self.pred_dir, "demonstrations")
         os.makedirs(self.pred_dir, exist_ok=True)
+        os.makedirs(self.demo_dir, exist_ok=True)
         atexit.register(self._save_pred_data)
 
-    def capture_demonstration(self, name: str, arguments: list, label: bool):
-        if not label:
-            return False
-        data_exists = True
-        if name not in self._data:
-            data_exists = self._load_pred_data(name)
-            if not data_exists:
-                self._meta_data[name] = dict.fromkeys(["num_args"])
-                self._data[name] = pd.DataFrame()
+    def capture_demonstration(
+        self, name: str, arguments: list, label: bool, scene: SceneBase
+    ):
+        time_now = datetime.now()
+        time_string = time_now.strftime("%y%m%d-%H%M%S")
 
-        all_features = self.take_snapshot(arguments)
+        this_demo_dir = os.path.join(self.demo_dir, name, time_string)
+        os.makedirs(this_demo_dir, exist_ok=False)
 
-        self._data[name] = pd.concat(
-            (self._data[name], all_features), axis=0, ignore_index=True
-        )
-        if data_exists:
-            assert self._meta_data[name]["num_args"] == len(arguments)
-            assert self._meta_data[name]["num_features"] == int(
-                len(self._data[name].columns) / len(arguments)
-            )
-        else:
-            self._meta_data[name]["num_args"] = len(arguments)
-            self._meta_data[name]["num_features"] = int(
-                len(self._data[name].columns) / len(arguments)
-            )
+        # Save pickle
+        save_data = (name, arguments, label, scene.objects)
+        with open(os.path.join(this_demo_dir, "demo.pkl"), "wb") as output:
+            pickle.dump(save_data, output)
+
+        # Save human readable data
+        save_string = f"Predicate name: {name}\nArguments: {arguments}\nHolds: {label}\nTime reported: {time_string}"
+        with open(os.path.join(this_demo_dir, "info.txt"), "w") as output:
+            pickle.dump(save_string, output)
+
+        # Save bullet state
+        p.saveBullet(os.path.join(this_demo_dir, "state.bullet"))
+
+        # # Old ------------------
+        # if not label:
+        #     return False
+        # data_exists = True
+        # if name not in self._data:
+        #     data_exists = self._load_pred_data(name)
+        #     if not data_exists:
+        #         self._meta_data[name] = dict.fromkeys(["num_args"])
+        #         self._data[name] = pd.DataFrame()
+        #
+        # all_features = self.take_snapshot(arguments)
+        #
+        # self._data[name] = pd.concat(
+        #     (self._data[name], all_features), axis=0, ignore_index=True
+        # )
+        # if data_exists:
+        #     assert self._meta_data[name]["num_args"] == len(arguments)
+        #     assert self._meta_data[name]["num_features"] == int(
+        #         len(self._data[name].columns) / len(arguments)
+        #     )
+        # else:
+        #     self._meta_data[name]["num_args"] = len(arguments)
+        #     self._meta_data[name]["num_features"] = int(
+        #         len(self._data[name].columns) / len(arguments)
+        #     )
 
         return True
 
