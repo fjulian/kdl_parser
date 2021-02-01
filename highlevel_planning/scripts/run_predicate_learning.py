@@ -1,9 +1,12 @@
 from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
 from highlevel_planning_py.tools.config import ConfigYaml
 from highlevel_planning_py.tools import run_util
-from highlevel_planning_py.predicate_learning.predicate_learning import (
-    PredicateDataManager,
-    PredicateLearner,
+from highlevel_planning_py.sim.world import WorldPybullet
+from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
+
+from highlevel_planning_py.predicate_learning.demonstrations import (
+    PredicateDemonstrationManager,
+#     PredicateLearner,
 )
 from highlevel_planning.srv import Snapshot, SnapshotResponse
 
@@ -30,8 +33,8 @@ class SimServer:
         scene, self.world = run_util.setup_pybullet_world(ScenePlanning1, BASEDIR, args)
 
         # Predicate learning
-        self.pdm = PredicateDataManager(BASEDIR, scene)
-        self.pl = PredicateLearner(self.pdm)
+        self.pdm = PredicateDemonstrationManager(BASEDIR, scene)
+        # self.pl = PredicateLearner(self.pdm)
 
         # GUI services
         self.run_srv = rospy.Service("sim_switch", SetBool, self._set_run_callback)

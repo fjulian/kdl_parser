@@ -169,7 +169,6 @@ class WorldPybullet(World):
         self.basic_settings()
 
     def close(self):
-        print("Closing world")
         pb.disconnect(physicsClientId=self.client_id)
 
     def restore_state(self, filepath):
