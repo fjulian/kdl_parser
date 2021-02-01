@@ -1,4 +1,4 @@
-import pybullet as p
+import pybullet as pb
 import os
 import pybullet_data
 import numpy as np
@@ -55,22 +55,22 @@ class _Model:
 
     def load(self, path, position, orientation, scale):
         model_path = os.path.expanduser(path)
-        self.uid = p.loadURDF(
+        self.uid = pb.loadURDF(
             model_path,
             position,
             orientation,
             globalScaling=scale,
             physicsClientId=self._physics_client,
         )
-        self.name = p.getBodyInfo(self.uid, physicsClientId=self._physics_client)
+        self.name = pb.getBodyInfo(self.uid, physicsClientId=self._physics_client)
 
-        for i in range(p.getNumJoints(self.uid, physicsClientId=self._physics_client)):
-            info = p.getJointInfo(self.uid, i, physicsClientId=self._physics_client)
+        for i in range(pb.getNumJoints(self.uid, physicsClientId=self._physics_client)):
+            info = pb.getJointInfo(self.uid, i, physicsClientId=self._physics_client)
             name = info[12] if type(info[12]) is str else info[12].decode("utf-8")
             self.link_name_to_index[name] = i
 
     def remove(self):
-        p.removeBody(self.uid, physicsClientId=self._physics_client)
+        pb.removeBody(self.uid, physicsClientId=self._physics_client)
 
 
 class WorldPybullet(World):
@@ -80,25 +80,26 @@ class WorldPybullet(World):
             assert savedir is not None
 
         if style == "gui":
-            self.client_id = p.connect(p.GUI)
+            self.client_id = pb.connect(pb.GUI)
         elif style == "shared":
-            self.client_id = p.connect(p.SHARED_MEMORY)
+            self.client_id = pb.connect(pb.SHARED_MEMORY)
         elif style == "direct":
-            self.client_id = p.connect(p.DIRECT)
+            self.client_id = pb.connect(pb.DIRECT)
         else:
             raise ValueError
 
         if load_objects:
-            p.resetSimulation(self.client_id)
+            pb.resetSimulation(physicsClientId=self.client_id)
         else:
-            p.restoreState(
-                fileName=os.path.join(savedir, "state.bullet"),
-                clientServerId=self.client_id,
-            )
-            p.removeAllUserDebugItems(physicsClientId=self.client_id)
+            self.restore_state(os.path.join(savedir, "state.bullet"))
+            pb.removeAllUserDebugItems(physicsClientId=self.client_id)
 
-        p.setGravity(0, 0, -9.81, self.client_id)
-        p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        self.basic_settings()
+
+    def basic_settings(self):
+        pb.setGravity(0, 0, -9.81, physicsClientId=self.client_id)
+        pb.setAdditionalSearchPath(pybullet_data.getDataPath())
+        pb.loadURDF("plane.urdf", physicsClientId=self.client_id)
 
     def add_model(self, path, position, orientation, scale=1.0):
         model = _Model(self.client_id)
@@ -110,9 +111,9 @@ class WorldPybullet(World):
 
     def draw_cross(self, point):
         if len(self.cross_uid) > 0:
-            p.removeUserDebugItem(self.cross_uid[0], physicsClientId=self.client_id)
-            p.removeUserDebugItem(self.cross_uid[1], physicsClientId=self.client_id)
-            p.removeUserDebugItem(self.cross_uid[2], physicsClientId=self.client_id)
+            pb.removeUserDebugItem(self.cross_uid[0], physicsClientId=self.client_id)
+            pb.removeUserDebugItem(self.cross_uid[1], physicsClientId=self.client_id)
+            pb.removeUserDebugItem(self.cross_uid[2], physicsClientId=self.client_id)
         start1 = point - np.array([0.1, 0.0, 0.0])
         end1 = point + np.array([0.1, 0.0, 0.0])
         start2 = point - np.array([0.0, 0.1, 0.0])
@@ -122,13 +123,13 @@ class WorldPybullet(World):
         color = np.array([255, 0, 0]) / 255.0
         width = 1.0
         lifetime = 0
-        uid1 = p.addUserDebugLine(
+        uid1 = pb.addUserDebugLine(
             start1.tolist(), end1, color.tolist(), width, lifetime
         )
-        uid2 = p.addUserDebugLine(
+        uid2 = pb.addUserDebugLine(
             start2.tolist(), end2, color.tolist(), width, lifetime
         )
-        uid3 = p.addUserDebugLine(
+        uid3 = pb.addUserDebugLine(
             start3.tolist(), end3, color.tolist(), width, lifetime
         )
         self.cross_uid = (uid1, uid2, uid3)
@@ -140,7 +141,7 @@ class WorldPybullet(World):
         width = 4.5
         lifetime = 0
         if replace_id is not None:
-            arrow_id = p.addUserDebugLine(
+            arrow_id = pb.addUserDebugLine(
                 point.tolist(),
                 tip.tolist(),
                 color,
@@ -149,24 +150,27 @@ class WorldPybullet(World):
                 replaceItemUniqueId=replace_id,
             )
         else:
-            arrow_id = p.addUserDebugLine(
+            arrow_id = pb.addUserDebugLine(
                 point.tolist(), tip.tolist(), color, width, lifetime
             )
         return arrow_id
 
     def step_one(self):
         for frc in self.forces:
-            p.applyExternalForce(frc[0], frc[1], frc[2], frc[3], frc[4])
+            pb.applyExternalForce(frc[0], frc[1], frc[2], frc[3], frc[4])
         if self.velocity_setter is not None:
             self.velocity_setter()
-        p.stepSimulation()
+        pb.stepSimulation(physicsClientId=self.client_id)
         if self.collision_checker is not None:
             self.collision_checker()
 
-    @staticmethod
-    def add_plane():
-        return p.loadURDF("plane.urdf")
+    def reset(self):
+        pb.resetSimulation(physicsClientId=self.client_id)
+        self.basic_settings()
 
     def close(self):
         print("Closing world")
-        p.disconnect(self.client_id)
+        pb.disconnect(physicsClientId=self.client_id)
+
+    def restore_state(self, filepath):
+        pb.restoreState(fileName=filepath, clientServerId=self.client_id)

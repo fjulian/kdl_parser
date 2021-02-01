@@ -105,6 +105,8 @@ class ObjectInfo:
         model_=None,
         nav_angle_=None,
         nav_min_dist_=None,
+        friction_setting_=None,
+        joint_setting_=None,
     ):
         if grasp_links_ is None:
             grasp_links_ = list()
@@ -125,3 +127,5 @@ class ObjectInfo:
         self.nav_angle = nav_angle_
         self.nav_min_dist = nav_min_dist_
         self.grasp_links = grasp_links_
+        self.friction_setting = friction_setting_
+        self.joint_setting = joint_setting_

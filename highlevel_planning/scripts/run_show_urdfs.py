@@ -5,19 +5,18 @@ import pybullet as p
 import os
 from time import time
 
+BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 def main():
     # Create world
     world = WorldPybullet(style="gui", sleep=True)
-    world.add_plane()
-
-    print(os.getcwd())
 
     # ======== Cupboard ====================================
 
     tic = time()
     cupboard_mdl = world.add_model(
-        os.path.join(os.getcwd(), "data/models/cupboard_drawers/cupboard_drawers.urdf"),
+        os.path.join(BASEDIR, "data/models/cupboard_drawers/cupboard_drawers.urdf"),
         position=[0.0, 0.0, 0.0],
         orientation=[0.0, 0.0, 0.0, 1.0],
     )
