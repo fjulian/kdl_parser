@@ -107,6 +107,7 @@ class ObjectInfo:
         nav_min_dist_=None,
         friction_setting_=None,
         joint_setting_=None,
+        urdf_name_=None,
     ):
         if grasp_links_ is None:
             grasp_links_ = list()
@@ -118,6 +119,7 @@ class ObjectInfo:
         assert type(grasp_orient_) is dict
         assert type(grasp_links_) is list
         self.urdf_path = urdf_path_
+        self.urdf_name = urdf_name_ if urdf_name_ is not None else urdf_path_
         self.init_pos = init_pos_
         self.init_orient = init_orient_
         self.scale = init_scale_
@@ -129,3 +131,18 @@ class ObjectInfo:
         self.grasp_links = grasp_links_
         self.friction_setting = friction_setting_
         self.joint_setting = joint_setting_
+
+    def __eq__(self, other):
+        res = True
+        res &= self.urdf_name == other.urdf_name
+        # res &= self.init_pos == other.init_pos
+        # res &= self.init_orient == other.init_orient
+        res &= self.scale == other.scale
+        # res &= self.grasp_pos == other.grasp_pos
+        # res &= self.grasp_orient == other.grasp_orient
+        # res &= self.nav_angle == other.nav_angle
+        # res &= self.nav_min_dist == other.nav_min_dist
+        # res &= self.grasp_links == other.grasp_links
+        # res &= self.friction_setting == other.friction_setting
+        # res &= self.joint_setting == other.joint_setting
+        return res

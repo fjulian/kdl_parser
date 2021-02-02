@@ -15,10 +15,10 @@ class SceneBase:
     def set_objects(self, objects):
         self.objects = deepcopy(objects)
 
-    def add_objects(self):
-        print("---------------------------")
+    def add_objects(self, force_load=False):
+        # print("---------------------------")
         for key, obj in self.objects.items():
-            if self.objects[key].model is None:
+            if self.objects[key].model is None or force_load:
                 self.objects[key].model = self._world.add_model(
                     obj.urdf_path, obj.init_pos, obj.init_orient, scale=obj.scale
                 )
@@ -39,5 +39,5 @@ class SceneBase:
                         force=spec["force"],
                         physicsClientId=self._world.client_id,
                     )
-            print("Added object " + key + ". ID: " + str(obj.model.uid))
-        print("---------------------------")
+            # print("Added object " + key + ". ID: " + str(obj.model.uid))
+        # print("---------------------------")

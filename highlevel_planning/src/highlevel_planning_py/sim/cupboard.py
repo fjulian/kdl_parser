@@ -32,6 +32,7 @@ def get_cupboard_info(base_dir, pos, orient):
 
     grasp_orient = R.from_euler("xzy", [180, 0, -45], degrees=True)
     return ObjectInfo(
+        urdf_name_="data/models/cupboard_drawers/cupboard_drawers.urdf",
         urdf_path_=urdf,
         init_pos_=np.array(pos),
         init_orient_=np.array(orient),

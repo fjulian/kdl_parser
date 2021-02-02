@@ -172,4 +172,4 @@ class WorldPybullet(World):
         pb.disconnect(physicsClientId=self.client_id)
 
     def restore_state(self, filepath):
-        pb.restoreState(fileName=filepath, clientServerId=self.client_id)
+        pb.restoreState(fileName=filepath, physicsClientId=self.client_id)

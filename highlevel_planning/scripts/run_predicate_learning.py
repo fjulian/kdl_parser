@@ -6,8 +6,8 @@ from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
 
 from highlevel_planning_py.predicate_learning.demonstrations import (
     PredicateDemonstrationManager,
-#     PredicateLearner,
 )
+from highlevel_planning_py.predicate_learning.features import PredicateFeatureManager
 from highlevel_planning.srv import Snapshot, SnapshotResponse
 
 import os
@@ -34,6 +34,7 @@ class SimServer:
 
         # Predicate learning
         self.pdm = PredicateDemonstrationManager(BASEDIR, scene)
+        self.pfm = PredicateFeatureManager(BASEDIR)
         # self.pl = PredicateLearner(self.pdm)
 
         # GUI services
@@ -59,17 +60,21 @@ class SimServer:
             success = self.pdm.capture_demonstration(
                 req.pred_name, pred_args, req.label
             )
+            rospy.loginfo(f"Captured demonstration: {success}")
         elif cmd == 1:
-            success = self.pl.build_rules(req.pred_name, relative_arg=req.relative_arg)
+            success = self.pfm.extract_features(req.pred_name)
+            rospy.loginfo(f"Extracted features: {success}")
         elif cmd == 2:
+            success = self.pl.build_rules(req.pred_name, relative_arg=req.relative_arg)
+        elif cmd == 3:
             success = self.pl.classify(
                 req.pred_name, pred_args, relative_arg=req.relative_arg
             )
-        elif cmd == 3:
+        elif cmd == 4:
             success = self.pl.inquire(
                 req.pred_name, pred_args, relative_arg=req.relative_arg
             )
-        elif cmd == 4:
+        elif cmd == 5:
             success = self.pl.process_inquire_result(
                 req.label, req.pred_name, pred_args
             )

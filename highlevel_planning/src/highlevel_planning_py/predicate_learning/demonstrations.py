@@ -39,7 +39,7 @@ class PredicateDemonstrationManager:
         # Save human readable data
         save_string = f"Predicate name: {name}\nArguments: {arguments}\nHolds: {label}\nTime reported: {time_string}"
         with open(os.path.join(this_demo_dir, "info.txt"), "w") as output:
-            pickle.dump(save_string, output)
+            output.write(save_string)
 
         # Save bullet state
         p.saveBullet(os.path.join(this_demo_dir, "state.bullet"))

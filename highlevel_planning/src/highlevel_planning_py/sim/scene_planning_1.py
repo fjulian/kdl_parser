@@ -12,6 +12,7 @@ class ScenePlanning1(SceneBase):
 
         if restored_objects is None:
             self.objects["table"] = ObjectInfo(
+                urdf_name_="data/models/table/table.urdf",
                 urdf_path_=os.path.join(base_dir, "data/models/table/table.urdf"),
                 init_pos_=np.array([3.0, 0.0, 0.0]),
                 init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
@@ -51,6 +52,7 @@ class ScenePlanning1(SceneBase):
                 },
             )
             self.objects["container1"] = ObjectInfo(
+                urdf_name_="data/models/container/container_no_lid.urdf",
                 urdf_path_=os.path.join(
                     base_dir, "data/models/container/container_no_lid.urdf"
                 ),
@@ -58,6 +60,7 @@ class ScenePlanning1(SceneBase):
                 init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
             )
             self.objects["lid1"] = ObjectInfo(
+                urdf_name_="data/models/container/lid.urdf",
                 urdf_path_=os.path.join(base_dir, "data/models/container/lid.urdf"),
                 init_pos_=np.array([3.5, -0.25, 0.775]),
                 init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
@@ -69,6 +72,7 @@ class ScenePlanning1(SceneBase):
                 friction_setting_=[{"link_name": "handle", "lateral_friction": 1.0}],
             )
             self.objects["container2"] = ObjectInfo(
+                urdf_name_="data/models/container/container_sliding_lid.urdf",
                 urdf_path_=os.path.join(
                     base_dir, "data/models/container/container_sliding_lid.urdf"
                 ),

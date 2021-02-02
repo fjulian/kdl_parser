@@ -6,6 +6,7 @@ venv
 highlevel_planning/knowledge/chimera
 highlevel_planning/knowledge/chimera-test
 highlevel_planning/data/reports
+highlevel_planning/data/predicates
 *.egg-info
 build/
 dist/

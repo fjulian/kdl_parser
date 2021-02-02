@@ -63,32 +63,35 @@ class Application:
         ttk.Button(
             mainframe, text="+ Demonstration", command=lambda: self._snapshot(0, True)
         ).grid(column=1, row=7)
-        # ttk.Button(
-        #     mainframe, text="Snapshot -", command=lambda: self._snapshot(0, False)
-        # ).grid(column=2, row=6)
         ttk.Button(
-            mainframe, text="Build rules", command=lambda: self._snapshot(1)
+            mainframe, text="- Demonstration", command=lambda: self._snapshot(0, False)
         ).grid(column=2, row=7)
-        ttk.Button(mainframe, text="Classify", command=lambda: self._snapshot(2)).grid(
-            column=3, row=7
+        ttk.Button(
+            mainframe, text="Extract features", command=lambda: self._snapshot(1)
+        ).grid(column=1, row=8)
+        ttk.Button(
+            mainframe, text="Build rules", command=lambda: self._snapshot(2)
+        ).grid(column=2, row=8)
+        ttk.Button(mainframe, text="Classify", command=lambda: self._snapshot(3)).grid(
+            column=3, row=8
         )
-        ttk.Button(mainframe, text="Inquire", command=lambda: self._snapshot(3)).grid(
-            column=1, row=8
+        ttk.Button(mainframe, text="Inquire", command=lambda: self._snapshot(4)).grid(
+            column=1, row=9
         )
         self.confirm_button = ttk.Button(
             mainframe,
             text="Confirm",
             state=tk.DISABLED,
-            command=lambda: self._snapshot(4, True),
+            command=lambda: self._snapshot(5, True),
         )
-        self.confirm_button.grid(column=2, row=8)
+        self.confirm_button.grid(column=2, row=9)
         self.deny_button = ttk.Button(
             mainframe,
             text="Deny",
             state=tk.DISABLED,
-            command=lambda: self._snapshot(4, False),
+            command=lambda: self._snapshot(5, False),
         )
-        self.deny_button.grid(column=3, row=8)
+        self.deny_button.grid(column=3, row=9)
 
         for child in mainframe.winfo_children():
             child.grid_configure(padx=5, pady=5)
@@ -113,7 +116,7 @@ class Application:
         self.root.bind("<Return>", self._run_sim)
 
     def _snapshot(self, cmd, label=True):
-        if cmd == 3:
+        if cmd == 4:
             if self.confirm_button["state"] == "normal":
                 rospy.logwarn(
                     "Previous inquiry still open, please reply to that one first."
@@ -122,7 +125,7 @@ class Application:
             else:
                 self.confirm_button["state"] = "normal"
                 self.deny_button["state"] = "normal"
-        elif cmd == 4:
+        elif cmd == 5:
             self.confirm_button["state"] = "disabled"
             self.deny_button["state"] = "disabled"
 
