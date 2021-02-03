@@ -12,15 +12,12 @@ from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
 class PredicateFeatureManager:
     def __init__(self, basedir):
         self.basedir = basedir
-        self.pred_dir = os.path.join(basedir, "data", "predicates")
-        self.demo_dir = os.path.join(self.pred_dir, "demonstrations")
-        self.feature_dir = os.path.join(self.pred_dir, "features")
+        pred_dir = os.path.join(basedir, "data", "predicates")
+        self.demo_dir = os.path.join(pred_dir, "demonstrations")
+        self.feature_dir = os.path.join(pred_dir, "features")
         os.makedirs(self.feature_dir, exist_ok=True)
 
-        self.feature_extractors = {
-            "com": self._extract_coms,
-            "aabb": self._extract_aabbs,
-        }
+        self.feature_extractors = {"com": self._extract_com, "aabb": self._extract_aabb}
 
         self.world = None
         self.scene = None
@@ -30,9 +27,10 @@ class PredicateFeatureManager:
         filename = os.path.join(self.feature_dir, f"{name}.pkl")
         if os.path.isfile(filename):
             with open(filename, "rb") as f:
-                data = pickle.load(f)
+                data, meta_data = pickle.load(f)
         else:
-            data = dict()
+            data = pd.DataFrame()
+            meta_data = dict()
 
         # Start simulator
         self.world = WorldPybullet("direct", sleep=False)
@@ -43,6 +41,10 @@ class PredicateFeatureManager:
             if not os.path.isdir(os.path.join(this_demo_dir, demo_id)):
                 continue
 
+            # Skip if this was already processed
+            if demo_id in data.index:
+                continue
+
             # Clear caches
             self._extract_com.cache_clear()
             self._extract_aabb.cache_clear()
@@ -50,8 +52,15 @@ class PredicateFeatureManager:
             # Load demo meta data
             meta_file_name = os.path.join(this_demo_dir, demo_id, "demo.pkl")
             with open(meta_file_name, "rb") as f:
-                meta_data = pickle.load(f)
-            _, arguments, label, objects = meta_data
+                demo_meta_data = pickle.load(f)
+            _, arguments, label, objects = demo_meta_data
+
+            if len(meta_data) == 0:
+                meta_data = dict.fromkeys(list(range(len(arguments))))
+            else:
+                assert len(meta_data) == len(arguments)
+
+            new_row = pd.DataFrame({"label": label}, index=[demo_id])
 
             # Populate simulation
             if objects != self.scene.objects:
@@ -61,20 +70,27 @@ class PredicateFeatureManager:
             simstate_file_name = os.path.join(this_demo_dir, demo_id, "state.bullet")
             self.world.restore_state(simstate_file_name)
 
-            for feature_name in self.feature_extractors:
-                if feature_name not in data:
-                    data[feature_name] = pd.DataFrame(columns=["label"])
-                if demo_id not in data[feature_name].index:
-                    new_data = self.feature_extractors[feature_name](arguments)
-                    new_data["label"] = label
-                    new_line = pd.DataFrame([new_data], index=[demo_id])
-                    data[feature_name] = data[feature_name].append(
-                        new_line, verify_integrity=True
+            for arg_idx, arg in enumerate(arguments):
+                for feature_name in self.feature_extractors:
+                    new_data, new_labels = self.feature_extractors[feature_name](arg)
+                    new_data = np.squeeze(new_data.reshape((-1, 1)))
+                    # new_data = pd.DataFrame(
+                    #     [{f"arg{arg_idx}_{feature_name}": new_data}], index=[demo_id]
+                    # )
+                    new_data = pd.DataFrame(
+                        [new_data],
+                        columns=[
+                            f"arg{arg_idx}_{feature_name}_{sfx}" for sfx in new_labels
+                        ],
+                        index=[demo_id],
                     )
+                    new_row = new_row.join(new_data)
+
+            data = data.append(new_row, verify_integrity=True)
 
         # Save data
         with open(filename, "wb") as f:
-            pickle.dump(data, f)
+            pickle.dump((data, meta_data), f)
 
         # Clean up
         self.world.close()
@@ -96,9 +112,10 @@ class PredicateFeatureManager:
 
     @lru_cache(maxsize=None)
     def _extract_com(self, obj_name):
-        aabb = self._extract_aabb(obj_name)
+        aabb, _ = self._extract_aabb(obj_name)
         com = np.mean(aabb, 0)
-        return com
+        labels = ["x", "y", "z"]
+        return com, labels
 
     def _extract_aabbs(self, arguments):
         data = dict()
@@ -124,4 +141,5 @@ class PredicateFeatureManager:
             )
             aabb[0, :] = np.minimum(aabb[0, :], tmp[0, :])
             aabb[1, :] = np.maximum(aabb[1, :], tmp[1, :])
-        return aabb
+        labels = ["x_min", "y_min", "z_min", "x_max", "y_max", "z_max"]
+        return aabb, labels
