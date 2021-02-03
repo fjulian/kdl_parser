@@ -29,8 +29,9 @@ class PredicateFeatureManager:
             with open(filename, "rb") as f:
                 data, meta_data = pickle.load(f)
         else:
-            data = pd.DataFrame()
+            data = dict()
             meta_data = dict()
+            meta_data["demos_processed"] = set()
 
         # Start simulator
         self.world = WorldPybullet("direct", sleep=False)
@@ -42,8 +43,9 @@ class PredicateFeatureManager:
                 continue
 
             # Skip if this was already processed
-            if demo_id in data.index:
+            if demo_id in meta_data["demos_processed"]:
                 continue
+            meta_data["demos_processed"].add(demo_id)
 
             # Clear caches
             self._extract_com.cache_clear()
@@ -55,13 +57,6 @@ class PredicateFeatureManager:
                 demo_meta_data = pickle.load(f)
             _, arguments, label, objects = demo_meta_data
 
-            if len(meta_data) == 0:
-                meta_data = dict.fromkeys(list(range(len(arguments))))
-            else:
-                assert len(meta_data) == len(arguments)
-
-            new_row = pd.DataFrame({"label": label}, index=[demo_id])
-
             # Populate simulation
             if objects != self.scene.objects:
                 self.world.reset()
@@ -71,22 +66,28 @@ class PredicateFeatureManager:
             self.world.restore_state(simstate_file_name)
 
             for arg_idx, arg in enumerate(arguments):
+                if f"arg{arg_idx}" not in data:
+                    data[f"arg{arg_idx}"] = pd.DataFrame()
+
+                new_row = pd.DataFrame({"label": label}, index=[demo_id])
+
                 for feature_name in self.feature_extractors:
                     new_data, new_labels = self.feature_extractors[feature_name](arg)
-                    new_data = np.squeeze(new_data.reshape((-1, 1)))
-                    # new_data = pd.DataFrame(
-                    #     [{f"arg{arg_idx}_{feature_name}": new_data}], index=[demo_id]
-                    # )
-                    new_data = pd.DataFrame(
-                        [new_data],
-                        columns=[
-                            f"arg{arg_idx}_{feature_name}_{sfx}" for sfx in new_labels
-                        ],
-                        index=[demo_id],
-                    )
-                    new_row = new_row.join(new_data)
+                    if len(new_data) > 0:
+                        new_data = np.squeeze(new_data.reshape((1, -1)))
+                        new_data = pd.DataFrame(
+                            [new_data],
+                            columns=[
+                                f"arg{arg_idx}_{feature_name}_{sfx}"
+                                for sfx in new_labels
+                            ],
+                            index=[demo_id],
+                        )
+                        new_row = new_row.join(new_data)
 
-            data = data.append(new_row, verify_integrity=True)
+                data[f"arg{arg_idx}"] = data[f"arg{arg_idx}"].append(
+                    new_row, verify_integrity=True
+                )
 
         # Save data
         with open(filename, "wb") as f:
