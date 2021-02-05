@@ -22,13 +22,15 @@ class RuleData:
 
 
 class RuleDataManager:
-    def __init__(self, basedir):
+    def __init__(self, basedir, feature_manager):
         self.data = dict()
 
         pred_dir = os.path.join(basedir, "data", "predicates")
         self.feature_dir = os.path.join(pred_dir, "features")
         self.rule_dir = os.path.join(pred_dir, "rules")
         os.makedirs(self.rule_dir, exist_ok=True)
+
+        self.pfm = feature_manager
 
         self.open_inquiry = None
 
@@ -40,6 +42,8 @@ class RuleDataManager:
 
         num_entities = len(feature_data)
         num_demos = len(feature_meta_data["demos_processed"])
+        num_demo_counts = feature_data["arg0"].label.value_counts()
+        num_positive_demos = num_demo_counts[True]
         skip_cols = 1
         num_values = np.zeros((num_entities,), dtype=int)
         num_features = np.zeros((num_entities,), dtype=int)
@@ -48,10 +52,14 @@ class RuleDataManager:
             assert num_values[arg_idx] % 3 == 0
             num_features[arg_idx] = num_values[arg_idx] / 3
 
+        positive_indices = np.where(feature_data["arg0"].label)[0]
+
         # Make value comparisons
         total_num_values = int(np.sum(num_values))
-        comparisons = np.empty((total_num_values, total_num_values, num_demos))
-        comparisons[:] = np.nan
+        comparisons_positive = np.empty(
+            (total_num_values, total_num_values, num_positive_demos)
+        )
+        comparisons_positive[:] = np.nan
         for first_entity_idx in range(num_entities - 1):
             for first_feature_idx in range(num_features[first_entity_idx]):
                 for second_entity_idx in range(first_entity_idx + 1, num_entities):
@@ -67,16 +75,94 @@ class RuleDataManager:
                                 + second_feature_idx * 3
                                 + i
                             )
-                            comparisons[row_idx, col_idx, :] = (
+                            comparisons_positive[row_idx, col_idx, :] = (
                                 feature_data[f"arg{first_entity_idx}"].iloc[
-                                    :, skip_cols + first_feature_idx * 3 + i
+                                    positive_indices,
+                                    skip_cols + first_feature_idx * 3 + i,
                                 ]
                                 > feature_data[f"arg{second_entity_idx}"].iloc[
-                                    :, skip_cols + second_feature_idx * 3 + i
+                                    positive_indices,
+                                    skip_cols + second_feature_idx * 3 + i,
                                 ]
                             )
 
-        print("hey")
+        accumulated = np.sum(comparisons_positive, axis=2)
+        # TODO Figure out how to deal with nan
+
+        # Extract rule candidates
+        rule_candidates = list()
+        lower = np.where(accumulated == 0)
+        for candidate_idx in range(len(lower[0])):
+            first_idx = lower[0][candidate_idx]
+            second_idx = lower[1][candidate_idx]
+            rule_candidates.append(
+                self._construct_candidate(
+                    second_idx, first_idx, num_values, skip_cols, feature_data
+                )
+            )
+        higher = np.where(accumulated == comparisons_positive.shape[2])
+        for candidate_idx in range(len(higher[0])):
+            first_idx = higher[0][candidate_idx]
+            second_idx = higher[1][candidate_idx]
+            rule_candidates.append(
+                self._construct_candidate(
+                    first_idx, second_idx, num_values, skip_cols, feature_data
+                )
+            )
+
+        rule_file = os.path.join(self.rule_dir, f"{pred_name}.pkl")
+        with open(rule_file, "wb") as f:
+            pickle.dump(rule_candidates, f)
+        return True
+
+    def classify(self, pred_name, arguments):
+        rule_file = os.path.join(self.rule_dir, f"{pred_name}.pkl")
+        with open(rule_file, "rb") as f:
+            rule_candidates = pickle.load(f)
+
+        features = self.pfm.extract_outer_features(arguments)
+
+        res = True
+        for rule in rule_candidates:
+            larger_value = features[f"arg{rule['larger_idx'][0]}"].iloc[
+                0, rule["larger_idx"][1]
+            ]
+            smaller_value = features[f"arg{rule['smaller_idx'][0]}"].iloc[
+                0, rule["smaller_idx"][1]
+            ]
+            this_res = larger_value > smaller_value
+            res &= this_res
+        rospy.loginfo(f"Classification result: {res}")
+        return res
+
+    def _construct_candidate(
+        self, larger_idx, smaller_idx, num_values, skip_cols, feature_data
+    ):
+        candidate = dict()
+        larger_arg_idx, larger_feature_idx = self._compute_arg_idx(
+            larger_idx, num_values
+        )
+        smaller_arg_idx, smaller_feature_idx = self._compute_arg_idx(
+            smaller_idx, num_values
+        )
+        candidate["larger_idx"] = (larger_arg_idx, larger_feature_idx)
+        candidate["smaller_idx"] = (smaller_arg_idx, smaller_feature_idx)
+        candidate["larger_name"] = feature_data[f"arg{larger_arg_idx}"].columns[
+            larger_feature_idx + skip_cols
+        ]
+        candidate["smaller_name"] = feature_data[f"arg{smaller_arg_idx}"].columns[
+            smaller_feature_idx + skip_cols
+        ]
+        return candidate
+
+    def _compute_arg_idx(self, full_idx, num_values):
+        arg_idx = None
+        for i in range(len(num_values)):
+            if np.sum(num_values[: i + 1]) > full_idx:
+                arg_idx = i
+                break
+        feature_idx = full_idx - np.sum(num_values[:arg_idx])
+        return arg_idx, feature_idx
 
     # def build_rules(self, pred_name: str, relative_arg: int = 0):
     #     self._prepare_data(pred_name, relative_arg)

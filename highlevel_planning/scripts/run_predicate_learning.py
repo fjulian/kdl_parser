@@ -33,8 +33,8 @@ class SimServer:
 
         # Predicate learning
         self.pdm = PredicateDemonstrationManager(BASEDIR, scene)
-        self.pfm = PredicateFeatureManager(BASEDIR)
-        self.rdm = RuleDataManager(BASEDIR)
+        self.pfm = PredicateFeatureManager(BASEDIR, self.world, scene)
+        self.rdm = RuleDataManager(BASEDIR, self.pfm)
         # self.pl = PredicateLearner(self.pdm)
 
         # GUI services
@@ -62,14 +62,12 @@ class SimServer:
             )
             rospy.loginfo(f"Captured demonstration: {success}")
         elif cmd == 1:
-            success = self.pfm.extract_features(req.pred_name)
+            success = self.pfm.extract_demo_features(req.pred_name)
             rospy.loginfo(f"Extracted features: {success}")
         elif cmd == 2:
             success = self.rdm.build_rules(req.pred_name)
         elif cmd == 3:
-            success = self.pl.classify(
-                req.pred_name, pred_args, relative_arg=req.relative_arg
-            )
+            success = self.rdm.classify(req.pred_name, pred_args)
         elif cmd == 4:
             success = self.pl.inquire(
                 req.pred_name, pred_args, relative_arg=req.relative_arg

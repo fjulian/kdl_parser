@@ -10,7 +10,7 @@ from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
 
 
 class PredicateFeatureManager:
-    def __init__(self, basedir):
+    def __init__(self, basedir, outer_world, outer_scene):
         self.basedir = basedir
         pred_dir = os.path.join(basedir, "data", "predicates")
         self.demo_dir = os.path.join(pred_dir, "demonstrations")
@@ -19,10 +19,17 @@ class PredicateFeatureManager:
 
         self.feature_extractors = {"com": self._extract_com, "aabb": self._extract_aabb}
 
+        self.outer_world = outer_world
+        self.outer_scene = outer_scene
+
         self.world = None
         self.scene = None
 
-    def extract_features(self, name: str):
+    def extract_demo_features(self, name: str):
+        """
+        Extracts features for all demonstrations that were previously saved to disk.
+        """
+
         # Load existing data
         filename = os.path.join(self.feature_dir, f"{name}.pkl")
         if os.path.isfile(filename):
@@ -99,6 +106,33 @@ class PredicateFeatureManager:
         self.scene = None
 
         return True
+
+    def extract_outer_features(self, arguments):
+        self.world = self.outer_world
+        self.scene = self.outer_scene
+
+        data = dict()
+        for arg_idx, arg in enumerate(arguments):
+            data[f"arg{arg_idx}"] = pd.DataFrame()
+
+            for feature_name in self.feature_extractors:
+                new_data, new_labels = self.feature_extractors[feature_name](arg)
+                if len(new_data) > 0:
+                    new_data = np.squeeze(new_data.reshape((1, -1)))
+                    new_data = pd.DataFrame(
+                        [new_data],
+                        columns=[
+                            f"arg{arg_idx}_{feature_name}_{sfx}" for sfx in new_labels
+                        ],
+                        index=[0],
+                    )
+                    data[f"arg{arg_idx}"] = data[f"arg{arg_idx}"].join(
+                        new_data, how="outer"
+                    )
+
+        self.world = None
+        self.scene = None
+        return data
 
     def _extract_coms(self, arguments):
         data = dict()
