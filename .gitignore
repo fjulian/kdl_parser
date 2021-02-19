@@ -10,6 +10,5 @@ highlevel_planning/data/predicates
 *.egg-info
 build/
 dist/
-.idea/
 cmake-build-debug/
 .ipynb_checkpoints
