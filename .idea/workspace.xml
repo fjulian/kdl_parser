@@ -5,7 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="53541a6b-36a7-47db-8f3e-20297ad9f4b5" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/highlevel_planning/notebooks/inspect_predicate_data.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/highlevel_planning/notebooks/inspect_predicate_data.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/highlevel_planning/scripts/run_predicate_learning.py" beforeDir="false" afterPath="$PROJECT_DIR$/highlevel_planning/scripts/run_predicate_learning.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/highlevel_planning/scripts/run_show_urdfs.py" beforeDir="false" afterPath="$PROJECT_DIR$/highlevel_planning/scripts/run_show_urdfs.py" afterDir="false" />
@@ -236,7 +235,7 @@
       <workItem from="1613052488971" duration="631000" />
       <workItem from="1613053234077" duration="3000" />
       <workItem from="1613469692835" duration="8575000" />
-      <workItem from="1613725172964" duration="717000" />
+      <workItem from="1613725172964" duration="1091000" />
     </task>
     <servers />
   </component>

@@ -6,6 +6,11 @@
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/.ipynb_checkpoints" />
       <excludeFolder url="file://$MODULE_DIR$/submodules" />
+      <excludeFolder url="file://$MODULE_DIR$/highlevel_planning/data/predicates" />
+      <excludeFolder url="file://$MODULE_DIR$/highlevel_planning/data/reports" />
+      <excludeFolder url="file://$MODULE_DIR$/highlevel_planning/data/sim" />
+      <excludeFolder url="file://$MODULE_DIR$/highlevel_planning/knowledge/chimera" />
+      <excludeFolder url="file://$MODULE_DIR$/highlevel_planning/knowledge" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.8 (asl_highlevel_planning)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
