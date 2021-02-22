@@ -3,6 +3,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 xacro "$DIR"/cupboard_drawers/cupboard_drawers.urdf.xacro > "$DIR"/cupboard_drawers/cupboard_drawers.urdf
+xacro "$DIR"/cupboard2/cupboard2.urdf.xacro > "$DIR"/cupboard2/cupboard2.urdf
 xacro "$DIR"/container/container_no_lid.urdf.xacro > "$DIR"/container/container_no_lid.urdf
 xacro "$DIR"/container/lid.urdf.xacro > "$DIR"/container/lid.urdf
 xacro "$DIR"/container/container_sliding_lid.urdf.xacro > "$DIR"/container/container_sliding_lid.urdf

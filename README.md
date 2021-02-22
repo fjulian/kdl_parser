@@ -1,28 +1,25 @@
 
-## Todo
-
-- High priority
-  - [ ] Use python logger instead of print statements.
-- Low priority
-  - [ ] Write tests for robot arm control code.
-- Done (new on top)
-  - [x] Define predicates
-  - [x] Define scene for symbol learning (table, cup, box, cupboard with drawers, ...)
-  - [x] Implement grasping skill
-  - [x] Try closing the whole loop with a trivial example
-  - [x] Instances of the robot arm class are distributed over multiple threads/processes. Therefore, variables are not carried over, which breaks the robot's behavior in some cases. Need to find a solution to have the robot class in a single thread only OR make the class state-less.
-  - [x] Restore simulation initial state if the simulation is already running, instead of reloading everything. This takes quite some time. Could be triggered via a command line argument or via querying which objects are present in the current simulation.
-  - [x] Add argparser
-  - [x] Look again at check_grasp function. Seems like it would also say that an object is grasped if the gripper is just open.
-  - [x] Change the robot arm transition. Doesn't necessarily need to be cartesian in all cases. Maybe this reduces the twitching.
-  - [x] Add navigation to the whole system
-  - [x] Find a better grasping pose for the drawer handle.
-  - [x] Make releasing an object a separate action
-  - [x] Allow robot base velocity command to be given in robot base frame
-  - [x] Write code that generates problem definition based on observations from the simulation
-
-
 ## Setup Instructions
+
+Tested on Ubuntu 20.04 with ROS Melodic.
+
+### ROS workspace
+
+This package needs to be built in a ROS workspace. The same workspace should contain ASL's `moma` repository:
+
+```bash
+mkdir -p ~/catkin_ws/src
+cd ~/catkin_ws/src
+git clone git@github.com:fjulian/asl_highlevel_planning.git
+cd asl_highlevel_planning
+git submodule update --init
+cd ..
+git clone git@github.com:ethz-asl/moma.git
+cd moma
+git submodule update --init
+```
+
+From now on, it is assumed, that all commands are run in `~/catkin_ws/src/asl_highlevel_planning`.
 
 ### Dependencies
 
@@ -30,16 +27,6 @@ First of all, install some apt packages using
 
 ```bash
 ./install_requirements.sh
-```
-
-If an error message comes up when building `trac_ik`, complaining about the header `nlopt.hpp` missing, it helps to install nlopt from source: https://github.com/stevengj/nlopt.
-
-### Set up virtualenv
-
-```
-virtualenv --system-site-packages .venv
-source .venv/bin/activate
-pip install -r requirements.txt
 ```
 
 ### Install Development Code
@@ -50,29 +37,59 @@ To make the python package available, just build the package:
 catkin build -DCMAKE_BUILD_TYPE=Release highlevel_planning
 ```
 
-### Robot Description
+If an error message comes up when building `trac_ik`, complaining about the header `nlopt.hpp` missing, it helps to install nlopt from source: https://github.com/stevengj/nlopt.
 
-The file data/ridgeback_panda_hand.urdf can be generated using the command
+### Set up virtualenv
 
 ```
-xacro mopa_description/robots/ridgeback_panda_hand.urdf.xacro
+python3 -m venv --system-site-packages .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ### Physics simulator
 
 There are two options: using the physics client GUI that comes with pybullet or launching the server separately and connecting to it via shared memory.
 
-For the first option, no additional setup needs to be done after installing pybullet in the virtual environment.
+For the first option (recommended), no additional setup needs to be done after installing pybullet in the virtual environment.
 
 For the second option, you need to clone and build bullet3 [according to the instructions](https://github.com/bulletphysics/bullet3). It boils down to simply executing the shell script `./build_cmake_pybullet_double.sh` which comes with the repo. Afterwards, the binary is located in the directory `bullet3/build_cmake/examples/ExampleBrowser`. When launching it for the first time, the correct mode "Physics Server" needs to be selected in the left pane. At subsequent launches, this mode will be automatically selected (it gets saved to the file `0_Bullet3Demo.txt`, located in the same folder as the binary).
 
-Depending on which option is selected, the initialization of the simulator interface needs to be adapted in the file `src/sim/world.py`.
+## Run
+
+To run any command, make sure that your ROS distribution, the ROS workspace, as well as the virtual environment are sourced.
+
+### Predicate Learning
+
+In order to run the predicate learning, after launching a ROS master, run the "server" in one terminal:
+
+```bash
+python highlevel_planning/scripts/run_predicate_learning.py -m gui -s
+```
+
+And the GUI in another:
+
+```bash
+python highlevel_planning/scripts/gui.py
+```
+
+After starting the simulation (press "Run"), you can rearrange objects using drag and drop. If you want to send a certain arrangement as a training sample, enter predicate name, arguments, and the argument that is to be considered relative (i.e. the one that can be modified to achieve the predicate. Should always be the same.), e.g.:
+
+- Name: `on`
+- Arguments: `table,cube1`
+- Relative argument: `1`
+
+Once, you're happy with the training examples, press "Build rules" to generate the rules.
+
+Then, after rearranging the objects, you can let the system classify the current situation by pressing "Classify". Monitor the terminal output of the server of the result.
+
+To let the system ask for the label of a certain state of its choosing, press "inquire" while the simulation is running. Afterwards, if the predicate holds in the new state, press "confirm" and otherwise "deny". 
+
+## Other
 
 ### Symbolic Planner
 
 TODO Write this!
-
-## Documentation
 
 ### Representation of planning problem in Python
 
