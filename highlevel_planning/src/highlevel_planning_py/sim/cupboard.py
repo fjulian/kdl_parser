@@ -7,7 +7,7 @@ import os
 
 
 def get_cupboard_info(base_dir, pos, orient):
-    urdf = os.path.join(base_dir, "data/models/cupboard_drawers/cupboard_drawers.urdf")
+    urdf = os.path.join(base_dir, "data/models/cupboard2/cupboard2.urdf")
 
     world = WorldPybullet("direct", sleep=False)
     tmp_model = world.add_model(urdf, position=pos, orientation=orient)
@@ -16,14 +16,14 @@ def get_cupboard_info(base_dir, pos, orient):
     yaw = rot.as_euler("xyz", degrees=False)
     nav_angle = yaw[2] + np.pi * 3.0 / 2.0
 
-    drawer_link_idx = list()
+    drawer_joint_idx = list()
     handle_link_idx = list()
     for i in range(pb.getNumJoints(tmp_model.uid, physicsClientId=world.client_id)):
         info = pb.getJointInfo(tmp_model.uid, i, physicsClientId=world.client_id)
         joint_name = info[1] if type(info[1]) is str else info[1].decode("utf-8")
         # print(info)
         if "drawer_joint" in joint_name and len(joint_name) == 13:
-            drawer_link_idx.append(i)
+            drawer_joint_idx.append(i)
         if "drawer_handle_dummy_joint" in joint_name:
             # handle_num = int(joint_name.split("drawer_handle_dummy_joint")[1])
             handle_link_idx.append(info[16])
@@ -43,6 +43,6 @@ def get_cupboard_info(base_dir, pos, orient):
         grasp_links_=handle_link_idx,
         joint_setting_=[
             {"jnt_idx": i, "mode": pb.VELOCITY_CONTROL, "force": 0.0}
-            for i in drawer_link_idx
+            for i in drawer_joint_idx
         ],
     )

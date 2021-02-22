@@ -14,14 +14,14 @@ def main():
 
     # ======== Cupboard ====================================
 
-    tic = time()
-    cupboard_mdl = world.add_model(
-        os.path.join(BASEDIR, "data/models/cupboard_drawers/cupboard_drawers.urdf"),
-        position=[0.0, 0.0, 0.0],
-        orientation=[0.0, 0.0, 0.0, 1.0],
-    )
-    toc = time() - tic
-    print(f"Load time: {toc}")
+    # tic = time()
+    # cupboard_mdl = world.add_model(
+    #     os.path.join(BASEDIR, "data/models/cupboard_drawers/cupboard_drawers.urdf"),
+    #     position=[0.0, 0.0, 0.0],
+    #     orientation=[0.0, 0.0, 0.0, 1.0],
+    # )
+    # toc = time() - tic
+    # print(f"Load time: {toc}")
 
     # drawer_link_idx = []
     # for i in range(p.getNumJoints(cupboard_mdl.uid)):
@@ -37,14 +37,26 @@ def main():
 
     # ======== Cupboard2 =======================================
 
-    # tic = time()
-    # cupboard_mdl = world.add_model(
-    #     os.path.join(os.getcwd(), "data/models/cupboard2/cupboard2.urdf"),
-    #     position=[0.0, 0.0, 0.0],
-    #     orientation=[0.0, 0.0, 0.0, 1.0],
-    # )
-    # toc = time() - tic
-    # print(f"Load time: {toc}")
+    tic = time()
+    cupboard_mdl = world.add_model(
+        os.path.join(BASEDIR, "data/models/cupboard2/cupboard2.urdf"),
+        position=[0.0, 0.0, 0.0],
+        orientation=[0.0, 0.0, 0.0, 1.0],
+    )
+    toc = time() - tic
+    print(f"Load time: {toc}")
+
+    drawer_joint_idx = []
+    for i in range(p.getNumJoints(cupboard_mdl.uid)):
+        info = p.getJointInfo(cupboard_mdl.uid, i)
+        joint_name = info[1] if type(info[1]) is str else info[1].decode("utf-8")
+        if "drawer_joint" in joint_name and len(joint_name) == 13:
+            drawer_joint_idx.append(i)
+
+    for i in drawer_joint_idx:
+        p.setJointMotorControl2(
+            cupboard_mdl.uid, i, controlMode=p.VELOCITY_CONTROL, force=0.0
+        )
 
     # ======== Container ======================================
 

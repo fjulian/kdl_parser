@@ -134,34 +134,12 @@ class PredicateFeatureManager:
         self.scene = None
         return data
 
-    def _extract_coms(self, arguments):
-        data = dict()
-
-        # Process arguments
-        for i, arg in enumerate(arguments):
-            data[f"arg{i}_com"] = self._extract_com(arg)
-
-        # TODO process surrounding objects
-
-        return data
-
     @lru_cache(maxsize=None)
     def _extract_com(self, obj_name):
         aabb, _ = self._extract_aabb(obj_name)
         com = np.mean(aabb, 0)
         labels = ["x", "y", "z"]
         return com, labels
-
-    def _extract_aabbs(self, arguments):
-        data = dict()
-
-        # Process arguments
-        for i, arg in enumerate(arguments):
-            data[f"arg{i}_aabb"] = self._extract_aabb(arg)
-
-        # TODO process surrounding objects
-
-        return data
 
     @lru_cache(maxsize=None)
     def _extract_aabb(self, obj_name):

@@ -123,15 +123,9 @@ class WorldPybullet(World):
         color = np.array([255, 0, 0]) / 255.0
         width = 1.0
         lifetime = 0
-        uid1 = pb.addUserDebugLine(
-            start1.tolist(), end1, color.tolist(), width, lifetime
-        )
-        uid2 = pb.addUserDebugLine(
-            start2.tolist(), end2, color.tolist(), width, lifetime
-        )
-        uid3 = pb.addUserDebugLine(
-            start3.tolist(), end3, color.tolist(), width, lifetime
-        )
+        uid1 = pb.addUserDebugLine(start1, end1, color, width, lifetime)
+        uid2 = pb.addUserDebugLine(start2, end2, color, width, lifetime)
+        uid3 = pb.addUserDebugLine(start3, end3, color, width, lifetime)
         self.cross_uid = (uid1, uid2, uid3)
 
     def draw_arrow(self, point, direction, color, length=0.2, replace_id=None):

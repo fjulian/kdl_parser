@@ -7,6 +7,7 @@ from highlevel_planning_py.predicate_learning.demonstrations import (
 )
 from highlevel_planning_py.predicate_learning.features import PredicateFeatureManager
 from highlevel_planning_py.predicate_learning.rules import RuleDataManager
+from highlevel_planning_py.predicate_learning.svm_experiments import SVMRules
 from highlevel_planning.srv import Snapshot, SnapshotResponse
 
 import os
@@ -34,7 +35,8 @@ class SimServer:
         # Predicate learning
         self.pdm = PredicateDemonstrationManager(BASEDIR, scene)
         self.pfm = PredicateFeatureManager(BASEDIR, self.world, scene)
-        self.rdm = RuleDataManager(BASEDIR, self.pfm)
+        # self.rdm = RuleDataManager(BASEDIR, self.pfm)
+        self.rdm = SVMRules(BASEDIR, self.pfm)
         # self.pl = PredicateLearner(self.pdm)
 
         # GUI services
