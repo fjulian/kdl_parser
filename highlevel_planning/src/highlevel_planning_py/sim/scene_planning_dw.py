@@ -5,7 +5,7 @@ from highlevel_planning_py.sim.scene_base import SceneBase
 from highlevel_planning_py.sim.cupboard import get_cupboard_info
 
 
-class ScenePlanning1(SceneBase):
+class ScenePlanningDW(SceneBase):
     def __init__(self, world, base_dir, restored_objects=None):
         SceneBase.__init__(self, world, restored_objects)
 
