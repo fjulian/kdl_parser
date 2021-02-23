@@ -48,7 +48,10 @@ class SimServer:
         return arguments
 
     def _move_manual(self, name, translation, rotation):
-        uid = self.scene.objects[name].model.uid
+        try:
+            uid = self.scene.objects[name].model.uid
+        except KeyError:
+            return "Invalid object name"
         pos, orient_quat = pb.getBasePositionAndOrientation(
             uid, physicsClientId=self.world.client_id
         )
@@ -64,6 +67,7 @@ class SimServer:
             new_orient_quat.tolist(),
             physicsClientId=self.world.client_id,
         )
+        return
 
     def loop(self):
         if self.running:

@@ -105,6 +105,12 @@ class Application:
         ttk.Entry(
             manipulation_frame, width=10, textvariable=self.moving_object_name
         ).grid(column=2, row=2, sticky=tk.W)
+        ttk.Label(manipulation_frame, text="Ctrl-Alt-<key> to translate").grid(
+            column=1, row=3, columnspan=2
+        )
+        ttk.Label(manipulation_frame, text="Ctrl-Alt-Shift-<key> to rotate").grid(
+            column=1, row=4, columnspan=2
+        )
 
         for child in manipulation_frame.winfo_children():
             child.grid_configure(padx=5, pady=5)
@@ -114,18 +120,30 @@ class Application:
 
         # Key bindings
         self.root.bind("<Return>", self._run_sim)
-        self._bind_key("<Alt-KeyPress-q>", (0, "trans", "fast", -1))
-        self._bind_key("<Alt-KeyPress-w>", (0, "trans", "slow", -1))
-        self._bind_key("<Alt-KeyPress-e>", (0, "trans", "slow", 1))
-        self._bind_key("<Alt-KeyPress-r>", (0, "trans", "fast", 1))
-        self._bind_key("<Alt-KeyPress-a>", (1, "trans", "fast", -1))
-        self._bind_key("<Alt-KeyPress-s>", (1, "trans", "slow", -1))
-        self._bind_key("<Alt-KeyPress-d>", (1, "trans", "slow", 1))
-        self._bind_key("<Alt-KeyPress-f>", (1, "trans", "fast", 1))
-        self._bind_key("<Alt-KeyPress-z>", (2, "trans", "fast", -1))
-        self._bind_key("<Alt-KeyPress-x>", (2, "trans", "slow", -1))
-        self._bind_key("<Alt-KeyPress-c>", (2, "trans", "slow", 1))
-        self._bind_key("<Alt-KeyPress-v>", (2, "trans", "fast", 1))
+        self._bind_key("<Control-Alt-KeyPress-u>", (0, "trans", "fast", -1))
+        self._bind_key("<Control-Alt-KeyPress-i>", (0, "trans", "slow", -1))
+        self._bind_key("<Control-Alt-KeyPress-o>", (0, "trans", "slow", 1))
+        self._bind_key("<Control-Alt-KeyPress-p>", (0, "trans", "fast", 1))
+        self._bind_key("<Control-Alt-KeyPress-j>", (1, "trans", "fast", -1))
+        self._bind_key("<Control-Alt-KeyPress-k>", (1, "trans", "slow", -1))
+        self._bind_key("<Control-Alt-KeyPress-l>", (1, "trans", "slow", 1))
+        self._bind_key("<Control-Alt-KeyPress-semicolon>", (1, "trans", "fast", 1))
+        self._bind_key("<Control-Alt-KeyPress-m>", (2, "trans", "fast", -1))
+        self._bind_key("<Control-Alt-KeyPress-comma>", (2, "trans", "slow", -1))
+        self._bind_key("<Control-Alt-KeyPress-period>", (2, "trans", "slow", 1))
+        self._bind_key("<Control-Alt-KeyPress-slash>", (2, "trans", "fast", 1))
+        self._bind_key("<Control-Alt-Shift-KeyPress-U>", (0, "rot", "fast", -1))
+        self._bind_key("<Control-Alt-Shift-KeyPress-I>", (0, "rot", "slow", -1))
+        self._bind_key("<Control-Alt-Shift-KeyPress-O>", (0, "rot", "slow", 1))
+        self._bind_key("<Control-Alt-Shift-KeyPress-P>", (0, "rot", "fast", 1))
+        self._bind_key("<Control-Alt-Shift-KeyPress-J>", (1, "rot", "fast", -1))
+        self._bind_key("<Control-Alt-Shift-KeyPress-K>", (1, "rot", "slow", -1))
+        self._bind_key("<Control-Alt-Shift-KeyPress-L>", (1, "rot", "slow", 1))
+        self._bind_key("<Control-Alt-Shift-KeyPress-colon>", (1, "rot", "fast", 1))
+        self._bind_key("<Control-Alt-Shift-KeyPress-M>", (2, "rot", "fast", -1))
+        self._bind_key("<Control-Alt-Shift-KeyPress-less>", (2, "rot", "slow", -1))
+        self._bind_key("<Control-Alt-Shift-KeyPress-greater>", (2, "rot", "slow", 1))
+        self._bind_key("<Control-Alt-Shift-KeyPress-question>", (2, "rot", "fast", 1))
 
     def _bind_key(self, key, params):
         self.root.bind(key, lambda e: self._move_object(*params))

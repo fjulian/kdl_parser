@@ -76,7 +76,9 @@ class SimServerROS2(SimServer, Node):
         return res
 
     def _move_manual_callback(self, msg):
-        self._move_manual(msg.target_name, msg.translation, msg.rotation)
+        ret = self._move_manual(msg.target_name, msg.translation, msg.rotation)
+        if ret is not None:
+            self.logger.warn(ret)
 
     def thread_loop(self, quit_event):
         rate = self.create_rate(240.0)

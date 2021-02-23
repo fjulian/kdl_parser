@@ -93,9 +93,9 @@ class ApplicationROS2(Application, Node):
                 translation[axis] = 0.2 * direction
         else:
             if speed == "slow":
-                rotation[axis] = 0.02 * direction
+                rotation[axis] = 1.0 * direction
             else:
-                rotation[axis] = 0.2 * direction
+                rotation[axis] = 5.0 * direction
 
         msg = ManipulationCmd()
         msg.target_name = self.moving_object_name.get()
