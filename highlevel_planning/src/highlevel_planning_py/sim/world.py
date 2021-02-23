@@ -94,6 +94,7 @@ class WorldPybullet(World):
             self.restore_state(os.path.join(savedir, "state.bullet"))
             pb.removeAllUserDebugItems(physicsClientId=self.client_id)
 
+        pb.configureDebugVisualizer(pb.COV_ENABLE_GUI, 0)
         self.basic_settings()
 
     def basic_settings(self):

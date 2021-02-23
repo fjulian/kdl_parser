@@ -10,9 +10,11 @@ from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
 
 
 class PredicateFeatureManager:
-    def __init__(self, basedir, outer_world, outer_scene):
-        self.basedir = basedir
-        pred_dir = os.path.join(basedir, "data", "predicates")
+    def __init__(
+        self, data_dir, assets_dir, outer_world, outer_scene, inner_scene_definition
+    ):
+        self.assets_dir = assets_dir
+        pred_dir = os.path.join(data_dir, "predicates")
         self.demo_dir = os.path.join(pred_dir, "demonstrations")
         self.feature_dir = os.path.join(pred_dir, "features")
         os.makedirs(self.feature_dir, exist_ok=True)
@@ -21,6 +23,7 @@ class PredicateFeatureManager:
 
         self.outer_world = outer_world
         self.outer_scene = outer_scene
+        self.inner_scene_definition = inner_scene_definition
 
         self.world = None
         self.scene = None
@@ -42,7 +45,9 @@ class PredicateFeatureManager:
 
         # Start simulator
         self.world = WorldPybullet("direct", sleep=False)
-        self.scene = ScenePlanning1(self.world, self.basedir, restored_objects=dict())
+        self.scene = self.inner_scene_definition(
+            self.world, self.assets_dir, restored_objects=dict()
+        )
 
         this_demo_dir = os.path.join(self.demo_dir, name)
         for demo_id in os.listdir(this_demo_dir):

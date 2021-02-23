@@ -3,7 +3,7 @@ import rospy
 
 from highlevel_planning_py.tools import run_util
 from highlevel_planning_py.predicate_learning.predicate_learning_server import SimServer
-from highlevel_planning.srv import Snapshot, SnapshotResponse
+from highlevel_planning_ros1.srv import Snapshot, SnapshotResponse
 
 
 from std_srvs.srv import SetBool, SetBoolResponse, Trigger, TriggerResponse
@@ -13,8 +13,8 @@ BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class SimServerROS1(SimServer):
-    def __init__(self, flags):
-        super().__init__(flags)
+    def __init__(self, flags_):
+        super().__init__(flags_)
 
         # GUI services
         self.run_srv = rospy.Service("sim_switch", SetBool, self._set_run_callback)
@@ -65,7 +65,6 @@ if __name__ == "__main__":
     flags = run_util.parse_arguments()
     rospy.init_node("hlp_simulator")
     app = SimServerROS1(flags)
-
     rate = rospy.Rate(240)
     while not rospy.is_shutdown():
         app.loop()

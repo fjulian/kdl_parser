@@ -15,7 +15,7 @@ class PredicateDemonstrationManager:
         self.scene = scene
         self._data = dict()
         self._meta_data = dict()
-        pred_dir = os.path.join(basedir, "data", "predicates")
+        pred_dir = os.path.join(basedir, "predicates")
         self.demo_dir = os.path.join(pred_dir, "demonstrations")
         os.makedirs(self.demo_dir, exist_ok=True)
 

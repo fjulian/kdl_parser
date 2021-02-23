@@ -5,7 +5,8 @@ import pickle
 import numpy as np
 
 from highlevel_planning_py.sim.world import WorldPybullet
-from highlevel_planning_py.sim.robot_arm import RobotArmPybullet
+
+# from highlevel_planning_py.sim.robot_arm import RobotArmPybullet
 from highlevel_planning_py.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning_py.skills import pddl_descriptions
 from highlevel_planning_py.knowledge.predicates import Predicates
@@ -63,7 +64,7 @@ def restore_pybullet_sim(savedir, args):
     return objects, robot_mdl
 
 
-def setup_pybullet_world(scene_object, basedir, args, savedir=None, objects=None):
+def setup_pybullet_world(scene_object, assets_dir, args, savedir=None, objects=None):
     # Create world
     world = WorldPybullet(
         style=args.method,
@@ -71,7 +72,9 @@ def setup_pybullet_world(scene_object, basedir, args, savedir=None, objects=None
         load_objects=not args.reuse_objects,
         savedir=savedir,
     )
-    scene = scene_object(world, basedir, restored_objects=objects)
+    p.setAdditionalSearchPath(assets_dir)
+
+    scene = scene_object(world, assets_dir, restored_objects=objects)
 
     return scene, world
 

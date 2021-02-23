@@ -14,11 +14,10 @@ def dir_levels_up(filepath, num_levels_up):
 
 
 class SVMRules:
-    def __init__(self, basedir, feature_manager):
-        self.basedir = basedir
+    def __init__(self, data_dir, feature_manager):
         self.pfm = feature_manager
 
-        pred_dir = os.path.join(basedir, "data", "predicates")
+        pred_dir = os.path.join(data_dir, "data", "predicates")
         self.demo_dir = os.path.join(pred_dir, "demonstrations")
         self.feature_dir = os.path.join(pred_dir, "features")
         # self.rule_dir = os.path.join(pred_dir, "rules_svm")
@@ -61,7 +60,7 @@ class SVMRules:
 
 
 if __name__ == "__main__":
-    basedir_ = dir_levels_up(os.path.abspath(__file__), 4)
-    assert basedir_.split("/")[-1] == "highlevel_planning"
-    svmr = SVMRules(basedir_, None)
+    data_dir_ = os.path.join(os.path.expanduser("~"), "Data", "highlevel_planning")
+    os.makedirs(data_dir_, exist_ok=True)
+    svmr = SVMRules(data_dir_, None)
     svmr.build_rules("on")

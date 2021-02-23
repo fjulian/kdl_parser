@@ -2,7 +2,6 @@ import os
 import atexit
 import pickle
 import numpy as np
-import rospy
 
 
 class RuleData:
@@ -132,7 +131,7 @@ class RuleDataManager:
             ]
             this_res = larger_value > smaller_value
             res &= this_res
-        rospy.loginfo(f"Classification result: {res}")
+        # rospy.loginfo(f"Classification result: {res}")
         return res
 
     def _construct_candidate(
