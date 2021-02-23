@@ -1,3 +1,7 @@
+import pybullet as pb
+import numpy as np
+from scipy.spatial.transform.rotation import Rotation
+
 from highlevel_planning_py.tools import run_util
 from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
 from highlevel_planning_py.sim.scene_planning_dw import ScenePlanningDW
@@ -23,14 +27,14 @@ class SimServer:
 
         # Create world
         scene_definition = ScenePlanningDW
-        scene, self.world = run_util.setup_pybullet_world(
+        self.scene, self.world = run_util.setup_pybullet_world(
             scene_definition, assets_dir, flags
         )
 
         # Predicate learning
-        self.pdm = PredicateDemonstrationManager(data_dir, scene)
+        self.pdm = PredicateDemonstrationManager(data_dir, self.scene)
         self.pfm = PredicateFeatureManager(
-            data_dir, assets_dir, self.world, scene, scene_definition
+            data_dir, assets_dir, self.world, self.scene, scene_definition
         )
         # self.rdm = RuleDataManager(BASEDIR, self.pfm)
         self.rdm = SVMRules(data_dir, self.pfm)
@@ -42,6 +46,24 @@ class SimServer:
         for i, a in enumerate(arguments):
             arguments[i] = a.strip()
         return arguments
+
+    def _move_manual(self, name, translation, rotation):
+        uid = self.scene.objects[name].model.uid
+        pos, orient_quat = pb.getBasePositionAndOrientation(
+            uid, physicsClientId=self.world.client_id
+        )
+        orient = Rotation.from_quat(orient_quat)
+        orient_euler = orient.as_euler("xyz", degrees=True)
+        orient_euler += np.array(rotation)
+        new_orient = Rotation.from_euler("xyz", orient_euler, degrees=True)
+        new_orient_quat = new_orient.as_quat()
+        new_pos = np.array(pos) + np.array(translation)
+        pb.resetBasePositionAndOrientation(
+            uid,
+            new_pos.tolist(),
+            new_orient_quat.tolist(),
+            physicsClientId=self.world.client_id,
+        )
 
     def loop(self):
         if self.running:

@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 from std_srvs.srv import SetBool, Trigger
 from highlevel_planning_interface_ros2.msg import HlpGuiCommand
+from highlevel_planning_interface_ros2.msg import ManipulationCmd
 from highlevel_planning_interface_ros2.srv import Snapshot
 
 from highlevel_planning_py.predicate_learning.gui import Application
@@ -29,6 +30,9 @@ class ApplicationROS2(Application, Node):
         self.set_srv = self.create_client(SetBool, "sim_switch")
         self.trigger_srv = self.create_client(Snapshot, "sim_snapshot")
 
+        # Publishers
+        self.mani_pub = self.create_publisher(ManipulationCmd, "move_manually", 10)
+
         self.confirm_button = None
         self.deny_button = None
         self.setup_window()
@@ -52,6 +56,7 @@ class ApplicationROS2(Application, Node):
         self.root.bind("<Return>", self._run_sim)
 
     def _snapshot(self, cmd, label=True):
+        self.progress_bar.start()
         if cmd == 4:
             if self.confirm_button["state"] == "normal":
                 self.logger.warn(
@@ -75,7 +80,28 @@ class ApplicationROS2(Application, Node):
             label=label,
         )
         res = call_wait_result(self, self.trigger_srv, req)
+        self.progress_bar.stop()
         self.logger.info("Sent command")
+
+    def _move_object(self, axis, mode, speed, direction):
+        translation = [0.0] * 3
+        rotation = [0.0] * 3
+        if mode == "trans":
+            if speed == "slow":
+                translation[axis] = 0.02 * direction
+            else:
+                translation[axis] = 0.2 * direction
+        else:
+            if speed == "slow":
+                rotation[axis] = 0.02 * direction
+            else:
+                rotation[axis] = 0.2 * direction
+
+        msg = ManipulationCmd()
+        msg.target_name = self.moving_object_name.get()
+        msg.translation = translation
+        msg.rotation = rotation
+        self.mani_pub.publish(msg)
 
 
 def main(args=None):

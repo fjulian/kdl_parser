@@ -26,6 +26,7 @@ if(ament_cmake_FOUND)
     rosidl_generate_interfaces(${PROJECT_NAME}
       "msg/HlpGuiCommand.msg"
       "srv/Snapshot.srv"
+      "msg/ManipulationCmd.msg"
      )
 
 

@@ -9,6 +9,7 @@ import pybullet as pb
 from highlevel_planning_py.tools import run_util
 from highlevel_planning_py.predicate_learning.predicate_learning_server import SimServer
 from highlevel_planning_interface_ros2.srv import Snapshot
+from highlevel_planning_interface_ros2.msg import ManipulationCmd
 
 
 from std_srvs.srv import SetBool, Trigger
@@ -30,6 +31,11 @@ class SimServerROS2(SimServer, Node):
         )
         self.snapshot_srv = self.create_service(
             Snapshot, "sim_snapshot", self._snapshot_callback
+        )
+
+        # Subscribers
+        self.create_subscription(
+            ManipulationCmd, "move_manually", self._move_manual_callback, 10
         )
 
     def _set_run_callback(self, req, res):
@@ -68,6 +74,9 @@ class SimServerROS2(SimServer, Node):
             success = False
         res.success = success
         return res
+
+    def _move_manual_callback(self, msg):
+        self._move_manual(msg.target_name, msg.translation, msg.rotation)
 
     def thread_loop(self, quit_event):
         rate = self.create_rate(240.0)
