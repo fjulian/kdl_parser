@@ -6,6 +6,8 @@ import time
 from math import ceil
 import atexit
 
+from dishwasher_challenge.utils import add_mesh_object
+
 
 class World(object):
     def __init__(self, sleep=True):
@@ -55,13 +57,18 @@ class _Model:
 
     def load(self, path, position, orientation, scale):
         model_path = os.path.expanduser(path)
-        self.uid = pb.loadURDF(
-            model_path,
-            position,
-            orientation,
-            globalScaling=scale,
-            physicsClientId=self._physics_client,
-        )
+        if model_path.split(".")[-1] == "urdf":
+            self.uid = pb.loadURDF(
+                model_path,
+                position,
+                orientation,
+                globalScaling=scale,
+                physicsClientId=self._physics_client,
+            )
+        else:
+            self.uid = add_mesh_object(
+                model_path, position, orientation, self._physics_client
+            )
         self.name = pb.getBodyInfo(self.uid, physicsClientId=self._physics_client)
 
         for i in range(pb.getNumJoints(self.uid, physicsClientId=self._physics_client)):
