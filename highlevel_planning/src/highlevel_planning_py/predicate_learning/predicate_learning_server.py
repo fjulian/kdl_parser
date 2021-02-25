@@ -13,6 +13,8 @@ from highlevel_planning_py.predicate_learning.features import PredicateFeatureMa
 from highlevel_planning_py.predicate_learning.rules import RuleDataManager
 from highlevel_planning_py.predicate_learning.svm_experiments import SVMRules
 
+from fake_perception.fake_perception import FakePerceptionPipeline
+
 
 class SimServer:
     def __init__(self, flags, assets_dir, data_dir):
@@ -31,6 +33,20 @@ class SimServer:
             scene_definition, assets_dir, flags
         )
 
+        # Setup perception
+        self.fpp = FakePerceptionPipeline(
+            observed_objects_only=False, client_id=self.world.client_id
+        )
+        for obj_name in self.scene.objects:
+            self.fpp.register_object(
+                uid=self.scene.objects[obj_name].model.uid, base_name=obj_name
+            )
+        self._print(
+            "Scene objects: {}".format(
+                self.fpp.object_info["object_ids_by_name"].keys()
+            )
+        )
+
         # Predicate learning
         self.pdm = PredicateDemonstrationManager(data_dir, self.scene)
         self.pfm = PredicateFeatureManager(
@@ -39,6 +55,9 @@ class SimServer:
         # self.rdm = RuleDataManager(BASEDIR, self.pfm)
         self.rdm = SVMRules(data_dir, self.pfm)
         # self.pl = PredicateLearner(self.pdm)
+
+    def _print(self, msg):
+        raise NotImplementedError
 
     @staticmethod
     def _process_args(raw_args):

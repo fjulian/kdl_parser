@@ -20,6 +20,10 @@ class PredicateDemonstrationManager:
         os.makedirs(self.demo_dir, exist_ok=True)
 
     def capture_demonstration(self, name: str, arguments: list, label: bool):
+        time_now = datetime.now()
+        time_string = time_now.strftime("%y%m%d-%H%M%S")
+        this_demo_dir = os.path.join(self.demo_dir, name, time_string)
+        os.makedirs(this_demo_dir, exist_ok=False)
 
         meta_file = os.path.join(self.demo_dir, name, "_meta.pkl")
         if os.path.isfile(meta_file):
@@ -30,12 +34,6 @@ class PredicateDemonstrationManager:
             meta_data = {"num_args": len(arguments)}
             with open(meta_file, "wb") as f:
                 pickle.dump(meta_data, f)
-
-        time_now = datetime.now()
-        time_string = time_now.strftime("%y%m%d-%H%M%S")
-
-        this_demo_dir = os.path.join(self.demo_dir, name, time_string)
-        os.makedirs(this_demo_dir, exist_ok=False)
 
         # Save pickle
         save_data = (name, arguments, label, self.scene.objects)

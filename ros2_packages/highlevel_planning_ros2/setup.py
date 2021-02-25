@@ -1,4 +1,5 @@
 from setuptools import setup
+from glob import glob
 
 try:
     import ament_index_python
@@ -27,12 +28,18 @@ setup(
         package_name: package_name,
     },
     data_files=[
+        # Install marker files in package index
         (
             "share/ament_index/resource_index/packages",
             ["resource/" + "highlevel_planning_py"],
         ),
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
+        # Include package file
         ("share/" + package_name, ["package.xml"]),
+        # Install launch files
+        ("share/" + package_name, glob("launch/*.launch.py")),
+        # Install config files
+        ("share/" + package_name, glob("config/*.yaml")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,

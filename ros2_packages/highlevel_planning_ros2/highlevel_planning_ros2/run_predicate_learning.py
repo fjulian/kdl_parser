@@ -4,7 +4,7 @@ import threading
 import rclpy
 from rclpy.node import Node
 import ament_index_python as ament_index
-import pybullet as pb
+from argparse import Namespace
 
 from highlevel_planning_py.tools import run_util
 from highlevel_planning_py.predicate_learning.predicate_learning_server import SimServer
@@ -16,11 +16,36 @@ from std_srvs.srv import SetBool, Trigger
 
 
 class SimServerROS2(SimServer, Node):
-    def __init__(self, flags_, assets_dir_, data_dir_):
-        SimServer.__init__(self, flags_, assets_dir_, data_dir_)
+    def __init__(self, assets_dir_, data_dir_):
         Node.__init__(self, "simserver_ros2")
-
         self.logger = self.get_logger()
+
+        self.declare_parameters(
+            "",
+            [
+                ("method", "gui"),
+                ("reuse_objects", False),
+                ("sleep", True),
+                ("non_interactive", False),
+                ("no_seed", False),
+            ],
+        )
+        method = self.get_parameter("method").value
+        reuse_objects = self.get_parameter("reuse_objects").value
+        sleep = self.get_parameter("sleep").value
+        non_interactive = self.get_parameter("non_interactive").value
+        no_seed = self.get_parameter("no_seed").value
+        flags = Namespace(
+            method=method,
+            reuse_objects=reuse_objects,
+            sleep=sleep,
+            non_interactive=non_interactive,
+            no_seed=no_seed,
+        )
+
+        SimServer.__init__(self, flags, assets_dir_, data_dir_)
+
+        self.logger.info("Started simulation with the following objects")
 
         # GUI services
         self.run_srv = self.create_service(
@@ -37,6 +62,9 @@ class SimServerROS2(SimServer, Node):
         self.create_subscription(
             ManipulationCmd, "move_manually", self._move_manual_callback, 10
         )
+
+    def _print(self, msg):
+        self.logger.info(msg)
 
     def _set_run_callback(self, req, res):
         self.running = req.data
@@ -104,8 +132,7 @@ def main(args=None):
     asset_dir = ament_index.get_package_prefix("dishwasher_description")
     asset_dir = os.path.join(asset_dir, "share", "dishwasher_description", "assets")
 
-    flags = run_util.parse_arguments()
-    app = SimServerROS2(flags, asset_dir, data_dir)
+    app = SimServerROS2(asset_dir, data_dir)
 
     quit_event_ = threading.Event()
     atexit.register(exit_handler, quit_event=quit_event_)
