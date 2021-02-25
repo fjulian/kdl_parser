@@ -48,7 +48,7 @@ class SimServer:
         )
 
         # Predicate learning
-        self.pdm = PredicateDemonstrationManager(data_dir, self.scene)
+        self.pdm = PredicateDemonstrationManager(data_dir, self.scene, self.fpp)
         self.pfm = PredicateFeatureManager(
             data_dir, assets_dir, self.world, self.scene, scene_definition
         )

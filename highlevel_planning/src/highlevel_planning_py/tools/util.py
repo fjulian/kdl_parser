@@ -1,3 +1,4 @@
+import os
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 import pybullet as p
@@ -82,6 +83,13 @@ def get_object_position(object_name, scene_objects, knowledge_base):
         return knowledge_base.lookup_table[object_name]
     else:
         raise ValueError("Invalid object")
+
+
+def dir_levels_up(filepath, num_levels_up):
+    res = filepath
+    for _ in range(num_levels_up):
+        res = os.path.dirname(res)
+    return res
 
 
 class IKError(Exception):

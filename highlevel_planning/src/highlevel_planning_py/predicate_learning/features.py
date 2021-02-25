@@ -4,9 +4,7 @@ from functools import lru_cache
 import pandas as pd
 import numpy as np
 import pybullet as pb
-
 from highlevel_planning_py.sim.world import WorldPybullet
-from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
 
 
 class PredicateFeatureManager:
@@ -57,7 +55,6 @@ class PredicateFeatureManager:
             # Skip if this was already processed
             if demo_id in meta_data["demos_processed"]:
                 continue
-            meta_data["demos_processed"].add(demo_id)
 
             # Clear caches
             self._extract_com.cache_clear()
@@ -100,6 +97,9 @@ class PredicateFeatureManager:
                 data[f"arg{arg_idx}"] = data[f"arg{arg_idx}"].append(
                     new_row, verify_integrity=True
                 )
+
+            # Mark this demo as processed
+            meta_data["demos_processed"].add(demo_id)
 
         # Save data
         with open(filename, "wb") as f:
