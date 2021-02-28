@@ -9,7 +9,13 @@ from highlevel_planning_py.sim.world import WorldPybullet
 
 class PredicateFeatureManager:
     def __init__(
-        self, data_dir, assets_dir, outer_world, outer_scene, inner_scene_definition
+        self,
+        data_dir,
+        assets_dir,
+        outer_world,
+        outer_scene,
+        inner_scene_definition,
+        perception,
     ):
         self.assets_dir = assets_dir
         pred_dir = os.path.join(data_dir, "predicates")
@@ -22,6 +28,7 @@ class PredicateFeatureManager:
         self.outer_world = outer_world
         self.outer_scene = outer_scene
         self.inner_scene_definition = inner_scene_definition
+        self.perception = perception
 
         self.world = None
         self.scene = None
@@ -69,6 +76,7 @@ class PredicateFeatureManager:
             # Populate simulation
             if objects != self.scene.objects:
                 self.world.reset()
+                pb.setAdditionalSearchPath(self.assets_dir)
                 self.scene.set_objects(objects)
                 self.scene.add_objects(force_load=True)
             simstate_file_name = os.path.join(this_demo_dir, demo_id, "state.bullet")
@@ -148,14 +156,17 @@ class PredicateFeatureManager:
 
     @lru_cache(maxsize=None)
     def _extract_aabb(self, obj_name):
-        obj_uid = self.scene.objects[obj_name].model.uid
-        link2idx = self.scene.objects[obj_name].model.link_name_to_index
-        aabb = np.array(pb.getAABB(obj_uid, physicsClientId=self.world.client_id))
-        for link in link2idx:
+        obj_base_ids = self.perception.object_info["object_ids_by_name"][obj_name]
+        obj_info = self.perception.object_info["objects_by_id"][obj_base_ids]
+
+        aabb = np.array(
+            pb.getAABB(
+                obj_base_ids[0], obj_base_ids[1], physicsClientId=self.world.client_id
+            )
+        )
+        for child in obj_info.children:
             tmp = np.array(
-                pb.getAABB(
-                    obj_uid, link2idx[link], physicsClientId=self.world.client_id
-                )
+                pb.getAABB(child[0], child[1], physicsClientId=self.world.client_id)
             )
             aabb[0, :] = np.minimum(aabb[0, :], tmp[0, :])
             aabb[1, :] = np.maximum(aabb[1, :], tmp[1, :])

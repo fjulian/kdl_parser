@@ -1,13 +1,12 @@
 from copy import deepcopy
 import pybullet as pb
 
-from highlevel_planning_py.sim.world import WorldPybullet
-
 
 class SceneBase:
-    def __init__(self, world: WorldPybullet, restored_objects: dict = None):
+    def __init__(self, world, asset_dir, restored_objects=None):
         self.world = world
         self.objects = dict()
+        self.asset_dir = asset_dir
 
         if restored_objects is not None:
             self.objects = restored_objects
@@ -39,5 +38,3 @@ class SceneBase:
                         force=spec["force"],
                         physicsClientId=self.world.client_id,
                     )
-            # print("Added object " + key + ". ID: " + str(obj.model.uid))
-        # print("---------------------------")

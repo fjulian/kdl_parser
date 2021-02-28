@@ -9,7 +9,7 @@ from dishwasher_challenge.sim import _find_objects
 
 class ScenePlanningDW(SceneBase):
     def __init__(self, world, assets_dir, restored_objects=None):
-        SceneBase.__init__(self, world, restored_objects)
+        SceneBase.__init__(self, world, assets_dir, restored_objects)
 
         if restored_objects is None:
             self.objects["kitchen"] = ObjectInfo(
