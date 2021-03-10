@@ -1,3 +1,6 @@
 [submodule "submodules/trac_ik"]
 	path = submodules/trac_ik
 	url = git@bitbucket.org:traclabs/trac_ik.git
+[submodule "submodules/monte-carlo-tree-search"]
+	path = submodules/monte-carlo-tree-search
+	url = git@github.com:int8/monte-carlo-tree-search.git
