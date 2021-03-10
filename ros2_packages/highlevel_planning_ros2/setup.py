@@ -19,6 +19,7 @@ setup(
         "highlevel_planning_py.knowledge",
         "highlevel_planning_py.pddl_interface",
         "highlevel_planning_py.predicate_learning",
+        "highlevel_planning_py.predicate_learning.rules",
         "highlevel_planning_py.sim",
         "highlevel_planning_py.skills",
         "highlevel_planning_py.tools",

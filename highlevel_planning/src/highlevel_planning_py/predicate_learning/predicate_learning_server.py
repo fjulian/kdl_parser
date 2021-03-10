@@ -11,8 +11,8 @@ from highlevel_planning_py.predicate_learning.demonstrations import (
 )
 from highlevel_planning_py.predicate_learning.features import PredicateFeatureManager
 
-# from highlevel_planning_py.predicate_learning.rules import RuleDataManager
-# from highlevel_planning_py.predicate_learning.svm_experiments import SVMRules
+from highlevel_planning_py.predicate_learning.rules.svm import SVMRules
+from highlevel_planning_py.predicate_learning.rules.boosting import BoostingRules
 
 from fake_perception.fake_perception import FakePerceptionPipeline
 
@@ -55,6 +55,7 @@ class SimServer:
         )
         # self.rdm = RuleDataManager(BASEDIR, self.pfm)
         # self.rdm = SVMRules(data_dir, self.pfm)
+        self.rdm = BoostingRules(data_dir, self.pfm)
         # self.pl = PredicateLearner(self.pdm)
 
     def _print(self, msg):

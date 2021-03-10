@@ -1,11 +1,10 @@
 import os
 import pandas as pd
-from sklearn.svm import SVC
-import seaborn as sns
+from sklearn.ensemble import AdaBoostClassifier
 from highlevel_planning_py.predicate_learning.rules.base import RulesBase
 
 
-class SVMRules(RulesBase):
+class BoostingRules(RulesBase):
     def __init__(self, data_dir, feature_manager):
         RulesBase.__init__(self, data_dir)
         self.pfm = feature_manager
@@ -13,7 +12,7 @@ class SVMRules(RulesBase):
 
     def build_rules(self, pred_name):
         if pred_name not in self.clfs:
-            self.clfs[pred_name] = SVC(kernel="linear")
+            self.clfs[pred_name] = AdaBoostClassifier(n_estimators=50)
 
         # Load features
         feature_data, _ = self._get_feature_data(pred_name)
@@ -22,10 +21,6 @@ class SVMRules(RulesBase):
         merged_data = merged_data.drop(columns="label_r")
 
         self.clfs[pred_name].fit(merged_data.iloc[:, 1:], merged_data.iloc[:, 0])
-
-        # Visualize rules
-        sns.pairplot(merged_data, hue="label", palette="bright")
-        print("bla")
 
         return True
 
@@ -47,5 +42,5 @@ class SVMRules(RulesBase):
 if __name__ == "__main__":
     data_dir_ = os.path.join(os.path.expanduser("~"), "Data", "highlevel_planning")
     os.makedirs(data_dir_, exist_ok=True)
-    svmr = SVMRules(data_dir_, None)
+    svmr = BoostingRules(data_dir_, None)
     svmr.build_rules("in")
