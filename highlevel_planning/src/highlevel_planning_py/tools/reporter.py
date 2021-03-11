@@ -81,7 +81,7 @@ class Reporter:
         self.explore_idx += 1
 
     def write_result_file(self):
-        savedir = os.path.join(self.basedir, "data", "reports")
+        savedir = os.path.join(self.basedir, "reports")
         if not os.path.isdir(savedir):
             os.makedirs(savedir)
 

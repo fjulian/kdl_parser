@@ -17,7 +17,7 @@ from rc.controllers import CartesianVelocityControllerKDL
 
 
 class RobotArm(object):
-    def __init__(self, world, config, base_dir):
+    def __init__(self, world, config, asset_dir):
         self._world = world
         self.num_joints = 0
 
@@ -26,7 +26,7 @@ class RobotArm(object):
         )
 
         # Set up IK solver
-        self.urdf_path = os.path.join(base_dir, "data/models/box_panda_hand_pb.urdf")
+        self.urdf_path = os.path.join(asset_dir, "box_panda_hand_pb.urdf")
         with open(self.urdf_path) as f:
             if f.mode == "r":
                 urdf_string = f.read()
@@ -215,8 +215,8 @@ class RobotArm(object):
 
 
 class RobotArmPybullet(RobotArm):
-    def __init__(self, world, config, base_dir, robot_model=None):
-        super(RobotArmPybullet, self).__init__(world, config, base_dir)
+    def __init__(self, world, config, asset_dir, robot_model=None):
+        super(RobotArmPybullet, self).__init__(world, config, asset_dir)
 
         self.model = robot_model
 
