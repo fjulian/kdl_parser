@@ -7,6 +7,7 @@ from highlevel_planning_py.execution.es_sequential_execution import (
     execute_plan_sequentially,
 )
 
+
 MAX_DEPTH = 30
 
 
@@ -17,10 +18,9 @@ class HLPTreeSearch:
     def tree_search(self):
         time_budget = 700
         start_time = time()
-        current_node = self.root
         while time() - start_time < time_budget:
+            current_node = self.root
             while not current_node.is_terminal():
-                # current_node.receive_visit()
                 if current_node.check_expanding():
                     # Expand
                     current_node = current_node.expand()
@@ -33,10 +33,11 @@ class HLPTreeSearch:
 
 
 class HLPTreeNode:
-    def __init__(self, state, explorer, parent=None):
+    def __init__(self, state, explorer, relevant_objects=None, parent=None):
         self.state = state
         self.exp = explorer
         self.parent = parent
+        self.relevant_objects = relevant_objects
 
         self.action_list = [
             act
@@ -50,28 +51,16 @@ class HLPTreeNode:
         self.never_expand = False
         self.results = defaultdict(int)
 
-    # @property
-    # def q(self):
-    #     success = self._results[1]
-    #     return success
-    #
-    # def expand(self):
-    #     action = self.untried_actions.pop()
-    #     next_state = self.state.move(action)
-    #     child_node = HLPTreeNode(next_state, parent=self)
-    #     self.children.append(child_node)
-    #     return child_node
-
-    # def receive_visit(self):
-    #     self.num_visited += 1
-
     def is_terminal(self):
-        self.state.is_game_over()
+        return self.state.is_game_over()
 
     def check_expanding(self):
         alpha = 0.4
-        return np.floor(self.num_visited ** alpha) > np.floor(
-            (self.num_visited - 1) ** alpha
+        return (
+            True
+            if self.num_visited == 0 or len(self.children) == 0
+            else np.floor(self.num_visited ** alpha)
+            > np.floor((self.num_visited - 1) ** alpha)
         )
 
     def expand(self):
@@ -83,7 +72,9 @@ class HLPTreeNode:
             if sequence_tuple in self.child_actions:
                 continue
             new_state = self.state.move(sequence_tuple)
-            new_child = HLPTreeNode(new_state, self.exp, self)
+            new_child = HLPTreeNode(
+                new_state, self.exp, relevant_objects=self.relevant_objects, parent=self
+            )
             self.children.append(new_child)
             self.child_actions.append(sequence_tuple)
             return new_child
@@ -91,7 +82,9 @@ class HLPTreeNode:
 
     def _sample_step(self):
         sequence = self.exp._sample_sequence(length=1)
-        parameters = self.exp._sample_parameters(sequence)
+        parameters, _ = self.exp._sample_parameters(
+            sequence, relevant_objects=self.relevant_objects
+        )
         sequence_tuple = (tuple(sequence), tuple(parameters))
         return sequence_tuple
 
@@ -113,10 +106,13 @@ class HLPTreeNode:
     def select_child(self, exploration_constant=np.sqrt(2)):
         scores = list()
         for child in self.children:
-            avg_result = float(child.results[1]) / float(child.num_visited)
-            score = avg_result + exploration_constant * np.sqrt(
-                np.log(self.num_visited) / float(child.num_visited)
-            )
+            if not child.is_terminal():
+                avg_result = float(child.results[1]) / float(child.num_visited)
+                score = avg_result + exploration_constant * np.sqrt(
+                    np.log(self.num_visited) / float(child.num_visited)
+                )
+            else:
+                score = -np.inf
             scores.append(score)
         max_idx = np.argmax(scores)
         return self.children[max_idx]
@@ -127,12 +123,25 @@ class HLPTreeNode:
         if self.parent:
             self.parent.backpropagate(result)
 
+    def print(self):
+        spacer = "-" * (self.state._depth - 1)
+        spacer += "|"
+        print(
+            spacer
+            + " ({}) {} Terminal: {}".format(
+                self.num_visited, self.state.action_str, self.is_terminal()
+            )
+        )
+        for child in self.children:
+            child.print()
+
 
 class HLPState:
-    def __init__(self, success, depth, pb_client_id, explorer):
+    def __init__(self, success, depth, pb_client_id, explorer, action_str=""):
         self._depth = depth
         self._bullet_state = pb.saveState(physicsClientId=pb_client_id)
         self._bullet_client_id = pb_client_id
+        self.action_str = action_str
 
         self.exp = explorer
         self.success = success
@@ -156,7 +165,13 @@ class HLPState:
         success = execute_plan_sequentially(
             action[0], action[1], self.exp.skill_set, self.exp.knowledge_base
         )
-        new_state = HLPState(success, self._depth + 1, self._bullet_client_id, self.exp)
+        new_state = HLPState(
+            success,
+            self._depth + 1,
+            self._bullet_client_id,
+            self.exp,
+            action_str=str(action),
+        )
         return new_state
 
     # def get_legal_actions(self):

@@ -2,7 +2,6 @@ import numpy as np
 import os
 import atexit
 from datetime import datetime
-import pybullet as p
 
 # Simulation
 from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
@@ -11,18 +10,18 @@ from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
 from highlevel_planning_py.skills.navigate import SkillNavigate
 from highlevel_planning_py.skills.grasping import SkillGrasping
 from highlevel_planning_py.skills.placing import SkillPlacing
-from highlevel_planning_py.execution.es_sequential_execution import (
-    execute_plan_sequentially,
-)
 
 # Learning
 from highlevel_planning_py.exploration.explorer import Explorer
 from highlevel_planning_py.exploration.pddl_extender import PDDLExtender
+from highlevel_planning_py.exploration import mcts
 
 # Other
 from highlevel_planning_py.tools.config import ConfigYaml
 from highlevel_planning_py.tools import run_util
 from highlevel_planning_py.tools.reporter import Reporter
+
+from highlevel_planning_py.exploration.exploration_tools import get_items_closeby
 
 # ----------------------------------------------------------------------
 
@@ -60,12 +59,12 @@ def main():
     objects, robot_mdl = run_util.restore_pybullet_sim(savedir, args)
 
     # Load config file
-    cfg = ConfigYaml(os.path.join(SRCROOT, "config", "main.yaml"))
+    cfg = ConfigYaml(os.path.join(SRCROOT, "config", "mcts.yaml"))
 
     time_now = datetime.now()
     time_string = time_now.strftime("%y%m%d-%H%M%S")
-    rep = Reporter(DATADIR, cfg, time_string, args.noninteractive)
-    atexit.register(exit_handler, rep)
+    # rep = Reporter(DATADIR, cfg, time_string, args.noninteractive)
+    # atexit.register(exit_handler, rep)
 
     # Populate simulation
     scene, world = run_util.setup_pybullet_world(
@@ -91,65 +90,25 @@ def main():
 
     # Set up exploration
     xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg)
+    goal_objects = xplorer._get_items_goal()
+    closeby_objects = get_items_closeby(
+        goal_objects,
+        scene.objects,
+        robot.model.uid,
+        distance_limit=0.4,  # TODO move magic number to parameters
+    )
+    relevant_objects = goal_objects + closeby_objects
 
-    # Define a demonstration to guide exploration
-    demo_sequence, demo_parameters = None, None
-    # demo_sequence = ["place", "place"]
-    # demo_parameters = [{"obj": "lid1"}, {"obj": "duck"}]
+    # Set up MCTS
+    mcts_state = mcts.HLPState(True, 0, world.client_id, xplorer)
+    mcts_root_node = mcts.HLPTreeNode(
+        mcts_state, xplorer, relevant_objects=relevant_objects
+    )
+    mcts_search = mcts.HLPTreeSearch(mcts_root_node)
 
     # ---------------------------------------------------------------
 
-    # Store initial state
-    initial_state_id = p.saveState()
-
-    while True:
-        # Plan
-        plan = kb.solve()
-        rep.report_after_planning(plan)
-
-        # Execute
-        if plan is False:
-            planning_failed = True
-            print("No plan found.")
-        else:
-            planning_failed = False
-            sequence, parameters = plan
-            print_plan(sequence, parameters)
-            if not args.noninteractive:
-                input("Press enter to run...")
-            res = execute_plan_sequentially(
-                sequence, parameters, skill_set, kb, verbose=True
-            )
-            rep.report_after_execution(res)
-            if res:
-                print("Reached goal successfully. Exiting.")
-                break
-            else:
-                print("Failure during plan execution.")
-
-        # Decide what happens next
-        if not args.noninteractive:
-            choice = input(f"Choose next action: (a)bort, (e)xplore\nYour choice: ")
-        else:
-            choice = "e"
-        if choice == "e":
-            # Exploration
-            rep.report_before_exploration(kb, plan)
-            success, metrics = xplorer.exploration(
-                planning_failed,
-                demo_sequence,
-                demo_parameters,
-                state_id=initial_state_id,
-                no_seed=args.no_seed,
-            )
-            rep.report_after_exploration(kb, metrics)
-            if not success:
-                print("Exploration was not successful")
-                break
-        else:
-            if choice != "a":
-                print("Invalid choice, aborting.")
-            break
+    mcts_search.tree_search()
 
 
 if __name__ == "__main__":

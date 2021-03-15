@@ -9,10 +9,12 @@ from highlevel_planning_py.tools.util import (
     homogenous_trafo,
     invert_hom_trafo,
 )
+
 from trac_ik_python.trac_ik import IK
 from scipy.spatial.transform import Rotation as R
 from kdl_parser_py.urdf import treeFromFile
 import PyKDL
+
 from rc.controllers import CartesianVelocityControllerKDL
 
 
@@ -180,6 +182,38 @@ class RobotArm(object):
             orient[3],
         )
         return np.array(sol)
+
+    # def ik(self, pos, orient):
+    #
+    #     pos_kdl = PyKDL.Vector(pos[0], pos[1], pos[2])
+    #     orient_kdl = PyKDL.Rotation().Quaternion(
+    #         orient[0], orient[1], orient[2], orient[3]
+    #     )
+    #     frame_target = PyKDL.Frame(orient_kdl, pos_kdl)
+    #
+    #     kdl_fk_solver = PyKDL.ChainFkSolverPos_recursive(self.kdl_chain)
+    #     kdl_ik_vel_solver = PyKDL.ChainIkSolverVel_pinv(self.kdl_chain)
+    #     kdl_ik_solver = PyKDL.ChainIkSolverPos_NR(
+    #         self.kdl_chain, kdl_fk_solver, kdl_ik_vel_solver
+    #     )
+    #
+    #     # Init joints
+    #     seed_state = self.get_joints()
+    #     joints_init = PyKDL.JntArray(self.num_arm_joints)
+    #     for i in range(len(seed_state)):
+    #         joints_init[i] = seed_state[i]
+    #
+    #     joints_output = PyKDL.JntArray(self.num_arm_joints)
+    #
+    #     ret = kdl_ik_solver.CartToJnt(joints_init, frame_target, joints_output)
+    #     if ret != 0:
+    #         error_str = kdl_ik_solver.strError(ret)
+    #         raise RuntimeError(f"IK solver returned: {error_str}")
+    #
+    #     res = np.zeros(self.num_arm_joints)
+    #     for i in range(len(res)):
+    #         res[i] = joints_output[i]
+    #     return res
 
     def fk(self, joint_states):
         assert len(joint_states) == self.num_arm_joints
@@ -375,8 +409,8 @@ class RobotArmPybullet(RobotArm):
         )
 
     def get_joints(self):
-        if self.model is None:
-            return [0.0] * self.ik_solver.number_of_joints
+        if not hasattr(self, "model") or self.model is None:
+            return [0.0] * self.num_arm_joints
         temp = p.getJointStates(self.model.uid, self.joint_idx_arm)
         pos = [a[0] for a in temp]
         return pos

@@ -7,7 +7,7 @@ import os
 
 
 def get_cupboard_info(base_dir, pos, orient):
-    urdf = os.path.join(base_dir, "data/models/cupboard2/cupboard2.urdf")
+    urdf = os.path.join(base_dir, "cupboard2/cupboard2.urdf")
 
     world = WorldPybullet("direct", sleep=False)
     tmp_model = world.add_model(urdf, position=pos, orientation=orient)

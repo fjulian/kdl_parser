@@ -6,7 +6,7 @@ import numpy as np
 
 from highlevel_planning_py.sim.world import WorldPybullet
 
-# from highlevel_planning_py.sim.robot_arm import RobotArmPybullet
+from highlevel_planning_py.sim.robot_arm import RobotArmPybullet
 from highlevel_planning_py.knowledge.knowledge_base import KnowledgeBase
 from highlevel_planning_py.skills import pddl_descriptions
 from highlevel_planning_py.knowledge.predicates import Predicates

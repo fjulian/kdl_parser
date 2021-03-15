@@ -6,7 +6,7 @@ import time
 from math import ceil
 import atexit
 
-from dishwasher_challenge.utils import add_mesh_object
+# from dishwasher_challenge.utils import add_mesh_object
 
 
 class World(object):
