@@ -18,7 +18,9 @@ class HLPTreeSearch:
     def tree_search(self):
         time_budget = 700
         start_time = time()
+        counter = 0
         while time() - start_time < time_budget:
+            counter += 1
             current_node = self.root
             while not current_node.is_terminal():
                 if current_node.check_expanding():
@@ -30,6 +32,13 @@ class HLPTreeSearch:
                     current_node = current_node.select_child()
             result = current_node.rollout()
             current_node.backpropagate(result)
+            print("----------------------------------------------")
+            self.root.print()
+            print(
+                "Iteration {}. Current successes: {}".format(
+                    counter, self.root.results[1]
+                )
+            )
 
 
 class HLPTreeNode:

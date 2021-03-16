@@ -7,10 +7,12 @@ import os
 
 
 def get_cupboard_info(base_dir, pos, orient):
-    urdf = os.path.join(base_dir, "cupboard2/cupboard2.urdf")
+    urdf_file = "cupboard2/cupboard2.urdf"
+    urdf = os.path.join(base_dir, urdf_file)
 
     world = WorldPybullet("direct", sleep=False)
-    tmp_model = world.add_model(urdf, position=pos, orientation=orient)
+    scale = 0.7
+    tmp_model = world.add_model(urdf, position=pos, orientation=orient, scale=scale)
 
     rot = R.from_quat(orient)
     yaw = rot.as_euler("xyz", degrees=False)
@@ -32,10 +34,11 @@ def get_cupboard_info(base_dir, pos, orient):
 
     grasp_orient = R.from_euler("xzy", [180, 0, -45], degrees=True)
     return ObjectInfo(
-        urdf_name_="data/models/cupboard_drawers/cupboard_drawers.urdf",
+        urdf_name_=urdf_file,
         urdf_path_=urdf,
         init_pos_=np.array(pos),
         init_orient_=np.array(orient),
+        init_scale_=scale,
         grasp_pos_={link: [np.array([0.0, 0.0, 0.0])] for link in handle_link_idx},
         grasp_orient_={link: [grasp_orient.as_quat()] for link in handle_link_idx},
         nav_angle_=nav_angle,
