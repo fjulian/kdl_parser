@@ -131,6 +131,7 @@ class HLPTreeNode:
         self.state.restore_state()
 
         feasible_moves = list()
+        feasible_navgoals = set()
         for action in self.action_list:
             # Skip nav action as the last action was already a nav action
             if self.own_action is not None:
@@ -149,7 +150,7 @@ class HLPTreeNode:
             # Sample positions
             num_position_samples = 2
             num_reachable_position_samples = 2
-            max_reachable_tries = 100
+            max_reachable_tries = 60
             for i, parameter in enumerate(parameters):
                 if self.exp.knowledge_base.type_x_child_of_y("position", parameter[1]):
                     for j in range(num_position_samples):
@@ -187,9 +188,15 @@ class HLPTreeNode:
             # Check which of them are feasible at the current state
             preconditions = self.exp.knowledge_base.actions[action]["preconds"]
             for parameter_dict in parameter_dicts:
+                if "nav" in action:
+                    if (
+                        parameter_dict["goal_pos"] in feasible_navgoals
+                        or parameter_dict["goal_pos"] == parameter_dict["current_pos"]
+                    ):
+                        continue
+
                 feasible = True
                 for precond in preconditions:
-
                     parameterized_precond = parametrize_predicate(
                         precond, parameter_dict
                     )
@@ -203,6 +210,8 @@ class HLPTreeNode:
                         break
                 sequence_tuple = ((action,), (parameter_dict,))
                 if feasible and sequence_tuple not in self.child_actions:
+                    if "nav" in action:
+                        feasible_navgoals.add(parameter_dict["goal_pos"])
                     feasible_moves.append(sequence_tuple)
 
         if len(feasible_moves) == 0:
