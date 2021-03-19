@@ -13,7 +13,7 @@ from highlevel_planning_py.exploration.logic_tools import (
 )
 
 
-MAX_DEPTH = 20
+MAX_DEPTH = 10
 
 
 class HLPTreeSearch:

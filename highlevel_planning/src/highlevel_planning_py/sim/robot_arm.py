@@ -477,7 +477,6 @@ class RobotArmPybullet(RobotArm):
         return joint_positions, joint_velocities, joint_torques
 
     def check_grasp(self):
-        self._world.step_seconds(0.4)
         gripper_state = p.getJointStates(
             self.model.uid, self.joint_idx_fingers, physicsClientId=self.pb_id
         )
