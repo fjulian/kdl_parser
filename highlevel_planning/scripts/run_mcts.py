@@ -3,6 +3,10 @@ import os
 import atexit
 from datetime import datetime
 import networkx as nx
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+mpl.use("TkAgg")
 
 # Simulation
 from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
@@ -111,6 +115,14 @@ def main():
     # ---------------------------------------------------------------
 
     mcts_search.tree_search()
+
+    save = True
+    if save:
+        figure, ax = plt.subplots()
+        mcts_search.figure = figure
+        mcts_search.ax = ax
+        mcts_search.plot_graph(mcts_root_node)
+        plt.show()
 
 
 if __name__ == "__main__":

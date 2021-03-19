@@ -5,10 +5,8 @@ import numpy as np
 from collections import defaultdict
 from itertools import product
 import networkx as nx
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-mpl.use("TkAgg")
 
 from highlevel_planning_py.execution.es_sequential_execution import (
     execute_plan_sequentially,
@@ -20,24 +18,27 @@ from highlevel_planning_py.exploration.logic_tools import (
 
 
 MAX_DEPTH = 10
+DEBUG = False
 
 
 class HLPTreeSearch:
     def __init__(self, root):
         self.root = root
 
-        plt.ion()
-        self.figure, self.ax = plt.subplots()
+        if DEBUG:
+            plt.ion()
+            self.figure, self.ax = plt.subplots()
 
     def tree_search(self):
-        time_budget = 700
+        time_budget = 180
         start_time = time()
         counter = 0
         while time() - start_time < time_budget:
             counter += 1
             current_node = self.root
             while not current_node.is_terminal():
-                self.plot_graph(current_node)
+                if DEBUG:
+                    self.plot_graph(current_node)
                 if current_node.check_expanding():
                     # Expand
                     current_node = current_node.expand()
@@ -157,7 +158,7 @@ class HLPTreeNode:
         if all_terminal:
             return True
 
-        alpha = 0.65
+        alpha = 0.75
         return (
             True
             if self.num_visited == 0 or len(self.children) == 0
