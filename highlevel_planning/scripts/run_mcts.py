@@ -2,6 +2,7 @@ import numpy as np
 import os
 import atexit
 from datetime import datetime
+import networkx as nx
 
 # Simulation
 from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
@@ -100,9 +101,10 @@ def main():
     relevant_objects = goal_objects + closeby_objects
 
     # Set up MCTS
+    graph = nx.DiGraph()
     mcts_state = mcts.HLPState(True, 0, world.client_id, xplorer)
     mcts_root_node = mcts.HLPTreeNode(
-        mcts_state, xplorer, relevant_objects=relevant_objects
+        mcts_state, xplorer, graph, relevant_objects=relevant_objects
     )
     mcts_search = mcts.HLPTreeSearch(mcts_root_node)
 

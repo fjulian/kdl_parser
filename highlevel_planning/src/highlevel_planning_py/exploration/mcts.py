@@ -1,8 +1,14 @@
 import pybullet as pb
 from time import time
+from uuid import uuid4
 import numpy as np
 from collections import defaultdict
 from itertools import product
+import networkx as nx
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+mpl.use("TkAgg")
 
 from highlevel_planning_py.execution.es_sequential_execution import (
     execute_plan_sequentially,
@@ -20,6 +26,9 @@ class HLPTreeSearch:
     def __init__(self, root):
         self.root = root
 
+        plt.ion()
+        self.figure, self.ax = plt.subplots()
+
     def tree_search(self):
         time_budget = 700
         start_time = time()
@@ -28,6 +37,7 @@ class HLPTreeSearch:
             counter += 1
             current_node = self.root
             while not current_node.is_terminal():
+                self.plot_graph(current_node)
                 if current_node.check_expanding():
                     # Expand
                     current_node = current_node.expand()
@@ -35,25 +45,82 @@ class HLPTreeSearch:
                 else:
                     # Select a child to continue from
                     current_node = current_node.select_child()
+
             # result = current_node.rollout()
             result = current_node.state.game_result
             result = 0 if result is None else result
             current_node.backpropagate(result)
-            print("----------------------------------------------")
-            self.root.print()
+            # print("----------------------------------------------")
+            # self.root.print()
             print(
                 "Iteration {}. Current successes: {}".format(
                     counter, self.root.results[1]
                 )
             )
 
+    def plot_graph(self, current_node):
+        pos = nx.drawing.nx_pydot.graphviz_layout(self.root.graph, prog="dot")
+        if len(pos) == 0:
+            return
+        self.ax.clear()
+
+        labels = dict()
+        for node in self.root.graph.nodes._nodes:
+            color = "#1f78b4"  # blue
+            if node is current_node:
+                color = "#ff0000"  # red
+            elif node.own_action is not None:
+                if (
+                    node.own_action[0][0] == "grasp"
+                    and node.own_action[1][0]["obj"] == "cube1"
+                ):
+                    color = "#eaff80"  # light green
+                elif (
+                    "nav" in node.own_action[0][0]
+                    and node.own_action[1][0]["goal_pos"] == "cupboard"
+                ):
+                    color = "#00b300"  # dark green
+
+            if node.own_action is not None:
+                labels[node] = node.own_action[0][0][0]
+
+            marker = "o"
+            if node.is_terminal():
+                if node.state.goal_reached():
+                    marker = "*"
+                    color = "#ff00ff"
+                else:
+                    marker = "^"
+
+            nx.draw_networkx_nodes(
+                self.root.graph,
+                pos,
+                nodelist=[node],
+                node_color=color,
+                node_shape=marker,
+                ax=self.ax,
+            )
+
+        nx.draw_networkx_labels(self.root.graph, pos, labels, font_size=13)
+        nx.draw_networkx_edges(self.root.graph, pos, ax=self.ax)
+
+        self.figure.canvas.draw()
+        self.figure.canvas.flush_events()
+
 
 class HLPTreeNode:
     def __init__(
-        self, state, explorer, relevant_objects=None, parent=None, own_action=None
+        self,
+        state,
+        explorer,
+        graph,
+        relevant_objects=None,
+        parent=None,
+        own_action=None,
     ):
         self.state = state
         self.exp = explorer
+        self.graph = graph
         self.parent = parent
         self.relevant_objects = relevant_objects
         self.own_action = own_action
@@ -71,6 +138,9 @@ class HLPTreeNode:
         self.overwrite_terminal = False
         self.results = defaultdict(int)
 
+        if self.parent is not None:
+            graph.add_edge(self.parent, self)
+
     def is_terminal(self):
         if self.overwrite_terminal:
             return True
@@ -87,7 +157,7 @@ class HLPTreeNode:
         if all_terminal:
             return True
 
-        alpha = 0.4
+        alpha = 0.65
         return (
             True
             if self.num_visited == 0 or len(self.children) == 0
@@ -110,6 +180,7 @@ class HLPTreeNode:
             new_child = HLPTreeNode(
                 new_state,
                 self.exp,
+                self.graph,
                 relevant_objects=self.relevant_objects,
                 parent=self,
                 own_action=sequence_tuple,
@@ -285,6 +356,8 @@ class HLPState:
         self.exp = explorer
         self.success = success
 
+        self.goal_reached_cache = None
+
     @property
     def game_result(self):
         if not self.success:
@@ -321,5 +394,7 @@ class HLPState:
         self.exp.robot.set_fingers(self.finger_state)
 
     def goal_reached(self):
-        self.restore_state()
-        return self.exp.knowledge_base.test_goals()
+        if self.goal_reached_cache is None:
+            self.restore_state()
+            self.goal_reached_cache = self.exp.knowledge_base.test_goals()
+        return self.goal_reached_cache
