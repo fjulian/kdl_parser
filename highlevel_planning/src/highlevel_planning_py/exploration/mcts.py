@@ -2,9 +2,14 @@ import pybullet as pb
 from time import time
 import numpy as np
 from collections import defaultdict
+from itertools import product
 
 from highlevel_planning_py.execution.es_sequential_execution import (
     execute_plan_sequentially,
+)
+from highlevel_planning_py.exploration.logic_tools import (
+    find_all_parameter_assignments,
+    parametrize_predicate,
 )
 
 
@@ -42,11 +47,14 @@ class HLPTreeSearch:
 
 
 class HLPTreeNode:
-    def __init__(self, state, explorer, relevant_objects=None, parent=None):
+    def __init__(
+        self, state, explorer, relevant_objects=None, parent=None, own_action=None
+    ):
         self.state = state
         self.exp = explorer
         self.parent = parent
         self.relevant_objects = relevant_objects
+        self.own_action = own_action
 
         self.action_list = [
             act
@@ -57,13 +65,26 @@ class HLPTreeNode:
         self.child_actions = list()
 
         self.num_visited = 0
-        self.never_expand = False
+        self.cannot_expand = False
+        self.overwrite_terminal = False
         self.results = defaultdict(int)
 
     def is_terminal(self):
+        if self.overwrite_terminal:
+            return True
         return self.state.is_game_over()
 
     def check_expanding(self):
+        if self.cannot_expand:
+            return False
+
+        # If there is no non-terminal child, expand
+        all_terminal = True
+        for child in self.children:
+            all_terminal &= child.is_terminal()
+        if all_terminal:
+            return True
+
         alpha = 0.4
         return (
             True
@@ -77,12 +98,19 @@ class HLPTreeNode:
         counter = 0
         while counter < max_tries:
             counter += 1
-            sequence_tuple = self._sample_step()
+            sequence_tuple = self._sample_feasible_step()
+            if sequence_tuple is False:
+                self.cannot_expand = True
+                return self
             if sequence_tuple in self.child_actions:
                 continue
             new_state = self.state.move(sequence_tuple)
             new_child = HLPTreeNode(
-                new_state, self.exp, relevant_objects=self.relevant_objects, parent=self
+                new_state,
+                self.exp,
+                relevant_objects=self.relevant_objects,
+                parent=self,
+                own_action=sequence_tuple,
             )
             self.children.append(new_child)
             self.child_actions.append(sequence_tuple)
@@ -96,6 +124,70 @@ class HLPTreeNode:
         )
         sequence_tuple = (tuple(sequence), tuple(parameters))
         return sequence_tuple
+
+    def _sample_feasible_step(self):
+        self.state.restore_state()
+
+        feasible_moves = list()
+        for action in self.action_list:
+            # Skip nav action as the last action was already a nav action
+            if self.own_action is not None:
+                if "nav" in self.own_action[0][0] and "nav" in action:
+                    continue
+
+            # if "place" in action:
+            #     print("bla")
+
+            # Get parameters
+            parameters = self.exp.knowledge_base.actions[action]["params"]
+            parameter_assignments = find_all_parameter_assignments(
+                parameters, self.relevant_objects + ["origin"], self.exp.knowledge_base
+            )
+
+            # Sample positions
+            num_position_samples = 20
+            for i, parameter in enumerate(parameters):
+                if self.exp.knowledge_base.type_x_child_of_y(parameter[1], "position"):
+                    for j in range(num_position_samples):
+                        position = self.exp.sample_position(self.relevant_objects)
+                        position_name = self.exp.knowledge_base.add_temp_object(
+                            object_type=parameter[1], object_value=position
+                        )
+                        parameter_assignments[i].append(position_name)
+
+            # For each parameterization, get all possible assignments
+            parameter_dicts = list()
+            for parametrization in product(*parameter_assignments):
+                parameter_dict = {
+                    parameters[i][0]: parametrization[i] for i in range(len(parameters))
+                }
+                parameter_dicts.append(parameter_dict)
+
+            # Check which of them are feasible at the current state
+            preconditions = self.exp.knowledge_base.actions[action]["preconds"]
+            for parameter_dict in parameter_dicts:
+                feasible = True
+                for precond in preconditions:
+
+                    parameterized_precond = parametrize_predicate(
+                        precond, parameter_dict
+                    )
+                    res = self.exp.knowledge_base.predicate_funcs.call[precond[0]](
+                        *parameterized_precond[2]
+                    )
+                    feasible &= res == precond[1]
+                    # if not res and action == "grasp" and precond[0] == "empty-hand":
+                    #     print("yey")
+                    if not feasible:
+                        break
+                sequence_tuple = ((action,), (parameter_dict,))
+                if feasible and sequence_tuple not in self.child_actions:
+                    feasible_moves.append(sequence_tuple)
+
+        if len(feasible_moves) == 0:
+            return False
+        selected_action = np.random.randint(len(feasible_moves))
+        return feasible_moves[selected_action]
 
     def rollout(self):
         current_rollout_state = self.state
@@ -123,6 +215,10 @@ class HLPTreeNode:
             else:
                 score = -np.inf
             scores.append(score)
+        if len(scores) == 0:
+            if self.cannot_expand:
+                self.overwrite_terminal = True
+            return self
         max_idx = np.argmax(scores)
         return self.children[max_idx]
 
@@ -148,9 +244,13 @@ class HLPTreeNode:
 class HLPState:
     def __init__(self, success, depth, pb_client_id, explorer, action_str=""):
         self._depth = depth
+        self.action_str = action_str
+
+        # Save state
         self._bullet_state = pb.saveState(physicsClientId=pb_client_id)
         self._bullet_client_id = pb_client_id
-        self.action_str = action_str
+        self.arm_state = explorer.robot.desired_arm
+        self.finger_state = explorer.robot.desired_fingers
 
         self.exp = explorer
         self.success = success
@@ -170,7 +270,7 @@ class HLPState:
         return self.game_result is not None
 
     def move(self, action):
-        self._restore_state()
+        self.restore_state()
         success = execute_plan_sequentially(
             action[0], action[1], self.exp.skill_set, self.exp.knowledge_base
         )
@@ -183,14 +283,13 @@ class HLPState:
         )
         return new_state
 
-    # def get_legal_actions(self):
-    #     self._restore_state()
-
-    def _restore_state(self):
+    def restore_state(self):
         pb.restoreState(
             stateId=self._bullet_state, physicsClientId=self._bullet_client_id
         )
+        self.exp.robot.set_joints(self.arm_state)
+        self.exp.robot.set_fingers(self.finger_state)
 
     def goal_reached(self):
-        self._restore_state()
+        self.restore_state()
         return self.exp.knowledge_base.test_goals()
