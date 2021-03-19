@@ -406,6 +406,12 @@ class KnowledgeBase:
             self.lookup_table[object_name] = object_value
         return object_name
 
+    def remove_temp_object(self, object_name):
+        if object_name in self.lookup_table:
+            del self.lookup_table[object_name]
+        if object_name in self._temp_objects:
+            del self._temp_objects[object_name]
+
     def generalize_temp_object(self, object_name):
         assert object_name in self.objects
         self._temp_generalized_objects.append(object_name)

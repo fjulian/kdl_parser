@@ -42,7 +42,7 @@ def get_cupboard_info(base_dir, pos, orient):
         grasp_pos_={link: [np.array([0.0, 0.0, 0.0])] for link in handle_link_idx},
         grasp_orient_={link: [grasp_orient.as_quat()] for link in handle_link_idx},
         nav_angle_=nav_angle,
-        nav_min_dist_=0.9,
+        nav_min_dist_=0.6,
         grasp_links_=handle_link_idx,
         joint_setting_=[
             {"jnt_idx": i, "mode": pb.VELOCITY_CONTROL, "force": 0.0}

@@ -13,7 +13,7 @@ from highlevel_planning_py.exploration.logic_tools import (
 )
 
 
-MAX_DEPTH = 30
+MAX_DEPTH = 20
 
 
 class HLPTreeSearch:
@@ -31,11 +31,13 @@ class HLPTreeSearch:
                 if current_node.check_expanding():
                     # Expand
                     current_node = current_node.expand()
-                    break
+                    # break
                 else:
                     # Select a child to continue from
                     current_node = current_node.select_child()
-            result = current_node.rollout()
+            # result = current_node.rollout()
+            result = current_node.state.game_result
+            result = 0 if result is None else result
             current_node.backpropagate(result)
             print("----------------------------------------------")
             self.root.print()
@@ -145,15 +147,34 @@ class HLPTreeNode:
             )
 
             # Sample positions
-            num_position_samples = 20
+            num_position_samples = 2
+            num_reachable_position_samples = 2
+            max_reachable_tries = 100
             for i, parameter in enumerate(parameters):
-                if self.exp.knowledge_base.type_x_child_of_y(parameter[1], "position"):
+                if self.exp.knowledge_base.type_x_child_of_y("position", parameter[1]):
                     for j in range(num_position_samples):
                         position = self.exp.sample_position(self.relevant_objects)
                         position_name = self.exp.knowledge_base.add_temp_object(
-                            object_type=parameter[1], object_value=position
+                            object_type="position", object_value=position
                         )
                         parameter_assignments[i].append(position_name)
+                    k = 0
+                    k_count = 0
+                    while k < num_reachable_position_samples:
+                        k_count += 1
+                        position = self.exp.sample_position(self.relevant_objects)
+                        position_name = self.exp.knowledge_base.add_temp_object(
+                            object_type="position", object_value=position
+                        )
+                        if self.exp.knowledge_base.predicate_funcs.call["in-reach"](
+                            position_name, None
+                        ):
+                            parameter_assignments[i].append(position_name)
+                            k += 1
+                        else:
+                            self.exp.knowledge_base.remove_temp_object(position_name)
+                        if k_count > max_reachable_tries:
+                            break
 
             # For each parameterization, get all possible assignments
             parameter_dicts = list()
