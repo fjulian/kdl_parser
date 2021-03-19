@@ -254,6 +254,11 @@ class RobotArmPybullet(RobotArm):
 
         self.model = robot_model
 
+        self.pb_id = world.client_id
+
+        self.desired_arm = self.start_cmd
+        self.desired_fingers = [0.0, 0.0]
+
         self.joint_idx_arm = [1, 2, 3, 4, 5, 6, 7]
         self.joint_idx_fingers = [0, 0]
         self.joint_idx_hand = 0
@@ -274,11 +279,13 @@ class RobotArmPybullet(RobotArm):
                 orientation=[0.0, 0.0, 0.0, 1.0],
             )
 
-        self.link_name_to_index = {p.getBodyInfo(self.model.uid)[0]: -1}
+        self.link_name_to_index = {
+            p.getBodyInfo(self.model.uid, physicsClientId=self.pb_id)[0]: -1
+        }
 
-        self.num_joints = p.getNumJoints(self.model.uid)
+        self.num_joints = p.getNumJoints(self.model.uid, physicsClientId=self.pb_id)
         for i in range(self.num_joints):
-            info = p.getJointInfo(self.model.uid, i)
+            info = p.getJointInfo(self.model.uid, i, physicsClientId=self.pb_id)
             joint_name = info[1] if type(info[1]) is str else info[1].decode("utf-8")
             # print(joint_name, info[16])  # Use this to print all joint names.
             if "panda_joint" in joint_name and len(joint_name) == 12:
@@ -299,7 +306,10 @@ class RobotArmPybullet(RobotArm):
             self.link_name_to_index[_name] = i
 
         p.enableJointForceTorqueSensor(
-            self.model.uid, self.joint_idx_hand, enableSensor=1
+            self.model.uid,
+            self.joint_idx_hand,
+            enableSensor=1,
+            physicsClientId=self.pb_id,
         )
 
         # Force fingers to move symmetrically
@@ -312,8 +322,11 @@ class RobotArmPybullet(RobotArm):
             jointAxis=[1, 0, 0],
             parentFramePosition=[0, 0, 0],
             childFramePosition=[0, 0, 0],
+            physicsClientId=self.pb_id,
         )
-        p.changeConstraint(c, gearRatio=-1, erp=0.1, maxForce=50)
+        p.changeConstraint(
+            c, gearRatio=-1, erp=0.1, maxForce=50, physicsClientId=self.pb_id
+        )
 
         self.apply_colors()
 
@@ -335,16 +348,23 @@ class RobotArmPybullet(RobotArm):
 
     def apply_color(self, link_name, rgba):
         link_idx = self.link_name_to_index[link_name]
-        p.changeVisualShape(self.model.uid, linkIndex=link_idx, rgbaColor=rgba)
+        p.changeVisualShape(
+            self.model.uid,
+            linkIndex=link_idx,
+            rgbaColor=rgba,
+            physicsClientId=self.pb_id,
+        )
 
     def set_joints(self, desired):
         if desired is None:
             return
+        self.desired_arm = desired
         p.setJointMotorControlArray(
             self.model.uid,
             self.joint_idx_arm,
             p.POSITION_CONTROL,
             targetPositions=desired,
+            physicsClientId=self.pb_id,
         )
 
     def task_space_velocity_control(
@@ -374,6 +394,7 @@ class RobotArmPybullet(RobotArm):
                     self.arm_base_link_idx,
                     self.link_name_to_index["panda_hand"],
                 ],
+                physicsClientId=self.pb_id,
             )
             base_r = R.from_quat(link_poses[0][5])
             ee_r = R.from_quat(link_poses[1][5])
@@ -395,6 +416,7 @@ class RobotArmPybullet(RobotArm):
                 self.joint_idx_arm,
                 p.VELOCITY_CONTROL,
                 targetVelocities=list(cmd),
+                physicsClientId=self.pb_id,
             )
 
             self._world.step_one()
@@ -406,42 +428,47 @@ class RobotArmPybullet(RobotArm):
             self.joint_idx_arm,
             p.VELOCITY_CONTROL,
             targetVelocities=[0.0] * len(cmd),
+            physicsClientId=self.pb_id,
         )
 
     def get_joints(self):
         if not hasattr(self, "model") or self.model is None:
             return [0.0] * self.num_arm_joints
-        temp = p.getJointStates(self.model.uid, self.joint_idx_arm)
+        temp = p.getJointStates(
+            self.model.uid, self.joint_idx_arm, physicsClientId=self.pb_id
+        )
         pos = [a[0] for a in temp]
         return pos
 
     def open_gripper(self):
         pos = [0.038, 0.038]
-        p.setJointMotorControlArray(
-            self.model.uid,
-            self.joint_idx_fingers,
-            p.POSITION_CONTROL,
-            targetPositions=pos,
-        )
+        self.set_fingers(pos)
 
     def close_gripper(self):
         pos = [0.0, 0.0]
+        self.set_fingers(pos)
+
+    def set_fingers(self, pos):
         forces = [25.0, 25.0]
+        self.desired_fingers = pos
         p.setJointMotorControlArray(
             self.model.uid,
             self.joint_idx_fingers,
             p.POSITION_CONTROL,
             targetPositions=pos,
             forces=forces,
+            physicsClientId=self.pb_id,
         )
 
     def get_motor_joint_states(self):
         joint_states = p.getJointStates(
-            self.model.uid, range(p.getNumJoints(self.model.uid))
+            self.model.uid,
+            range(p.getNumJoints(self.model.uid, physicsClientId=self.pb_id)),
+            physicsClientId=self.pb_id,
         )
         joint_infos = [
-            p.getJointInfo(self.model.uid, i)
-            for i in range(p.getNumJoints(self.model.uid))
+            p.getJointInfo(self.model.uid, i, physicsClientId=self.pb_id)
+            for i in range(p.getNumJoints(self.model.uid, physicsClientId=self.pb_id))
         ]
         joint_states = [j for j, i in zip(joint_states, joint_infos) if i[3] > -1]
         joint_positions = [state[0] for state in joint_states]
@@ -450,23 +477,24 @@ class RobotArmPybullet(RobotArm):
         return joint_positions, joint_velocities, joint_torques
 
     def check_grasp(self):
-        gripper_state = p.getJointStates(self.model.uid, self.joint_idx_fingers)
+        self._world.step_seconds(0.4)
+        gripper_state = p.getJointStates(
+            self.model.uid, self.joint_idx_fingers, physicsClientId=self.pb_id
+        )
         assert len(gripper_state) == 2
 
-        # dist_threshold = 0.01
-        # dist = gripper_state[0][0] + gripper_state[1][0]
-        # if dist > dist_threshold:
-        #     object_present = True
-        # else:
-        #     object_present = False
-
-        force_threshold = 1.0
-        force1 = gripper_state[0][3]
-        force2 = gripper_state[1][3]
-        if abs(force1) < force_threshold and abs(force2) < force_threshold:
+        dist_threshold = 0.01
+        dist = gripper_state[0][0] + gripper_state[1][0]
+        if dist < dist_threshold:
             object_present = False
         else:
-            object_present = True
+            force_threshold = 1.0
+            force1 = gripper_state[0][3]
+            force2 = gripper_state[1][3]
+            if abs(force1) < force_threshold and abs(force2) < force_threshold:
+                object_present = False
+            else:
+                object_present = True
 
         return object_present
 
@@ -481,7 +509,9 @@ class RobotArmPybullet(RobotArm):
 
     def velocity_setter(self):
         # Determine current robot pose
-        _, orient = p.getBasePositionAndOrientation(self.model.uid)
+        _, orient = p.getBasePositionAndOrientation(
+            self.model.uid, physicsClientId=self.pb_id
+        )
         orient = R.from_quat(orient)
         # euler = orient.as_euler('xyz', degrees=True)
 
@@ -490,17 +520,26 @@ class RobotArmPybullet(RobotArm):
         # vel_rot doesn't need to be converted, since body and world z axis coincide.
 
         p.resetBaseVelocity(
-            self.model.uid, vel_trans_world.tolist(), [0.0, 0.0, self.velocity_turn]
+            self.model.uid,
+            vel_trans_world.tolist(),
+            [0.0, 0.0, self.velocity_turn],
+            physicsClientId=self.pb_id,
         )
 
     def get_wrist_force_torque(self):
-        _, _, f_t, _ = p.getJointState(self.model.uid, self.joint_idx_hand)
+        _, _, f_t, _ = p.getJointState(
+            self.model.uid, self.joint_idx_hand, physicsClientId=self.pb_id
+        )
         forces = np.array(f_t[:3])
         torques = np.array(f_t[3:])
         return forces, torques
 
     def get_link_pose(self, link_name):
-        ret = p.getLinkState(self.model.uid, self.link_name_to_index[link_name])
+        ret = p.getLinkState(
+            self.model.uid,
+            self.link_name_to_index[link_name],
+            physicsClientId=self.pb_id,
+        )
         pos = np.array(ret[4])
         orient = np.array(ret[5])
         return pos, orient

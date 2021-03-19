@@ -11,7 +11,7 @@ def get_cupboard_info(base_dir, pos, orient):
     urdf = os.path.join(base_dir, urdf_file)
 
     world = WorldPybullet("direct", sleep=False)
-    scale = 0.7
+    scale = 0.5
     tmp_model = world.add_model(urdf, position=pos, orientation=orient, scale=scale)
 
     rot = R.from_quat(orient)

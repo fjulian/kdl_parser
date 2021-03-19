@@ -194,4 +194,7 @@ class Predicates:
         return above and within
 
     def has_grasp(self, obj):
-        return len(self._scene.objects[obj].grasp_pos) > 0
+        if obj in self._scene.objects:
+            return len(self._scene.objects[obj].grasp_pos) > 0
+        else:
+            return False

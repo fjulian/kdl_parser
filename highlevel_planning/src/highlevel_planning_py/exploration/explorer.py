@@ -592,7 +592,7 @@ class Explorer:
         max_coords = bounding_box[1]
         max_coords += self.config_params["bounding_box_inflation_length"]
         min_coords -= self.config_params["bounding_box_inflation_length"]
-        min_coords[2] = np.max([min_coords[2], arm_base_pos[2] - 0.1])
+        min_coords[2] = np.max([min_coords[2], arm_base_pos[2] - 0.15])
         max_coords[2] = np.max([max_coords[2], min_coords[2] + 0.01])
 
         assert min_coords[2] < max_coords[2]

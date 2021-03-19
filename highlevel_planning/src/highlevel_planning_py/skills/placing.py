@@ -66,7 +66,7 @@ class SkillPlacing:
 
             self.robot._world.step_seconds(0.2)
             self.robot.open_gripper()
-            self.robot._world.step_seconds(0.4)
+            self.robot._world.step_seconds(0.5)
 
             # Go back to pre-place-pose
             if not collision_during_pre:

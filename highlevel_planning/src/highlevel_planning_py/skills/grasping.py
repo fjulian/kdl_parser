@@ -108,7 +108,7 @@ class SkillGrasping:
         )
 
         self.robot.open_gripper()
-        self.robot._world.step_seconds(0.2)
+        self.robot._world.step_seconds(0.5)
         self.robot.transition_cartesian(pos_retract, orient_current)
 
 
