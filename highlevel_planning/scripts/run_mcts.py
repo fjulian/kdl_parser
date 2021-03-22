@@ -30,9 +30,13 @@ from highlevel_planning_py.exploration.exploration_tools import get_items_closeb
 
 # ----------------------------------------------------------------------
 
-DATADIR = os.path.join(os.path.expanduser("~"), "Data", "highlevel_planning")
 SRCROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ASSETDIR = os.path.join(SRCROOT, "data", "models")
+PATHS = {
+    "data_dir": os.path.join(os.path.expanduser("~"), "Data", "highlevel_planning"),
+    "src_root_dir": SRCROOT,
+    "asset_dir": os.path.join(SRCROOT, "data", "models"),
+    "bin_dir": os.path.join(SRCROOT, "bin"),
+}
 
 
 def exit_handler(rep: Reporter):
@@ -60,7 +64,7 @@ def main():
         raise RuntimeError("Cannot reload objects when in direct mode.")
 
     # Load existing simulation data if desired
-    savedir = os.path.join(DATADIR, "simulator")
+    savedir = os.path.join(PATHS["data_dir"], "simulator")
     objects, robot_mdl = run_util.restore_pybullet_sim(savedir, args)
 
     # Load config file
@@ -73,16 +77,16 @@ def main():
 
     # Populate simulation
     scene, world = run_util.setup_pybullet_world(
-        ScenePlanning1, ASSETDIR, args, savedir, objects
+        ScenePlanning1, PATHS["asset_dir"], args, savedir, objects
     )
-    robot = run_util.setup_robot(world, cfg, ASSETDIR, robot_mdl)
+    robot = run_util.setup_robot(world, cfg, PATHS["asset_dir"], robot_mdl)
 
     # Save state
     run_util.save_pybullet_sim(args, savedir, scene, robot)
 
     # -----------------------------------
 
-    kb, preds = run_util.setup_knowledge_base(DATADIR, scene, robot, cfg, time_string)
+    kb, preds = run_util.setup_knowledge_base(PATHS, scene, robot, cfg, time_string)
 
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot, cfg)

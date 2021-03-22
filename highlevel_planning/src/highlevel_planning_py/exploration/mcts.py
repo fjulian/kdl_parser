@@ -18,7 +18,7 @@ from highlevel_planning_py.exploration.logic_tools import (
 
 
 MAX_DEPTH = 10
-DEBUG = False
+DEBUG = True
 
 
 class HLPTreeSearch:
@@ -205,13 +205,10 @@ class HLPTreeNode:
         feasible_moves = list()
         feasible_navgoals = set()
         for action in self.action_list:
-            # Skip nav action as the last action was already a nav action
+            # Skip nav action if the last action was already a nav action
             if self.own_action is not None:
                 if "nav" in self.own_action[0][0] and "nav" in action:
                     continue
-
-            # if "place" in action:
-            #     print("bla")
 
             # Get parameters
             parameters = self.exp.knowledge_base.actions[action]["params"]
