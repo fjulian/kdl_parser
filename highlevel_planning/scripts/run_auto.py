@@ -66,16 +66,23 @@ def main():
     # Load config file
     cfg = ConfigYaml(os.path.join(SRCROOT, "config", "main.yaml"))
 
-    time_now = datetime.now()
-    time_string = time_now.strftime("%y%m%d-%H%M%S")
-    rep = Reporter(PATHS, cfg, time_string, args.noninteractive)
-    atexit.register(exit_handler, rep)
-
     # Populate simulation
     scene, world = run_util.setup_pybullet_world(
         ScenePlanning1, PATHS["asset_dir"], args, savedir, objects
     )
     robot = run_util.setup_robot(world, cfg, PATHS["asset_dir"], robot_mdl)
+
+    # Set up reporter
+    time_now = datetime.now()
+    time_string = time_now.strftime("%y%m%d-%H%M%S")
+    rep = Reporter(
+        PATHS,
+        cfg,
+        domain_name=scene.__class__.__name__,
+        time_string=time_string,
+        noninteractive=args.noninteractive,
+    )
+    atexit.register(exit_handler, rep)
 
     # Save state
     run_util.save_pybullet_sim(args, savedir, scene, robot)

@@ -90,7 +90,9 @@ def setup_robot(world, cfg, asset_dir, robot_mdl):
 
 def setup_knowledge_base(paths, scene, robot, cfg, time_string):
     # Set up planner interface and domain representation
-    kb = KnowledgeBase(paths, domain_name="chimera", time_string=time_string)
+    kb = KnowledgeBase(
+        paths, domain_name=scene.__class__.__name__, time_string=time_string
+    )
 
     # Add basic skill descriptions
     skill_descriptions = pddl_descriptions.get_action_descriptions()

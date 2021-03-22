@@ -13,10 +13,12 @@ class Reporter:
         self,
         paths,
         config: ConfigYaml,
+        domain_name,
         time_string: str = None,
         noninteractive: bool = False,
     ):
         self.paths = paths
+        self.domain_name = domain_name
         self.data = dict()
         self.metrics = OrderedDict()
         if time_string is None:
@@ -59,7 +61,7 @@ class Reporter:
         self.run_idx += 1
 
     def report_before_exploration(self, knowledge_base: KnowledgeBase, plan):
-        kb_clone = KnowledgeBase(self.paths)
+        kb_clone = KnowledgeBase(self.paths, domain_name=self.domain_name)
         kb_clone.duplicate(knowledge_base)
         self.data[f"explore_{self.explore_idx}_kb_before"] = kb_clone
         self.metrics[f"explore_{self.explore_idx}_goal"] = str(kb_clone.goals)
@@ -72,7 +74,7 @@ class Reporter:
     def report_after_exploration(
         self, knowledge_base: KnowledgeBase, exploration_metrics: OrderedDict
     ):
-        kb_clone = KnowledgeBase(self.paths)
+        kb_clone = KnowledgeBase(self.paths, domain_name=self.domain_name)
         kb_clone.duplicate(knowledge_base)
         self.data[f"explore_{self.explore_idx}_kb_after"] = kb_clone
         self._extract_kb_metrics(kb_clone, f"explore_{self.explore_idx}_kb_after")
