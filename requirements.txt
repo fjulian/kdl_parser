@@ -10,3 +10,12 @@ argparse
 PyYAML
 matplotlib
 tqdm
+
+mctspy
+setuptools
+rospy
+pytest
+networkx
+seaborn
+sklearn
+scikit-learn

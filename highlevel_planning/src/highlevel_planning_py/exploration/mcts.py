@@ -13,6 +13,7 @@ from highlevel_planning_py.execution.es_sequential_execution import (
 from highlevel_planning_py.exploration.logic_tools import (
     find_all_parameter_assignments,
     parametrize_predicate,
+    measure_predicates,
 )
 
 
@@ -76,7 +77,7 @@ class HLPTreeSearch:
             self.figure, self.ax = plt.subplots()
 
     def tree_search(self):
-        time_budget = 20
+        time_budget = 180
         start_time = time()
         counter = 0
         counter2 = 0
@@ -86,7 +87,9 @@ class HLPTreeSearch:
             while not current_node.is_terminal(self.exp):
                 counter2 += 1
                 if DEBUG and counter2 % 10 == 0:
-                    plot_graph(self.root.graph, current_node, self.figure, self.ax)
+                    plot_graph(
+                        self.root.graph, current_node, self.figure, self.ax, self.exp
+                    )
                 if current_node.check_expanding(self.exp):
                     # Expand
                     current_node = current_node.expand(self.exp)
@@ -263,12 +266,16 @@ class HLPTreeNode:
                     parameterized_precond = parametrize_predicate(
                         precond, parameter_dict
                     )
-                    res = explorer.knowledge_base.predicate_funcs.call[precond[0]](
-                        *parameterized_precond[2]
-                    )
+                    try:
+                        idx = self.state.predicate_specs.index(
+                            (parameterized_precond[0], parameterized_precond[2])
+                        )
+                        res = self.state.measured_predicates[idx]
+                    except ValueError:
+                        res = explorer.knowledge_base.predicate_funcs.call[precond[0]](
+                            *parameterized_precond[2]
+                        )
                     feasible &= res == precond[1]
-                    # if not res and action == "grasp" and precond[0] == "empty-hand":
-                    #     print("yey")
                     if not feasible:
                         break
                 sequence_tuple = ((action,), (parameter_dict,))
@@ -327,7 +334,7 @@ class HLPTreeNode:
         print(
             spacer
             + " ({}) {} Terminal: {}".format(
-                self.num_visited, self.state.action_str, self.is_terminal()
+                self.num_visited, self.state.action_str, self.is_terminal(explorer=None)
             )
         )
         for child in self.children:
@@ -335,15 +342,20 @@ class HLPTreeNode:
 
 
 class HLPState:
-    def __init__(self, success, depth, pb_client_id, explorer, action_str=""):
+    def __init__(self, success, depth, pb_client_id, explorer, predicate_specs):
         self._depth = depth
-        self.action_str = action_str
 
         # Save state
         self._bullet_state = pb.saveState(physicsClientId=pb_client_id)
         self._bullet_client_id = pb_client_id
         self.arm_state = explorer.robot.desired_arm
         self.finger_state = explorer.robot.desired_fingers
+
+        # Evaluate predicates
+        self.predicate_specs = predicate_specs
+        self.measured_predicates = measure_predicates(
+            predicate_specs, explorer.knowledge_base
+        )
 
         self.success = success
         self.goal_reached_cache = None
@@ -371,7 +383,7 @@ class HLPState:
             self._depth + 1,
             self._bullet_client_id,
             explorer,
-            action_str=str(action),
+            self.predicate_specs,
         )
         return new_state
 

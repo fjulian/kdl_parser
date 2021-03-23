@@ -21,6 +21,7 @@ from highlevel_planning_py.skills.placing import SkillPlacing
 from highlevel_planning_py.exploration.explorer import Explorer
 from highlevel_planning_py.exploration.pddl_extender import PDDLExtender
 from highlevel_planning_py.exploration import mcts
+from highlevel_planning_py.exploration.logic_tools import determine_relevant_predicates
 
 # Other
 from highlevel_planning_py.tools.config import ConfigYaml
@@ -125,10 +126,11 @@ def main():
     )
     relevant_objects = goal_objects + closeby_objects
     action_list = [act for act in kb.actions if act not in kb.meta_actions]
+    relevant_predicates = determine_relevant_predicates(relevant_objects, kb)
 
     # Set up MCTS
     graph = nx.DiGraph()
-    mcts_state = mcts.HLPState(True, 0, world.client_id, xplorer)
+    mcts_state = mcts.HLPState(True, 0, world.client_id, xplorer, relevant_predicates)
     mcts_root_node = mcts.HLPTreeNode(
         mcts_state, action_list, graph, relevant_objects=relevant_objects
     )
