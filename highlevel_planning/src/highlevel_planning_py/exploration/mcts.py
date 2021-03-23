@@ -1,6 +1,5 @@
 import pybullet as pb
 from time import time
-from uuid import uuid4
 import numpy as np
 from collections import defaultdict
 from itertools import product
@@ -18,37 +17,86 @@ from highlevel_planning_py.exploration.logic_tools import (
 
 
 MAX_DEPTH = 10
-DEBUG = True
+DEBUG = False
+
+
+def plot_graph(graph, current_node, fig, ax, explorer):
+    pos = nx.drawing.nx_pydot.graphviz_layout(graph, prog="dot")
+    if len(pos) == 0:
+        return
+    ax.clear()
+
+    labels = dict()
+    for node in graph.nodes._nodes:
+        color = "#1f78b4"  # blue
+        if node is current_node:
+            color = "#ff0000"  # red
+        elif node.own_action is not None:
+            if (
+                node.own_action[0][0] == "grasp"
+                and node.own_action[1][0]["obj"] == "cube1"
+            ):
+                color = "#eaff80"  # light green
+            elif (
+                "nav" in node.own_action[0][0]
+                and node.own_action[1][0]["goal_pos"] == "cupboard"
+            ):
+                color = "#00b300"  # dark green
+
+        if node.own_action is not None:
+            labels[node] = node.own_action[0][0][0]
+
+        marker = "o"
+        if node.is_terminal(explorer):
+            if node.state.goal_reached(explorer):
+                marker = "*"
+                color = "#ff00ff"  # pink
+            else:
+                marker = "^"
+
+        nx.draw_networkx_nodes(
+            graph, pos, nodelist=[node], node_color=color, node_shape=marker, ax=ax
+        )
+
+    nx.draw_networkx_labels(graph, pos, labels, font_size=13)
+    nx.draw_networkx_edges(graph, pos, ax=ax)
+
+    # fig.canvas.draw()
+    # fig.canvas.flush_events()
 
 
 class HLPTreeSearch:
-    def __init__(self, root):
+    def __init__(self, root, explorer):
         self.root = root
+
+        self.exp = explorer
 
         if DEBUG:
             plt.ion()
             self.figure, self.ax = plt.subplots()
 
     def tree_search(self):
-        time_budget = 180
+        time_budget = 20
         start_time = time()
         counter = 0
+        counter2 = 0
         while time() - start_time < time_budget:
             counter += 1
             current_node = self.root
-            while not current_node.is_terminal():
-                if DEBUG:
-                    self.plot_graph(current_node)
-                if current_node.check_expanding():
+            while not current_node.is_terminal(self.exp):
+                counter2 += 1
+                if DEBUG and counter2 % 10 == 0:
+                    plot_graph(self.root.graph, current_node, self.figure, self.ax)
+                if current_node.check_expanding(self.exp):
                     # Expand
-                    current_node = current_node.expand()
+                    current_node = current_node.expand(self.exp)
                     # break
                 else:
                     # Select a child to continue from
-                    current_node = current_node.select_child()
+                    current_node = current_node.select_child(self.exp)
 
             # result = current_node.rollout()
-            result = current_node.state.game_result
+            result = current_node.state.game_result(self.exp)
             result = 0 if result is None else result
             current_node.backpropagate(result)
             # print("----------------------------------------------")
@@ -59,78 +107,24 @@ class HLPTreeSearch:
                 )
             )
 
-    def plot_graph(self, current_node):
-        pos = nx.drawing.nx_pydot.graphviz_layout(self.root.graph, prog="dot")
-        if len(pos) == 0:
-            return
-        self.ax.clear()
-
-        labels = dict()
-        for node in self.root.graph.nodes._nodes:
-            color = "#1f78b4"  # blue
-            if node is current_node:
-                color = "#ff0000"  # red
-            elif node.own_action is not None:
-                if (
-                    node.own_action[0][0] == "grasp"
-                    and node.own_action[1][0]["obj"] == "cube1"
-                ):
-                    color = "#eaff80"  # light green
-                elif (
-                    "nav" in node.own_action[0][0]
-                    and node.own_action[1][0]["goal_pos"] == "cupboard"
-                ):
-                    color = "#00b300"  # dark green
-
-            if node.own_action is not None:
-                labels[node] = node.own_action[0][0][0]
-
-            marker = "o"
-            if node.is_terminal():
-                if node.state.goal_reached():
-                    marker = "*"
-                    color = "#ff00ff"
-                else:
-                    marker = "^"
-
-            nx.draw_networkx_nodes(
-                self.root.graph,
-                pos,
-                nodelist=[node],
-                node_color=color,
-                node_shape=marker,
-                ax=self.ax,
-            )
-
-        nx.draw_networkx_labels(self.root.graph, pos, labels, font_size=13)
-        nx.draw_networkx_edges(self.root.graph, pos, ax=self.ax)
-
-        self.figure.canvas.draw()
-        self.figure.canvas.flush_events()
-
 
 class HLPTreeNode:
     def __init__(
         self,
         state,
-        explorer,
+        action_list,
         graph,
         relevant_objects=None,
         parent=None,
         own_action=None,
     ):
         self.state = state
-        self.exp = explorer
         self.graph = graph
         self.parent = parent
         self.relevant_objects = relevant_objects
         self.own_action = own_action
 
-        self.action_list = [
-            act
-            for act in self.exp.knowledge_base.actions
-            if act not in self.exp.knowledge_base.meta_actions
-        ]
+        self.action_list = action_list
         self.children = list()
         self.child_actions = list()
 
@@ -142,23 +136,23 @@ class HLPTreeNode:
         if self.parent is not None:
             graph.add_edge(self.parent, self)
 
-    def is_terminal(self):
+    def is_terminal(self, explorer):
         if self.overwrite_terminal:
             return True
-        return self.state.is_game_over()
+        return self.state.is_game_over(explorer)
 
-    def check_expanding(self):
+    def check_expanding(self, explorer):
         if self.cannot_expand:
             return False
 
         # If there is no non-terminal child, expand
         all_terminal = True
         for child in self.children:
-            all_terminal &= child.is_terminal()
+            all_terminal &= child.is_terminal(explorer)
         if all_terminal:
             return True
 
-        alpha = 0.75
+        alpha = 0.6
         return (
             True
             if self.num_visited == 0 or len(self.children) == 0
@@ -166,21 +160,21 @@ class HLPTreeNode:
             > np.floor((self.num_visited - 1) ** alpha)
         )
 
-    def expand(self):
+    def expand(self, explorer):
         max_tries = 50
         counter = 0
         while counter < max_tries:
             counter += 1
-            sequence_tuple = self._sample_feasible_step()
+            sequence_tuple = self._sample_feasible_step(explorer)
             if sequence_tuple is False:
                 self.cannot_expand = True
                 return self
             if sequence_tuple in self.child_actions:
                 continue
-            new_state = self.state.move(sequence_tuple)
+            new_state = self.state.move(sequence_tuple, explorer)
             new_child = HLPTreeNode(
                 new_state,
-                self.exp,
+                self.action_list,
                 self.graph,
                 relevant_objects=self.relevant_objects,
                 parent=self,
@@ -191,16 +185,16 @@ class HLPTreeNode:
             return new_child
         return None
 
-    def _sample_step(self):
-        sequence = self.exp._sample_sequence(length=1)
-        parameters, _ = self.exp._sample_parameters(
+    def _sample_step(self, explorer):
+        sequence = explorer._sample_sequence(length=1)
+        parameters, _ = explorer._sample_parameters(
             sequence, relevant_objects=self.relevant_objects
         )
         sequence_tuple = (tuple(sequence), tuple(parameters))
         return sequence_tuple
 
-    def _sample_feasible_step(self):
-        self.state.restore_state()
+    def _sample_feasible_step(self, explorer):
+        self.state.restore_state(explorer)
 
         feasible_moves = list()
         feasible_navgoals = set()
@@ -211,9 +205,9 @@ class HLPTreeNode:
                     continue
 
             # Get parameters
-            parameters = self.exp.knowledge_base.actions[action]["params"]
+            parameters = explorer.knowledge_base.actions[action]["params"]
             parameter_assignments = find_all_parameter_assignments(
-                parameters, self.relevant_objects + ["origin"], self.exp.knowledge_base
+                parameters, self.relevant_objects + ["origin"], explorer.knowledge_base
             )
 
             # Sample positions
@@ -221,10 +215,10 @@ class HLPTreeNode:
             num_reachable_position_samples = 2
             max_reachable_tries = 60
             for i, parameter in enumerate(parameters):
-                if self.exp.knowledge_base.type_x_child_of_y("position", parameter[1]):
+                if explorer.knowledge_base.type_x_child_of_y(parameter[1], "position"):
                     for j in range(num_position_samples):
-                        position = self.exp.sample_position(self.relevant_objects)
-                        position_name = self.exp.knowledge_base.add_temp_object(
+                        position = explorer.sample_position(self.relevant_objects)
+                        position_name = explorer.knowledge_base.add_temp_object(
                             object_type="position", object_value=position
                         )
                         parameter_assignments[i].append(position_name)
@@ -232,17 +226,17 @@ class HLPTreeNode:
                     k_count = 0
                     while k < num_reachable_position_samples:
                         k_count += 1
-                        position = self.exp.sample_position(self.relevant_objects)
-                        position_name = self.exp.knowledge_base.add_temp_object(
+                        position = explorer.sample_position(self.relevant_objects)
+                        position_name = explorer.knowledge_base.add_temp_object(
                             object_type="position", object_value=position
                         )
-                        if self.exp.knowledge_base.predicate_funcs.call["in-reach"](
+                        if explorer.knowledge_base.predicate_funcs.call["in-reach"](
                             position_name, None
                         ):
                             parameter_assignments[i].append(position_name)
                             k += 1
                         else:
-                            self.exp.knowledge_base.remove_temp_object(position_name)
+                            explorer.knowledge_base.remove_temp_object(position_name)
                         if k_count > max_reachable_tries:
                             break
 
@@ -255,7 +249,7 @@ class HLPTreeNode:
                 parameter_dicts.append(parameter_dict)
 
             # Check which of them are feasible at the current state
-            preconditions = self.exp.knowledge_base.actions[action]["preconds"]
+            preconditions = explorer.knowledge_base.actions[action]["preconds"]
             for parameter_dict in parameter_dicts:
                 if "nav" in action:
                     if (
@@ -269,7 +263,7 @@ class HLPTreeNode:
                     parameterized_precond = parametrize_predicate(
                         precond, parameter_dict
                     )
-                    res = self.exp.knowledge_base.predicate_funcs.call[precond[0]](
+                    res = explorer.knowledge_base.predicate_funcs.call[precond[0]](
                         *parameterized_precond[2]
                     )
                     feasible &= res == precond[1]
@@ -288,7 +282,7 @@ class HLPTreeNode:
         selected_action = np.random.randint(len(feasible_moves))
         return feasible_moves[selected_action]
 
-    def rollout(self):
+    def rollout(self, explorer):
         current_rollout_state = self.state
         while not current_rollout_state.is_game_over():
             max_tries = 50
@@ -296,17 +290,17 @@ class HLPTreeNode:
             new_state = None
             while counter < max_tries:
                 counter += 1
-                sequence_tuple = self._sample_step()
+                sequence_tuple = self._sample_step(explorer)
                 new_state = current_rollout_state.move(sequence_tuple)
                 if new_state.success:
                     break
             current_rollout_state = new_state
-        return current_rollout_state.game_result
+        return current_rollout_state.game_result()
 
-    def select_child(self, exploration_constant=np.sqrt(2)):
+    def select_child(self, explorer, exploration_constant=np.sqrt(2)):
         scores = list()
         for child in self.children:
-            if not child.is_terminal():
+            if not child.is_terminal(explorer):
                 avg_result = float(child.results[1]) / float(child.num_visited)
                 score = avg_result + exploration_constant * np.sqrt(
                     np.log(self.num_visited) / float(child.num_visited)
@@ -351,48 +345,47 @@ class HLPState:
         self.arm_state = explorer.robot.desired_arm
         self.finger_state = explorer.robot.desired_fingers
 
-        self.exp = explorer
         self.success = success
-
         self.goal_reached_cache = None
 
-    @property
-    def game_result(self):
+    def game_result(self, explorer):
         if not self.success:
             return 0
         elif self._depth >= MAX_DEPTH:
             return 0
-        elif self.goal_reached():
+        elif self.goal_reached(explorer):
             return 1
         else:
             return None
 
-    def is_game_over(self):
-        return self.game_result is not None
+    def is_game_over(self, explorer):
+        return self.game_result(explorer) is not None
 
-    def move(self, action):
-        self.restore_state()
+    def move(self, action, explorer):
+        self.restore_state(explorer)
         success = execute_plan_sequentially(
-            action[0], action[1], self.exp.skill_set, self.exp.knowledge_base
+            action[0], action[1], explorer.skill_set, explorer.knowledge_base
         )
         new_state = HLPState(
             success,
             self._depth + 1,
             self._bullet_client_id,
-            self.exp,
+            explorer,
             action_str=str(action),
         )
         return new_state
 
-    def restore_state(self):
+    def restore_state(self, explorer):
         pb.restoreState(
             stateId=self._bullet_state, physicsClientId=self._bullet_client_id
         )
-        self.exp.robot.set_joints(self.arm_state)
-        self.exp.robot.set_fingers(self.finger_state)
+        explorer.robot.set_joints(self.arm_state)
+        explorer.robot.set_fingers(self.finger_state)
 
-    def goal_reached(self):
+    def goal_reached(self, explorer):
+        if explorer is None:
+            return False
         if self.goal_reached_cache is None:
-            self.restore_state()
-            self.goal_reached_cache = self.exp.knowledge_base.test_goals()
+            self.restore_state(explorer)
+            self.goal_reached_cache = explorer.knowledge_base.test_goals()
         return self.goal_reached_cache

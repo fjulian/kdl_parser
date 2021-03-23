@@ -30,7 +30,7 @@ class World(object):
         }
 
         self.velocity_setter = None
-        atexit.register(self.close)
+        # atexit.register(self.close)
 
     def sleep(self, seconds):
         if self.sleep_flag:

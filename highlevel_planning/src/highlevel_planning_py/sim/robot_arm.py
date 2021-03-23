@@ -477,12 +477,13 @@ class RobotArmPybullet(RobotArm):
         return joint_positions, joint_velocities, joint_torques
 
     def check_grasp(self):
+        self._world.step_seconds(0.1)
         gripper_state = p.getJointStates(
             self.model.uid, self.joint_idx_fingers, physicsClientId=self.pb_id
         )
         assert len(gripper_state) == 2
 
-        dist_threshold = 0.01
+        dist_threshold = 0.005
         dist = gripper_state[0][0] + gripper_state[1][0]
         if dist < dist_threshold:
             object_present = False

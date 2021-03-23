@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import atexit
+import pickle
 from datetime import datetime
 import networkx as nx
 import matplotlib as mpl
@@ -49,6 +50,22 @@ def print_plan(sequence, parameters):
     for idx, seq_item in enumerate(sequence):
         print(f"{seq_item} {parameters[idx]}")
     print("---------------------------------------------------")
+
+
+def mcts_exit_handler(node, time_string):
+    savedir = os.path.join(PATHS["data_dir"], "mcts")
+    os.makedirs(savedir, exist_ok=True)
+
+    figure, ax = plt.subplots()
+    mcts.plot_graph(node.graph, node, figure, ax, explorer=None)
+    filename = "{}_mcts_tree.png".format(time_string)
+    figure.savefig(os.path.join(savedir, filename))
+    print("Saved tree figure")
+
+    filename = "{}_mcts_tree.pkl".format(time_string)
+    with open(os.path.join(savedir, filename), "wb") as f:
+        pickle.dump(node, f)
+    print("Saved tree data structure")
 
 
 def main():
@@ -104,29 +121,23 @@ def main():
         goal_objects,
         scene.objects,
         robot.model.uid,
-        distance_limit=0.4,  # TODO move magic number to parameters
+        distance_limit=0.1,  # TODO move magic number to parameters
     )
     relevant_objects = goal_objects + closeby_objects
+    action_list = [act for act in kb.actions if act not in kb.meta_actions]
 
     # Set up MCTS
     graph = nx.DiGraph()
     mcts_state = mcts.HLPState(True, 0, world.client_id, xplorer)
     mcts_root_node = mcts.HLPTreeNode(
-        mcts_state, xplorer, graph, relevant_objects=relevant_objects
+        mcts_state, action_list, graph, relevant_objects=relevant_objects
     )
-    mcts_search = mcts.HLPTreeSearch(mcts_root_node)
+    mcts_search = mcts.HLPTreeSearch(mcts_root_node, xplorer)
+    atexit.register(mcts_exit_handler, node=mcts_root_node, time_string=time_string)
 
     # ---------------------------------------------------------------
 
     mcts_search.tree_search()
-
-    save = True
-    if save:
-        figure, ax = plt.subplots()
-        mcts_search.figure = figure
-        mcts_search.ax = ax
-        mcts_search.plot_graph(mcts_root_node)
-        plt.show()
 
 
 if __name__ == "__main__":
