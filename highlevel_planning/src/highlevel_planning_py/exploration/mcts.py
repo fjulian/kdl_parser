@@ -395,9 +395,9 @@ class HLPState:
         explorer.robot.set_fingers(self.finger_state)
 
     def goal_reached(self, explorer):
-        if explorer is None:
-            return False
         if self.goal_reached_cache is None:
+            if explorer is None:
+                return False
             self.restore_state(explorer)
             self.goal_reached_cache = explorer.knowledge_base.test_goals()
         return self.goal_reached_cache
