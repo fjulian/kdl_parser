@@ -57,12 +57,27 @@ class _Model:
 
     def load(self, path, position, orientation, scale):
         model_path = os.path.expanduser(path)
-        if model_path.split(".")[-1] == "urdf":
+        ending = model_path.split(".")[-1]
+        if ending == "urdf":
             self.uid = pb.loadURDF(
                 model_path,
                 position,
                 orientation,
                 globalScaling=scale,
+                physicsClientId=self._physics_client,
+            )
+        elif ending == "sdf":
+            tmp = pb.loadSDF(
+                sdfFileName=model_path,
+                globalScaling=scale,
+                physicsClientId=self._physics_client,
+            )
+            assert len(tmp) == 1
+            self.uid = tmp[0]
+            pb.resetBasePositionAndOrientation(
+                self.uid,
+                posObj=position,
+                ornObj=orientation,
                 physicsClientId=self._physics_client,
             )
         else:

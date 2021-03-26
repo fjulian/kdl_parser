@@ -4,6 +4,8 @@ from highlevel_planning_py.tools.util import rotate_orient, ObjectInfo
 from highlevel_planning_py.sim.scene_base import SceneBase
 from highlevel_planning_py.sim.cupboard import get_cupboard_info
 
+from scipy.spatial.transform import Rotation as R
+
 
 class ScenePlanning1(SceneBase):
     def __init__(self, world, base_dir, restored_objects=None):
@@ -26,7 +28,7 @@ class ScenePlanning1(SceneBase):
                 grasp_orient_={
                     -1: [
                         np.array([0.0, 0.0, 0.0, 1.0]),
-                        rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "y", -25.0),
+                        R.from_euler("zx", [-90, -50], degrees=True).as_quat(),
                     ]
                 },
             )
@@ -76,8 +78,26 @@ class ScenePlanning1(SceneBase):
                 init_pos_=np.array([3.5, 0.25, 0.625]),
                 init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
             )
+            self.objects["can"] = ObjectInfo(
+                urdf_name_="coke_can/model.sdf",
+                urdf_path_=os.path.join(base_dir, "coke_can/model.sdf"),
+                init_pos_=np.array([3.0, 0.25, 0.7]),
+                init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
+                # grasp_pos_={5: [np.array([0.0, 0.0, 0.0])]},
+                # grasp_orient_={
+                #     5: [rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "y", 90)]
+                # },
+                # grasp_links_=[5],
+                # friction_setting_=[{"link_name": "handle", "lateral_friction": 1.0}],
+            )
+            self.objects["shelf"] = ObjectInfo(
+                urdf_name_="shelf/shelf.urdf",
+                urdf_path_=os.path.join(base_dir, "shelf/shelf.urdf"),
+                init_pos_=np.array([0.0, -1.5, 0.0]),
+                init_orient_=np.array([0.0, 0.0, 0.70710678, 0.70710678]),
+            )
             self.objects["cupboard"] = get_cupboard_info(
-                base_dir, pos=[0.0, 2.0, 0.0], orient=[0.0, 0.0, 0.0, 1.0]
+                base_dir, pos=[0.0, 1.5, 0.0], orient=[0.0, 0.0, 0.0, 1.0]
             )
 
             self.add_objects()

@@ -35,19 +35,19 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.2 0.03"/>
+        <box size="0.25 0.8 0.03"/>
       </geometry>
       <material name="light_brown"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.2 0.03"/>
+        <box size="0.25 0.8 0.03"/>
       </geometry>
     </collision>
   </link>
   <joint name="left_wall_joint" type="fixed">
-    <origin rpy="1.5707963267948966 0 0" xyz="0 -0.65 0.6"/>
+    <origin rpy="1.5707963267948966 0 0" xyz="0 -0.35 0.4"/>
     <parent link="base_link"/>
     <child link="left_wall_plane"/>
   </joint>
@@ -63,19 +63,19 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.2 0.03"/>
+        <box size="0.25 0.8 0.03"/>
       </geometry>
       <material name="light_brown"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.2 0.03"/>
+        <box size="0.25 0.8 0.03"/>
       </geometry>
     </collision>
   </link>
   <joint name="right_wall_joint" type="fixed">
-    <origin rpy="1.5707963267948966 0 0" xyz="0 0.65 0.6"/>
+    <origin rpy="1.5707963267948966 0 0" xyz="0 0.35 0.4"/>
     <parent link="base_link"/>
     <child link="right_wall_plane"/>
   </joint>
@@ -91,14 +91,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.27 0.03"/>
+        <box size="0.25 0.6699999999999999 0.03"/>
       </geometry>
       <material name="light_brown"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.27 0.03"/>
+        <box size="0.25 0.6699999999999999 0.03"/>
       </geometry>
     </collision>
   </link>
@@ -119,19 +119,19 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.27 0.03"/>
+        <box size="0.25 0.6699999999999999 0.03"/>
       </geometry>
       <material name="light_brown"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.27 0.03"/>
+        <box size="0.25 0.6699999999999999 0.03"/>
       </geometry>
     </collision>
   </link>
   <joint name="board1_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0.3075"/>
+    <origin rpy="0 0 0" xyz="0 0 0.20750000000000002"/>
     <parent link="base_link"/>
     <child link="board1_plane"/>
   </joint>
@@ -147,19 +147,19 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.27 0.03"/>
+        <box size="0.25 0.6699999999999999 0.03"/>
       </geometry>
       <material name="light_brown"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.27 0.03"/>
+        <box size="0.25 0.6699999999999999 0.03"/>
       </geometry>
     </collision>
   </link>
   <joint name="board2_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0.6"/>
+    <origin rpy="0 0 0" xyz="0 0 0.4"/>
     <parent link="base_link"/>
     <child link="board2_plane"/>
   </joint>
@@ -175,19 +175,19 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.27 0.03"/>
+        <box size="0.25 0.6699999999999999 0.03"/>
       </geometry>
       <material name="light_brown"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.27 0.03"/>
+        <box size="0.25 0.6699999999999999 0.03"/>
       </geometry>
     </collision>
   </link>
   <joint name="board3_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0.8925"/>
+    <origin rpy="0 0 0" xyz="0 0 0.5925"/>
     <parent link="base_link"/>
     <child link="board3_plane"/>
   </joint>
@@ -203,19 +203,19 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.27 0.03"/>
+        <box size="0.25 0.6699999999999999 0.03"/>
       </geometry>
       <material name="light_brown"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <box size="0.3 1.27 0.03"/>
+        <box size="0.25 0.6699999999999999 0.03"/>
       </geometry>
     </collision>
   </link>
   <joint name="board4_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 1.1849999999999998"/>
+    <origin rpy="0 0 0" xyz="0 0 0.785"/>
     <parent link="base_link"/>
     <child link="board4_plane"/>
   </joint>
