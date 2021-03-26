@@ -62,8 +62,8 @@ def plot_graph(graph, current_node, fig, ax, explorer):
     nx.draw_networkx_labels(graph, pos, labels, font_size=13)
     nx.draw_networkx_edges(graph, pos, ax=ax)
 
-    # fig.canvas.draw()
-    # fig.canvas.flush_events()
+    fig.canvas.draw()
+    fig.canvas.flush_events()
 
 
 class HLPTreeSearch:
@@ -72,9 +72,9 @@ class HLPTreeSearch:
 
         self.exp = explorer
 
-        if DEBUG:
-            plt.ion()
-            self.figure, self.ax = plt.subplots()
+        # if DEBUG:
+        plt.ion()
+        self.figure, self.ax = plt.subplots(figsize=(25, 18))
 
     def tree_search(self):
         time_budget = 180
@@ -101,6 +101,9 @@ class HLPTreeSearch:
             # result = current_node.rollout()
             result = current_node.state.game_result(self.exp)
             result = 0 if result is None else result
+            if result == 1:
+                plot_graph(self.root.graph, self.root, self.figure, self.ax, self.exp)
+                bla = input("fadsf")
             current_node.backpropagate(result)
             # print("----------------------------------------------")
             # self.root.print()

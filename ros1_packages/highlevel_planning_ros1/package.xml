@@ -13,6 +13,7 @@
   <depend>kdl_parser_py</depend>
   <depend>python_orocos_kdl</depend>
   <depend>robot_control</depend>
+  <depend>message_runtime</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
