@@ -201,12 +201,15 @@ def main():
 
     # drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
 
-    grasp_example(
-        sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1", grasp_id=1
-    )
+    # grasp_example(
+    #     sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1", grasp_id=1
+    # )
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lid1")
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lego")
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="duck")
+    grasp_example(
+        sk_grasp, sk_nav, robot, scene, sk_place, object_name="tall_box", grasp_id=1
+    )
 
     # drive_example(robot, world)
 

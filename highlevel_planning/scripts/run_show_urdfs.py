@@ -71,8 +71,14 @@ def main():
 
     # ======== Shelf =======================================
 
-    shelf_mdl = world.add_model(
-        "data/models/shelf/shelf.urdf",
+    # shelf_mdl = world.add_model(
+    #     "data/models/shelf/shelf.urdf",
+    #     position=[0.0, 0.0, 0.0],
+    #     orientation=[0.0, 0.0, 0.0, 1.0],
+    # )
+
+    mdl = world.add_model(
+        "data/models/tall_box.urdf",
         position=[0.0, 0.0, 0.0],
         orientation=[0.0, 0.0, 0.0, 1.0],
     )

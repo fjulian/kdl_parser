@@ -83,12 +83,35 @@ class ScenePlanning1(SceneBase):
                 urdf_path_=os.path.join(base_dir, "coke_can/model.sdf"),
                 init_pos_=np.array([3.0, 0.25, 0.7]),
                 init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
-                # grasp_pos_={5: [np.array([0.0, 0.0, 0.0])]},
-                # grasp_orient_={
-                #     5: [rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "y", 90)]
-                # },
-                # grasp_links_=[5],
-                # friction_setting_=[{"link_name": "handle", "lateral_friction": 1.0}],
+                init_scale_=0.8,
+                grasp_pos_={
+                    -1: [np.array([0.0, 0.0, 0.03]), np.array([0.0, 0.0, 0.025])]
+                },
+                grasp_orient_={
+                    -1: [
+                        rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "z", -90),
+                        R.from_euler("y", -55, degrees=True).as_quat(),
+                    ]
+                },
+                grasp_links_=[-1],
+            )
+            self.objects["tall_box"] = ObjectInfo(
+                urdf_name_="tall_box.urdf",
+                urdf_path_=os.path.join(base_dir, "tall_box.urdf"),
+                init_pos_=np.array([2.8, 0.25, 0.7]),
+                init_orient_=R.from_euler("z", -20, degrees=True).as_quat(),
+                init_scale_=1.0,
+                grasp_pos_={
+                    -1: [np.array([0.0, 0.0, 0.055]), np.array([0.0, 0.0, 0.05])]
+                },
+                grasp_orient_={
+                    -1: [
+                        rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "z", -90),
+                        R.from_euler("y", -75, degrees=True).as_quat(),
+                    ]
+                },
+                grasp_links_=[-1],
+                friction_setting_=[{"link_name": "body", "lateral_friction": 2.0}],
             )
             self.objects["shelf"] = ObjectInfo(
                 urdf_name_="shelf/shelf.urdf",
