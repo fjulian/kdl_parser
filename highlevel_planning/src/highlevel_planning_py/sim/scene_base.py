@@ -15,7 +15,6 @@ class SceneBase:
         self.objects = deepcopy(objects)
 
     def add_objects(self, force_load=False):
-        # print("---------------------------")
         for key, obj in self.objects.items():
             if self.objects[key].model is None or force_load:
                 self.objects[key].model = self.world.add_model(

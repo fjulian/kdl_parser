@@ -4,6 +4,18 @@ from scipy.spatial.transform import Rotation as R
 from highlevel_planning_py.tools.util import SkillExecutionError, IKError
 
 
+def get_object_link_pose(body_id, link_id):
+    if link_id == -1:
+        temp = p.getBasePositionAndOrientation(body_id)
+        r_O_O_obj = np.array(temp[0]).reshape((-1, 1))
+        C_O_obj = R.from_quat(np.array(temp[1]))
+    else:
+        temp = p.getLinkState(body_id, link_id)
+        r_O_O_obj = np.array(temp[4]).reshape((-1, 1))
+        C_O_obj = R.from_quat(np.array(temp[5]))
+    return r_O_O_obj, C_O_obj
+
+
 class SkillGrasping:
     def __init__(self, scene_, robot_, config):
         self.scene = scene_
@@ -30,14 +42,7 @@ class SkillGrasping:
             raise SkillExecutionError("Invalid grasp ID")
 
         # Get the object pose
-        if link_id == -1:
-            temp = p.getBasePositionAndOrientation(target_id)
-            r_O_O_obj = np.array(temp[0]).reshape((-1, 1))
-            C_O_obj = R.from_quat(np.array(temp[1]))
-        else:
-            temp = p.getLinkState(target_id, link_id)
-            r_O_O_obj = np.array(temp[4]).reshape((-1, 1))
-            C_O_obj = R.from_quat(np.array(temp[5]))
+        r_O_O_obj, C_O_obj = get_object_link_pose(target_id, link_id)
 
         # Get grasp data
         r_Obj_obj_grasp = obj_info.grasp_pos[link_id][grasp_id].reshape((-1, 1))
@@ -92,6 +97,34 @@ class SkillGrasping:
         self.robot._world.step_seconds(0.2)
         self.robot.close_gripper()
         self.robot._world.step_seconds(0.4)
+
+        # Compute position of object link w.r.t. finger
+        obj_info = self.scene.objects[target_name]
+        target_uid = obj_info.model.uid
+        target_link_id = obj_info.grasp_links[link_idx]
+        r_O_O_finger, C_O_finger = self.robot.get_link_pose("panda_leftfinger")
+        # r_O_O_finger = r_O_O_finger.reshape((-1, 1))
+        C_O_finger = R.from_quat(C_O_finger)
+        r_O_O_obj, C_O_obj = get_object_link_pose(target_uid, target_link_id)
+        r_O_O_obj = np.reshape(r_O_O_obj, (3,))
+        r_finger_finger_obj = C_O_finger.inv().apply(
+            np.reshape(r_O_O_obj - r_O_O_finger, (3,))
+        )
+        C_finger_obj = C_O_finger.inv() * C_O_obj
+
+        # Create no slip constraint between object and fingers
+        constr1_id = p.createConstraint(
+            self.robot.model.uid,
+            self.robot.link_name_to_index["panda_leftfinger"],
+            target_uid,
+            target_link_id,
+            jointType=p.JOINT_FIXED,
+            jointAxis=[1.0, 0.0, 0.0],
+            parentFramePosition=r_finger_finger_obj,
+            childFramePosition=[0.0, 0.0, 0.0],
+            parentFrameOrientation=C_finger_obj.as_quat(),
+        )
+        self.robot.grasped_objects.append(constr1_id)
 
         # Save some variables required for releasing
         self.last_pre_pos = pos_pre

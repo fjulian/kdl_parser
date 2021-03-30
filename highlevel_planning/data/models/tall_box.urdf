@@ -3,7 +3,7 @@
   <link name="base_link"/>
   <link name="body">
     <contact>
-      <lateral_friction value="1.0"/>
+      <lateral_friction value="2.0"/>
     </contact>
     <inertial>
         <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -27,7 +27,7 @@
     </collision>
   </link>
   <joint name="blj" type="fixed">
-    <origin xyz="0 0 0" rpy="0 0 0.07"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
     <parent link="base_link"/>
     <child link="body"/>
   </joint>

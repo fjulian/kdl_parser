@@ -30,7 +30,11 @@ class SkillPlacing:
         # ----- Compute place location in robot frame -------
 
         # Get robot arm base pose
-        temp1 = p.getLinkState(self.robot.model.uid, self.robot.arm_base_link_idx)
+        temp1 = p.getLinkState(
+            self.robot.model.uid,
+            self.robot.arm_base_link_idx,
+            physicsClientId=self.robot.pb_id,
+        )
         r_O_O_rob = np.array(temp1[4]).reshape((-1, 1))
         C_O_rob = R.from_quat(np.array(temp1[5]))
         T_O_rob = homogenous_trafo(r_O_O_rob, C_O_rob)
@@ -62,6 +66,12 @@ class SkillPlacing:
             if not collision_during_pre:
                 self.robot.transition_cartesian(
                     pos, orient.as_quat(), stop_on_contact=True
+                )
+
+            # Remove grasp constraints
+            for constraint in self.robot.grasped_objects:
+                p.removeConstraint(
+                    userConstraintUniqueId=constraint, physicsClientId=self.robot.pb_id
                 )
 
             self.robot._world.step_seconds(0.2)

@@ -53,6 +53,9 @@ class RobotArm(object):
         self.std_vel = 0.3
         self.std_duration = 4
 
+        # List of constraints attaching grasped objects to fingers
+        self.grasped_objects = list()
+
     def set_joints(self, desired):
         raise NotImplementedError
 
@@ -326,6 +329,20 @@ class RobotArmPybullet(RobotArm):
         )
         p.changeConstraint(
             c, gearRatio=-1, erp=0.1, maxForce=50, physicsClientId=self.pb_id
+        )
+
+        # Increase finger friction
+        p.changeDynamics(
+            self.model.uid,
+            self.link_name_to_index["panda_leftfinger"],
+            lateralFriction=2.0,
+            physicsClientId=self.pb_id,
+        )
+        p.changeDynamics(
+            self.model.uid,
+            self.link_name_to_index["panda_rightfinger"],
+            lateralFriction=2.0,
+            physicsClientId=self.pb_id,
         )
 
         self.apply_colors()
