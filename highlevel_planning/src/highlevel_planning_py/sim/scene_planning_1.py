@@ -107,7 +107,7 @@ class ScenePlanning1(SceneBase):
                 grasp_orient_={
                     -1: [
                         rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "z", -90),
-                        R.from_euler("y", -75, degrees=True).as_quat(),
+                        R.from_euler("y", -80, degrees=True).as_quat(),
                     ]
                 },
                 grasp_links_=[-1],
@@ -117,7 +117,9 @@ class ScenePlanning1(SceneBase):
                 urdf_name_="shelf/shelf.urdf",
                 urdf_path_=os.path.join(base_dir, "shelf/shelf.urdf"),
                 init_pos_=np.array([0.0, -1.5, 0.0]),
-                init_orient_=np.array([0.0, 0.0, 0.70710678, 0.70710678]),
+                init_orient_=R.from_euler("z", 90, degrees=True).as_quat(),
+                nav_min_dist_=0.5,
+                nav_angle_=np.pi / 4.0,
             )
             self.objects["cupboard"] = get_cupboard_info(
                 base_dir, pos=[0.0, 1.5, 0.0], orient=[0.0, 0.0, 0.0, 1.0]

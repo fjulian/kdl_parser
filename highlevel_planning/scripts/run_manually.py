@@ -115,7 +115,7 @@ def grasp_example(
     # print(robot.get_wrist_force())
 
     # Place cube somewhere else
-    new_pos = scene.objects[object_name].init_pos + np.array([0.2, 0.4, 0.05])
+    new_pos = scene.objects[object_name].init_pos + np.array([-0.2, 0.0, 0.2])
     sk_nav.move_to_pos(new_pos)
     sk_place.place_object(new_pos)
 
@@ -157,6 +157,20 @@ def predicate_example(scene, robot):
     preds = Predicates(scene, robot)
     print("Cube on table: " + str(preds.on("table", "cube1")))
     print("Cube on box 1: " + str(preds.on("container1", "cube1")))
+
+
+def shelf_example(sk_nav, sk_grasp, sk_place, scene, robot):
+    sk_nav.move_to_object("tall_box")
+    sk_grasp.grasp_object("tall_box", link_idx=0, grasp_id=1)
+
+    new_pos = scene.objects["shelf"].init_pos + np.array([0.3, 0.1, 1.0])
+
+    # sk_nav.move_to_object("shelf")
+    sk_nav.move_to_pos(new_pos)
+
+    sk_place.place_object(new_pos)
+    robot.to_start()
+    robot._world.step_seconds(5.0)
 
 
 def main():
@@ -207,9 +221,9 @@ def main():
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lid1")
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lego")
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="duck")
-    grasp_example(
-        sk_grasp, sk_nav, robot, scene, sk_place, object_name="tall_box", grasp_id=1
-    )
+    # grasp_example(
+    #     sk_grasp, sk_nav, robot, scene, sk_place, object_name="tall_box", grasp_id=1
+    # )
 
     # drive_example(robot, world)
 
@@ -218,6 +232,8 @@ def main():
     # navigate_with_cube(sk_nav, sk_grasp)
 
     # navigation_example(sk_nav, world)
+
+    shelf_example(sk_nav, sk_grasp, sk_place, scene, robot)
 
     # -----------------------------------
 

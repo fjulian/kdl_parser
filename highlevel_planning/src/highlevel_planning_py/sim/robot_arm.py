@@ -55,6 +55,7 @@ class RobotArm(object):
 
         # List of constraints attaching grasped objects to fingers
         self.grasped_objects = list()
+        self.grasp_orientation = None
 
     def set_joints(self, desired):
         raise NotImplementedError
@@ -164,8 +165,16 @@ class RobotArm(object):
         self.set_joints(cmd.tolist())
 
     def check_max_contact_force_ok(self):
-        force, _ = self.get_wrist_force_torque()
-        magnitude = np.linalg.norm(force)
+        retry = 5
+        magnitude = self._max_force_magnitude + 1
+        counter = 0
+        while counter < retry:
+            counter += 1
+            force, _ = self.get_wrist_force_torque()
+            magnitude = np.linalg.norm(force)
+            if magnitude < self._max_force_magnitude:
+                break
+            self._world.step_one()
         if magnitude > self._max_force_magnitude:
             return False
         else:

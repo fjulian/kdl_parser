@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="container_no_lid">
     <xacro:include filename="$(cwd)/common.xacro"/>
-    <xacro:property name="total_width" value="0.7"/>
-    <xacro:property name="total_height" value="0.8"/>
+    <xacro:property name="total_width" value="1.2"/>
+    <xacro:property name="total_height" value="1.4"/>
     <xacro:property name="total_depth" value="0.25"/>
     <xacro:property name="wall_thickness" value="0.03"/>
-    <xacro:property name="num_boards" value="5"/>
+    <xacro:property name="num_boards" value="6"/>
 
     <link name="base_link">
         <inertial>
@@ -43,5 +43,7 @@
     <xacro:board index="2"/>
     <xacro:board index="3"/>
     <xacro:board index="4"/>
+    <xacro:board index="5"/>
+<!--    <xacro:board index="6"/>-->
 
 </robot>

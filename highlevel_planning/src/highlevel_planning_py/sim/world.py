@@ -121,7 +121,9 @@ class WorldPybullet(World):
 
     def basic_settings(self):
         pb.setGravity(0, 0, -9.81, physicsClientId=self.client_id)
-        pb.setAdditionalSearchPath(pybullet_data.getDataPath())
+        pb.setAdditionalSearchPath(
+            pybullet_data.getDataPath(), physicsClientId=self.client_id
+        )
         pb.loadURDF("plane.urdf", physicsClientId=self.client_id)
 
     def add_model(self, path, position, orientation, scale=1.0):

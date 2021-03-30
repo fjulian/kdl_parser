@@ -27,6 +27,8 @@ class SkillPlacing:
 
         self.robot.to_start()
 
+        self.robot._world.draw_cross(np.squeeze(target_pos))
+
         # ----- Compute place location in robot frame -------
 
         # Get robot arm base pose
@@ -45,7 +47,8 @@ class SkillPlacing:
         r_R_R_obj = np.matmul(T_rob_O, np.reshape(np.append(r_O_O_obj, 1.0), (-1, 1)))
 
         # Orientation in robot frame
-        C_rob_ee = R.from_quat(self.robot.start_orient)
+        # C_rob_ee = R.from_quat(self.robot.start_orient)
+        C_rob_ee = R.from_quat(self.robot.grasp_orientation)
 
         # ----- Place object -------
 
@@ -57,6 +60,7 @@ class SkillPlacing:
             pos_pre = pos - np.matmul(orient.as_dcm(), np.array([0.0, 0.0, 0.15]))
             pos_pre_joints = self.robot.ik(pos_pre, orient.as_quat())
             if pos_pre_joints.tolist() is None:
+                print("IK failed for pre place pose")
                 raise IKError
             collision_during_pre = False
             if not self.robot.transition_cmd_to(pos_pre_joints, stop_on_contact=True):
@@ -64,15 +68,24 @@ class SkillPlacing:
 
             # Go to place pose
             if not collision_during_pre:
-                self.robot.transition_cartesian(
-                    pos, orient.as_quat(), stop_on_contact=True
-                )
+                cartesian = False
+                if cartesian:
+                    self.robot.transition_cartesian(
+                        pos, orient.as_quat(), stop_on_contact=True
+                    )
+                else:
+                    pos_joints = self.robot.ik(pos, orient.as_quat())
+                    if pos_pre_joints.tolist() is None:
+                        print("IK failed for place pose")
+                        raise IKError
+                    self.robot.transition_cmd_to(pos_joints, stop_on_contact=True)
 
             # Remove grasp constraints
             for constraint in self.robot.grasped_objects:
                 p.removeConstraint(
                     userConstraintUniqueId=constraint, physicsClientId=self.robot.pb_id
                 )
+            self.robot.grasped_objects.clear()
 
             self.robot._world.step_seconds(0.2)
             self.robot.open_gripper()
