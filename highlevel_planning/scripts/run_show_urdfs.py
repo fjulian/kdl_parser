@@ -77,12 +77,6 @@ def main():
     #     orientation=[0.0, 0.0, 0.0, 1.0],
     # )
 
-    mdl = world.add_model(
-        "data/models/tall_box.urdf",
-        position=[0.0, 0.0, 0.0],
-        orientation=[0.0, 0.0, 0.0, 1.0],
-    )
-
     # ========================================================
 
     world.step_seconds(500)

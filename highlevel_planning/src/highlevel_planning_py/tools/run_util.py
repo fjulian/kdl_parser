@@ -106,6 +106,7 @@ def setup_knowledge_base(paths, scene, robot, cfg, time_string):
     kb.add_type("navgoal")  # Anything we can navigate to
     kb.add_type("position", "navgoal")  # Pure positions
     kb.add_type("item", "navgoal")  # Anything we can grasp
+    kb.add_type("grasp_id")
 
     # Add origin
     kb.add_object("origin", "position", np.array([0.0, 0.0, 0.0]))

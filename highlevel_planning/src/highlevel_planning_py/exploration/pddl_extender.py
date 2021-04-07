@@ -73,6 +73,8 @@ class PDDLExtender(object):
             for param_name, param_value in params.items():
                 if param_value not in already_retyped:
                     hidden_parameters[idx][param_name] = param_value
+                    if param_value not in self.knowledge_base.objects:
+                        self.knowledge_base.make_permanent(param_value)
 
         # Determine translation between meta action argument names and sub action argument names
         param_translator = [dict.fromkeys(param_dict) for param_dict in parameters]

@@ -83,8 +83,10 @@ class SequentialExecution(ExecutionSystem):
             try:
                 if action_name == "grasp":
                     target_name = action_parameters["obj"]
-                    target_link_idx = 0
-                    target_grasp_idx = 0
+                    grasp_spec = action_parameters["gid"]
+                    grasp_spec = self.knowledge_base.lookup_table[grasp_spec]
+                    target_link_idx = grasp_spec[0]
+                    target_grasp_idx = grasp_spec[1]
                     res = self.skill_set_["grasp"].grasp_object(
                         target_name, target_link_idx, target_grasp_idx
                     )

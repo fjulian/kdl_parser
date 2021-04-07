@@ -19,7 +19,14 @@ from highlevel_planning_py.exploration.exploration_tools import get_items_closeb
 
 class Explorer:
     def __init__(
-        self, skill_set, robot, scene_objects, pddl_extender, knowledge_base, config
+        self,
+        skill_set,
+        robot,
+        scene_objects,
+        pddl_extender,
+        knowledge_base,
+        config,
+        world,
     ):
         self.config_params = config.getparam(["explorer"])
 
@@ -37,6 +44,7 @@ class Explorer:
         self.scene_objects = scene_objects
         self.pddl_extender = pddl_extender
         self.knowledge_base = knowledge_base
+        self.world = world
 
         self.current_state_id = None
         self.metrics = None
@@ -64,10 +72,10 @@ class Explorer:
 
         # Save the state the robot is currently in
         if state_id is None:
-            self.current_state_id = p.saveState()
+            self.current_state_id = self.world.save_state()
         else:
             self.current_state_id = state_id
-            p.restoreState(state_id)
+            self.world.restore_state(state_id)
 
         # Identify objects that are involved in reaching the goal
         goal_objects = self._get_items_goal()
@@ -249,7 +257,7 @@ class Explorer:
         self.add_metric("found_plan", found_plan)
 
         # Restore initial state
-        p.restoreState(stateId=self.current_state_id)
+        self.world.restore_state(self.current_state_id)
         return found_plan
 
     def _sampling_loops(
@@ -267,7 +275,7 @@ class Explorer:
         found_plan = False
         for sample_idx in range(self.config_params["max_samples_per_sequence_length"]):
             # Restore initial state
-            p.restoreState(stateId=self.current_state_id)
+            self.world.restore_state(self.current_state_id)
 
             # Sample sequences until an abstractly feasible one was found
             (success, completion_result) = self._sample_feasible_sequence(
@@ -545,6 +553,12 @@ class Explorer:
                         obj_sample = self.knowledge_base.add_temp_object(
                             object_type=obj_type, object_value=position
                         )
+                    elif self.knowledge_base.type_x_child_of_y(obj_type, "grasp_id"):
+                        object_name = parameters_current_action[-1]
+                        link_idx, grasp_idx = self.sample_grasp(object_name)
+                        obj_sample = self.knowledge_base.add_temp_object(
+                            object_type=obj_type, object_value=(link_idx, grasp_idx)
+                        )
                     else:
                         objects_to_sample_from = self.knowledge_base.get_objects_by_type(
                             obj_type,
@@ -600,6 +614,16 @@ class Explorer:
         # Sample
         sample = np.random.uniform(low=min_coords, high=max_coords)
         return sample
+
+    def sample_grasp(self, object_name):
+        num_links = len(self.scene_objects[object_name].grasp_links)
+        if num_links == 0:
+            raise NameError
+        link_idx = np.random.randint(num_links)
+        link_id = self.scene_objects[object_name].grasp_links[link_idx]
+        num_grasps = len(self.scene_objects[object_name].grasp_pos[link_id])
+        grasp_idx = np.random.randint(num_grasps)
+        return link_idx, grasp_idx
 
     # ----- Other tools ------------------------------------
 
@@ -679,7 +703,7 @@ class Explorer:
 
     def _test_completed_sequence(self, completion_result: dict):
         # Restore initial state
-        p.restoreState(stateId=self.current_state_id)
+        self.world.restore_state(self.current_state_id)
 
         success = np.array([0, 0, 0])
         (
