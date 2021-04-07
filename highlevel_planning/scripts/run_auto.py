@@ -101,7 +101,7 @@ def main():
     pddl_ex = PDDLExtender(kb, preds)
 
     # Set up exploration
-    xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg)
+    xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg, world)
 
     # Define a demonstration to guide exploration
     demo_sequence, demo_parameters = None, None
@@ -111,7 +111,7 @@ def main():
     # ---------------------------------------------------------------
 
     # Store initial state
-    initial_state_id = p.saveState()
+    initial_state_id = world.save_state()
 
     while True:
         # Plan

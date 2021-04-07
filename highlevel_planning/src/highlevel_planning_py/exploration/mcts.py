@@ -349,7 +349,7 @@ class HLPState:
         self._depth = depth
 
         # Save state
-        self._bullet_state = pb.saveState(physicsClientId=pb_client_id)
+        self._bullet_state = explorer.world.save_state()
         self._bullet_client_id = pb_client_id
         self.arm_state = explorer.robot.desired_arm
         self.finger_state = explorer.robot.desired_fingers
@@ -391,9 +391,7 @@ class HLPState:
         return new_state
 
     def restore_state(self, explorer):
-        pb.restoreState(
-            stateId=self._bullet_state, physicsClientId=self._bullet_client_id
-        )
+        explorer.world.restore_state(self._bullet_state)
         explorer.robot.set_joints(self.arm_state)
         explorer.robot.set_fingers(self.finger_state)
 

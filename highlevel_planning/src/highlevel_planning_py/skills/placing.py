@@ -81,11 +81,7 @@ class SkillPlacing:
                     self.robot.transition_cmd_to(pos_joints, stop_on_contact=True)
 
             # Remove grasp constraints
-            for constraint in self.robot.grasped_objects:
-                p.removeConstraint(
-                    userConstraintUniqueId=constraint, physicsClientId=self.robot.pb_id
-                )
-            self.robot.grasped_objects.clear()
+            self.robot._world.delete_all_constraints()
 
             self.robot._world.step_seconds(0.2)
             self.robot.open_gripper()

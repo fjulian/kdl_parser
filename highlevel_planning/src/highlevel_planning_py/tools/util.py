@@ -154,3 +154,23 @@ class ObjectInfo:
         # res &= self.friction_setting == other.friction_setting
         # res &= self.joint_setting == other.joint_setting
         return res
+
+
+class ConstraintSpec:
+    def __init__(
+        self,
+        parent_uid,
+        parent_link_id,
+        child_uid,
+        child_link_id,
+        trafo_pos,
+        trafo_orient,
+    ):
+        self.parent_uid = parent_uid
+        self.parent_link_id = parent_link_id
+        self.child_uid = child_uid
+        self.child_link_id = child_link_id
+        self.trafo_pos = trafo_pos
+        self.trafo_orient = trafo_orient
+
+        self.constrain_id = None

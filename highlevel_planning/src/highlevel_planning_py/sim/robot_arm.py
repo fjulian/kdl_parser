@@ -54,7 +54,6 @@ class RobotArm(object):
         self.std_duration = 4
 
         # List of constraints attaching grasped objects to fingers
-        self.grasped_objects = list()
         self.grasp_orientation = None
 
     def set_joints(self, desired):

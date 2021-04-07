@@ -113,11 +113,14 @@ class WorldPybullet(World):
         if load_objects:
             pb.resetSimulation(physicsClientId=self.client_id)
         else:
-            self.restore_state(os.path.join(savedir, "state.bullet"))
+            self.restore_state_file(os.path.join(savedir, "state.bullet"))
             pb.removeAllUserDebugItems(physicsClientId=self.client_id)
 
         pb.configureDebugVisualizer(pb.COV_ENABLE_GUI, 0)
         self.basic_settings()
+
+        # Persistance for storing states
+        self.active_constraints = list()
 
     def basic_settings(self):
         pb.setGravity(0, 0, -9.81, physicsClientId=self.client_id)
@@ -190,5 +193,38 @@ class WorldPybullet(World):
     def close(self):
         pb.disconnect(physicsClientId=self.client_id)
 
-    def restore_state(self, filepath):
+    def restore_state_file(self, filepath):
         pb.restoreState(fileName=filepath, physicsClientId=self.client_id)
+
+    def save_state(self):
+        state_id = pb.saveState(physicsClientId=self.client_id)
+        constraint_list = [constraint[1] for constraint in self.active_constraints]
+        return state_id, constraint_list
+
+    def restore_state(self, saved_state):
+        self.delete_all_constraints()
+        pb.restoreState(stateId=saved_state[0], physicsClientId=self.client_id)
+        for constraint in saved_state[1]:
+            self.add_constraint(constraint)
+
+    def add_constraint(self, constraint_spec):
+        constraint_id = pb.createConstraint(
+            constraint_spec.parent_uid,
+            constraint_spec.parent_link_id,
+            constraint_spec.child_uid,
+            constraint_spec.child_link_id,
+            jointType=pb.JOINT_FIXED,
+            jointAxis=[1.0, 0.0, 0.0],
+            parentFramePosition=constraint_spec.trafo_pos,
+            childFramePosition=[0.0, 0.0, 0.0],
+            parentFrameOrientation=constraint_spec.trafo_orient,
+            physicsClientId=self.client_id,
+        )
+        self.active_constraints.append((constraint_id, constraint_spec))
+
+    def delete_all_constraints(self):
+        for constraint in self.active_constraints:
+            pb.removeConstraint(
+                userConstraintUniqueId=constraint[0], physicsClientId=self.client_id
+            )
+        self.active_constraints.clear()

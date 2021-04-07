@@ -24,7 +24,7 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
     ) = completion_results
 
     # Restore initial state
-    p.restoreState(stateId=explorer.current_state_id)
+    explorer.world.restore_state(explorer.current_state_id)
 
     relevant_predicates = determine_relevant_predicates(
         relevant_objects, explorer.knowledge_base

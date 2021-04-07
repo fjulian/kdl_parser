@@ -116,7 +116,7 @@ def main():
     pddl_ex = PDDLExtender(kb, preds)
 
     # Set up exploration
-    xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg)
+    xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg, world)
     goal_objects = xplorer._get_items_goal()
     closeby_objects = get_items_closeby(
         goal_objects,

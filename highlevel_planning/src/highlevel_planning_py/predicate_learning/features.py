@@ -80,7 +80,7 @@ class PredicateFeatureManager:
                 self.scene.set_objects(objects)
                 self.scene.add_objects(force_load=True)
             simstate_file_name = os.path.join(this_demo_dir, demo_id, "state.bullet")
-            self.world.restore_state(simstate_file_name)
+            self.world.restore_state_file(simstate_file_name)
 
             for arg_idx, arg in enumerate(arguments):
                 if f"arg{arg_idx}" not in data:

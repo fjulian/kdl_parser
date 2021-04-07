@@ -1,7 +1,11 @@
 import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from highlevel_planning_py.tools.util import SkillExecutionError, IKError
+from highlevel_planning_py.tools.util import (
+    SkillExecutionError,
+    IKError,
+    ConstraintSpec,
+)
 
 
 def get_object_link_pose(body_id, link_id):
@@ -113,18 +117,15 @@ class SkillGrasping:
         C_finger_obj = C_O_finger.inv() * C_O_obj
 
         # Create no slip constraint between object and fingers
-        constr1_id = p.createConstraint(
+        constraint_spec = ConstraintSpec(
             self.robot.model.uid,
             self.robot.link_name_to_index["panda_leftfinger"],
             target_uid,
             target_link_id,
-            jointType=p.JOINT_FIXED,
-            jointAxis=[1.0, 0.0, 0.0],
-            parentFramePosition=r_finger_finger_obj,
-            childFramePosition=[0.0, 0.0, 0.0],
-            parentFrameOrientation=C_finger_obj.as_quat(),
+            r_finger_finger_obj,
+            C_finger_obj.as_quat(),
         )
-        self.robot.grasped_objects.append(constr1_id)
+        self.robot._world.add_constraint(constraint_spec)
 
         # Save some variables required for releasing
         self.last_pre_pos = pos_pre
