@@ -173,22 +173,5 @@ def resample_positions(
                     )
                     parameters[idx][param_name] = new_param_value
                     resampled_parameters[param_value] = new_param_value
-                elif explorer.knowledge_base.is_type(param_value, "grasp_id"):
-                    object_name = parameters[idx]["obj"]
-                    new_grasp = explorer.sample_grasp(object_name)
-
-                    value_list = list(explorer.knowledge_base.lookup_table.values())
-                    if new_grasp in value_list:
-                        tmp_idx = value_list.index(new_grasp)
-                        new_param_value = list(
-                            explorer.knowledge_base.lookup_table.keys()
-                        )[tmp_idx]
-                    else:
-                        new_param_value = explorer.knowledge_base.add_temp_object(
-                            object_type="grasp_id", object_value=new_grasp
-                        )
-
-                    parameters[idx][param_name] = new_param_value
-                    resampled_parameters[param_value] = new_param_value
 
                 # TODO (later) make sure that this temp object is made permanent if the sequence is kept
