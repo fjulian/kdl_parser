@@ -554,11 +554,18 @@ class Explorer:
                             object_type=obj_type, object_value=position
                         )
                     elif self.knowledge_base.type_x_child_of_y(obj_type, "grasp_id"):
-                        object_name = parameters_current_action[-1]
-                        link_idx, grasp_idx = self.sample_grasp(object_name)
-                        obj_sample = self.knowledge_base.add_temp_object(
-                            object_type=obj_type, object_value=(link_idx, grasp_idx)
-                        )
+                        object_name = parameter_samples[idx_action]["obj"]
+                        grasp_spec = self.sample_grasp(object_name)
+                        value_list = list(self.knowledge_base.lookup_table.values())
+                        if grasp_spec in value_list:
+                            idx = value_list.index(grasp_spec)
+                            obj_sample = list(self.knowledge_base.lookup_table.keys())[
+                                idx
+                            ]
+                        else:
+                            obj_sample = self.knowledge_base.add_temp_object(
+                                object_type=obj_type, object_value=grasp_spec
+                            )
                     else:
                         objects_to_sample_from = self.knowledge_base.get_objects_by_type(
                             obj_type,

@@ -14,6 +14,7 @@ class Predicates:
             "inside": self.inside,
             "on": self.on,
             "has-grasp": self.has_grasp,
+            "grasped-with": self.grasped_with,
         }
 
         self.descriptions = {
@@ -24,6 +25,7 @@ class Predicates:
             "inside": [["container", "item"], ["contained", "item"]],
             "on": [["supporting", "item"], ["supported", "item"]],
             "has-grasp": [["obj", "navgoal"]],
+            "grasped-with": [["obj", "item"], ["gid", "grasp_id"], ["rob", "robot"]],
         }
 
         self.sk_grasping = SkillGrasping(scene, robot, cfg)
@@ -198,3 +200,7 @@ class Predicates:
             return len(self._scene.objects[obj].grasp_pos) > 0
         else:
             return False
+
+    def grasped_with(self, obj, gid, rob):
+        # TODO: add check whether grasp is correct
+        return self.in_hand(obj, rob)

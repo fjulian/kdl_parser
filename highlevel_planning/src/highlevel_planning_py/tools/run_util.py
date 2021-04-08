@@ -111,6 +111,7 @@ def setup_knowledge_base(paths, scene, robot, cfg, time_string):
     # Add origin
     kb.add_object("origin", "position", np.array([0.0, 0.0, 0.0]))
     kb.add_object("robot1", "robot")
+    kb.add_object("default_grasp", "grasp_id", (0, 0))
 
     # Set up predicates
     preds = Predicates(scene, robot, kb, cfg)

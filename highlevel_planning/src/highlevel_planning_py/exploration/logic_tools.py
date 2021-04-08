@@ -214,13 +214,18 @@ def find_all_parameter_assignments(parameters, relevant_objects, knowledge_base)
     return parameter_assignments
 
 
-def determine_relevant_predicates(relevant_objects, knowledge_base):
+def determine_relevant_predicates(
+    relevant_objects, knowledge_base, ignore_predicates=None
+):
     """
     Determine all predicates of objects involved in this action and objects that are close to them
     """
     predicate_descriptions = knowledge_base.predicate_funcs.descriptions
     relevant_predicates = list()
     for pred in predicate_descriptions:
+        if ignore_predicates is not None and pred in ignore_predicates:
+            continue
+
         parameters = predicate_descriptions[pred]
 
         parameter_assignments = find_all_parameter_assignments(

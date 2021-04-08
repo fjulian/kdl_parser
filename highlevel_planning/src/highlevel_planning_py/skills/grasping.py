@@ -154,7 +154,11 @@ def get_grasping_description():
         ("in-reach", True, ["obj", "rob"]),
         ("empty-hand", True, ["rob"]),
     ]
-    action_effects = [("empty-hand", False, ["rob"]), ("in-hand", True, ["obj", "rob"])]
+    action_effects = [
+        ("empty-hand", False, ["rob"]),
+        ("in-hand", True, ["obj", "rob"]),
+        ("grasped-with", True, ["obj", "gid", "rob"]),
+    ]
     return (
         action_name,
         {

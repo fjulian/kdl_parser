@@ -310,7 +310,9 @@ class KnowledgeBase:
         )
         relevant_objects.update(closeby_objects)
 
-        relevant_predicates = determine_relevant_predicates(relevant_objects, self)
+        relevant_predicates = determine_relevant_predicates(
+            relevant_objects, self, ignore_predicates=["at"]
+        )
         measured_predicates = measure_predicates(relevant_predicates, self)
         for i in range(len(relevant_predicates)):
             if measured_predicates[i]:
