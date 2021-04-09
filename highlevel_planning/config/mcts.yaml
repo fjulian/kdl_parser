@@ -16,3 +16,6 @@ robot_arm:
   max_force_magnitude: 150
 grasping:
   pregrasp_z_offset: 0.15
+mcts:
+  search_budget_sec: 200
+  max_depth: 10

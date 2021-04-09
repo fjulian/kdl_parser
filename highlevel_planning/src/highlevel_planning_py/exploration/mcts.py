@@ -18,7 +18,7 @@ from highlevel_planning_py.exploration.logic_tools import (
 
 
 MAX_DEPTH = 10
-DEBUG = False
+DEBUG = True
 
 
 def plot_graph(graph, current_node, fig, ax, explorer):
@@ -35,12 +35,12 @@ def plot_graph(graph, current_node, fig, ax, explorer):
         elif node.own_action is not None:
             if (
                 node.own_action[0][0] == "grasp"
-                and node.own_action[1][0]["obj"] == "cube1"
+                and node.own_action[1][0]["obj"] == "tall_box"
             ):
                 color = "#eaff80"  # light green
             elif (
                 "nav" in node.own_action[0][0]
-                and node.own_action[1][0]["goal_pos"] == "cupboard"
+                and node.own_action[1][0]["goal_pos"] == "shelf"
             ):
                 color = "#00b300"  # dark green
 
@@ -67,26 +67,27 @@ def plot_graph(graph, current_node, fig, ax, explorer):
 
 
 class HLPTreeSearch:
-    def __init__(self, root, explorer):
+    def __init__(self, root, explorer, config):
         self.root = root
 
         self.exp = explorer
+
+        self.time_budget = config.getparam(["mcts", "search_budget_sec"])
 
         # if DEBUG:
         plt.ion()
         self.figure, self.ax = plt.subplots(figsize=(25, 18))
 
     def tree_search(self):
-        time_budget = 180
         start_time = time()
         counter = 0
         counter2 = 0
-        while time() - start_time < time_budget:
+        while time() - start_time < self.time_budget:
             counter += 1
             current_node = self.root
             while not current_node.is_terminal(self.exp):
                 counter2 += 1
-                if DEBUG and counter2 % 10 == 0:
+                if DEBUG:  # and counter2 % 10 == 0:
                     plot_graph(
                         self.root.graph, current_node, self.figure, self.ax, self.exp
                     )
@@ -213,7 +214,9 @@ class HLPTreeNode:
             # Get parameters
             parameters = explorer.knowledge_base.actions[action]["params"]
             parameter_assignments = find_all_parameter_assignments(
-                parameters, self.relevant_objects + ["origin"], explorer.knowledge_base
+                parameters,
+                self.relevant_objects + ["origin", "grasp0", "grasp1"],
+                explorer.knowledge_base,
             )
 
             # Sample positions
@@ -345,8 +348,11 @@ class HLPTreeNode:
 
 
 class HLPState:
-    def __init__(self, success, depth, pb_client_id, explorer, predicate_specs):
+    def __init__(
+        self, success, depth, pb_client_id, explorer, predicate_specs, max_depth
+    ):
         self._depth = depth
+        self._max_depth = max_depth
 
         # Save state
         self._bullet_state = explorer.world.save_state()
@@ -366,7 +372,7 @@ class HLPState:
     def game_result(self, explorer):
         if not self.success:
             return 0
-        elif self._depth >= MAX_DEPTH:
+        elif self._depth >= self._max_depth:
             return 0
         elif self.goal_reached(explorer):
             return 1
@@ -387,6 +393,7 @@ class HLPState:
             self._bullet_client_id,
             explorer,
             self.predicate_specs,
+            self._max_depth,
         )
         return new_state
 

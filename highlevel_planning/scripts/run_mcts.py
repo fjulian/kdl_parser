@@ -41,18 +41,6 @@ PATHS = {
 }
 
 
-def exit_handler(rep: Reporter):
-    rep.write_result_file()
-
-
-def print_plan(sequence, parameters):
-    print("---------------------------------------------------")
-    print("Found plan:")
-    for idx, seq_item in enumerate(sequence):
-        print(f"{seq_item} {parameters[idx]}")
-    print("---------------------------------------------------")
-
-
 def mcts_exit_handler(node, time_string):
     savedir = os.path.join(PATHS["data_dir"], "mcts")
     os.makedirs(savedir, exist_ok=True)
@@ -130,11 +118,14 @@ def main():
 
     # Set up MCTS
     graph = nx.DiGraph()
-    mcts_state = mcts.HLPState(True, 0, world.client_id, xplorer, relevant_predicates)
+    max_depth = cfg.getparam(["mcts", "max_depth"], default_value=10)
+    mcts_state = mcts.HLPState(
+        True, 0, world.client_id, xplorer, relevant_predicates, max_depth
+    )
     mcts_root_node = mcts.HLPTreeNode(
         mcts_state, action_list, graph, relevant_objects=relevant_objects
     )
-    mcts_search = mcts.HLPTreeSearch(mcts_root_node, xplorer)
+    mcts_search = mcts.HLPTreeSearch(mcts_root_node, xplorer, cfg)
     atexit.register(mcts_exit_handler, node=mcts_root_node, time_string=time_string)
 
     # ---------------------------------------------------------------
