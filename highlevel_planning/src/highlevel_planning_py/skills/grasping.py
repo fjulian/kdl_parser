@@ -153,6 +153,7 @@ def get_grasping_description():
     action_preconditions = [
         ("in-reach", True, ["obj", "rob"]),
         ("empty-hand", True, ["rob"]),
+        ("has-grasp", True, ["obj", "gid"]),
     ]
     action_effects = [
         ("empty-hand", False, ["rob"]),

@@ -178,7 +178,7 @@ def main():
     args = run_util.parse_arguments()
 
     # Load existing simulation data if desired
-    savedir = os.path.join(PATHS["data_dir"], "data", "sim")
+    savedir = os.path.join(PATHS["data_dir"], "simulator")
     objects, robot_mdl = run_util.restore_pybullet_sim(savedir, args)
 
     # Load config file

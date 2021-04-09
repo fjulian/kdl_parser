@@ -555,17 +555,15 @@ class Explorer:
                         )
                     elif self.knowledge_base.type_x_child_of_y(obj_type, "grasp_id"):
                         object_name = parameter_samples[idx_action]["obj"]
-                        grasp_spec = self.sample_grasp(object_name)
-                        value_list = list(self.knowledge_base.lookup_table.values())
-                        if grasp_spec in value_list:
-                            idx = value_list.index(grasp_spec)
-                            obj_sample = list(self.knowledge_base.lookup_table.keys())[
-                                idx
-                            ]
-                        else:
-                            obj_sample = self.knowledge_base.add_temp_object(
-                                object_type=obj_type, object_value=grasp_spec
-                            )
+                        possible_grasps = list()
+                        for grasp_id in ["grasp0", "grasp1"]:
+                            if self.knowledge_base.predicate_funcs.call["has-grasp"](
+                                object_name, grasp_id
+                            ):
+                                possible_grasps.append(grasp_id)
+                        if len(possible_grasps) == 0:
+                            raise NameError("No grasp for target object")
+                        obj_sample = np.random.choice(possible_grasps)
                     else:
                         objects_to_sample_from = self.knowledge_base.get_objects_by_type(
                             obj_type,
@@ -708,7 +706,7 @@ class Explorer:
                     item_list.append(arg)
         return item_list
 
-    def _test_completed_sequence(self, completion_result: dict):
+    def _test_completed_sequence(self, completion_result):
         # Restore initial state
         self.world.restore_state(self.current_state_id)
 

@@ -2,7 +2,6 @@ import numpy as np
 import os
 import atexit
 from datetime import datetime
-import pybullet as p
 
 # Simulation
 from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1

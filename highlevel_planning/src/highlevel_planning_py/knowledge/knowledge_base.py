@@ -44,7 +44,7 @@ class KnowledgeBase:
         # self.goals = [("in-hand", True, ("duck", "robot1"))]
         # self.goals = [("at", True, ("container1", "robot1"))]
         # self.goals = [("at", True, ("cupboard", "robot1"))]
-        self.goals = [("on", True, ("cupboard", "cube1"))]
+        # self.goals = [("on", True, ("cupboard", "cube1"))]
         # self.goals = [("on", True, ("cupboard", "duck"))]
         # self.goals = [
         #     ("on", True, ("cupboard", "cube1")),
@@ -55,6 +55,7 @@ class KnowledgeBase:
         # self.goals = [("inside", True, ("container1", "cube1"))]
         # self.goals = [("inside", True, ("container1", "lego"))]
         # self.goals = [("inside", True, ("container1", "duck"))]
+        self.goals = [("inside", True, ("shelf", "tall_box"))]
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()
@@ -81,7 +82,6 @@ class KnowledgeBase:
 
     def duplicate(self, original):
         self.domain_name = deepcopy(original.domain_name)
-        self.predicate_definitions = deepcopy(original.predicate_definitions)
         self.predicate_definitions = deepcopy(original.predicate_definitions)
         self.actions = deepcopy(original.actions)
         self.types = deepcopy(original.types)
@@ -323,15 +323,16 @@ class KnowledgeBase:
         # TODO maybe move this into a separate dummy perception module
         for obj in scene.objects:
             self.add_object(obj, "item")
-            if self.predicate_funcs.call["has-grasp"](obj):
-                self.object_predicates.add(("has-grasp", obj))
+            for grasp in ["grasp0", "grasp1"]:
+                if self.predicate_funcs.call["has-grasp"](obj, grasp):
+                    self.object_predicates.add(("has-grasp", obj, grasp))
 
         # Add "objects" that are always visible
         for object_name in self.objects:
             for object_type in self.objects[object_name]:
                 if self.type_x_child_of_y(object_type, "position"):
                     self.add_object(object_name, "position")
-                    self.object_predicates.add(("has-grasp", object_name))
+                    self.object_predicates.add(("has-grasp", object_name, "grasp0"))
                     break
 
     def type_x_child_of_y(self, x, y):
@@ -403,7 +404,7 @@ class KnowledgeBase:
         else:
             self._temp_objects[object_name] = [object_type]
             if self.is_type(object_name, "position"):
-                self._temp_object_predicates.add(("has-grasp", object_name))
+                self._temp_object_predicates.add(("has-grasp", object_name, "grasp0"))
         if object_value is not None:
             self.lookup_table[object_name] = object_value
         return object_name

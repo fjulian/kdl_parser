@@ -157,11 +157,12 @@ def get_nav_in_reach_description():
     action_params = [
         ["current_pos", "navgoal"],
         ["goal_pos", "navgoal"],
+        ["gid", "grasp_id"],
         ["rob", "robot"],
     ]
     action_preconditions = [
         ("at", True, ["current_pos", "rob"]),
-        ("has-grasp", True, ["goal_pos"]),
+        ("has-grasp", True, ["goal_pos", "gid"]),
     ]
     action_effects = [
         ("in-reach", True, ["goal_pos", "rob"]),

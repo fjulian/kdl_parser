@@ -24,7 +24,7 @@ class Predicates:
             "at": [["target", "navgoal"], ["rob", "robot"]],
             "inside": [["container", "item"], ["contained", "item"]],
             "on": [["supporting", "item"], ["supported", "item"]],
-            "has-grasp": [["obj", "navgoal"]],
+            "has-grasp": [["obj", "navgoal"], ["gid", "grasp_id"]],
             "grasped-with": [["obj", "item"], ["gid", "grasp_id"], ["rob", "robot"]],
         }
 
@@ -61,11 +61,6 @@ class Predicates:
     def in_reach(self, target_item, robot_name):
         if self._kb.is_type(target_item, "position"):
             return self.in_reach_pos(self._kb.lookup_table[target_item], robot_name)
-        elif type(target_item) is list:
-            print(
-                "wooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
-            )  # Want to see if this ever happens
-            return self.in_reach_pos(target_item, robot_name)
         elif type(target_item) is str:
             return self.in_reach_obj(target_item, robot_name)
         else:
@@ -195,12 +190,24 @@ class Predicates:
 
         return above and within
 
-    def has_grasp(self, obj):
+    def has_grasp(self, obj, gid):
         if obj in self._scene.objects:
-            return len(self._scene.objects[obj].grasp_pos) > 0
+            grasp_spec = self._kb.lookup_table[gid]
+            success = True
+            success &= 0 <= grasp_spec[0] < len(self._scene.objects[obj].grasp_links)
+            if not success:
+                return False
+            link_id = self._scene.objects[obj].grasp_links[grasp_spec[0]]
+            success &= (
+                0 <= grasp_spec[1] < len(self._scene.objects[obj].grasp_pos[link_id])
+            )
+            return success
         else:
             return False
 
     def grasped_with(self, obj, gid, rob):
-        # TODO: add check whether grasp is correct
-        return self.in_hand(obj, rob)
+        # TODO: add check whether object is actually grasped with correct grasp
+        success = True
+        success &= self.has_grasp(obj, gid)
+        success &= self.in_hand(obj, rob)
+        return success

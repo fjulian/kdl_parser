@@ -15,7 +15,7 @@ class ConfigYaml:
             if default_value is not None:
                 assert type(default_value) == type(ret)
             return ret
-        except ValueError:
+        except KeyError:
             param_name = "/".join(args_list)
             print(
                 "".join(("WARNING: Falling back to default for parameter ", param_name))

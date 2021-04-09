@@ -3,7 +3,6 @@ numpy
 scipy
 urdf-parser-py
 pandas
-cython
 ipython
 
 argparse
@@ -11,9 +10,6 @@ PyYAML
 matplotlib
 tqdm
 
-mctspy
-setuptools
-rospy
 pytest
 networkx
 seaborn
