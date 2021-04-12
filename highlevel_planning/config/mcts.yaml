@@ -17,5 +17,5 @@ robot_arm:
 grasping:
   pregrasp_z_offset: 0.15
 mcts:
-  search_budget_sec: 200
+  search_budget_sec: 700
   max_depth: 10

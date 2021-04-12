@@ -75,7 +75,7 @@ class SkillPlacing:
                     )
                 else:
                     pos_joints = self.robot.ik(pos, orient.as_quat())
-                    if pos_pre_joints.tolist() is None:
+                    if pos_joints.tolist() is None:
                         print("IK failed for place pose")
                         raise IKError
                     self.robot.transition_cmd_to(pos_joints, stop_on_contact=True)

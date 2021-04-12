@@ -23,6 +23,7 @@ from highlevel_planning_py.exploration.explorer import Explorer
 from highlevel_planning_py.exploration.pddl_extender import PDDLExtender
 from highlevel_planning_py.exploration import mcts
 from highlevel_planning_py.exploration.logic_tools import determine_relevant_predicates
+from highlevel_planning_py.knowledge.knowledge_base import KnowledgeBase
 
 # Other
 from highlevel_planning_py.tools.config import ConfigYaml
@@ -42,7 +43,7 @@ PATHS = {
 }
 
 
-def mcts_exit_handler(node, time_string, config, metrics):
+def mcts_exit_handler(node, time_string, config, metrics, knowledge_base):
     savedir = os.path.join(PATHS["data_dir"], "mcts")
     os.makedirs(savedir, exist_ok=True)
 
@@ -55,6 +56,7 @@ def mcts_exit_handler(node, time_string, config, metrics):
     data["tree"] = node
     data["config"] = config._cfg
     data["metrics"] = metrics
+    data["knowledge_base"] = knowledge_base
 
     filename = "{}_data.pkl".format(time_string)
     with open(os.path.join(savedir, filename), "wb") as f:
@@ -146,8 +148,11 @@ def main():
     # ---------------------------------------------------------------
 
     metrics = mcts_search.tree_search()
+    metrics["goals"] = kb.goals
 
-    mcts_exit_handler(mcts_root_node, time_string, cfg, metrics)
+    kb_clone = KnowledgeBase(PATHS, domain_name=scene.__class__.__name__)
+    kb_clone.duplicate(kb)
+    mcts_exit_handler(mcts_root_node, time_string, cfg, metrics, kb_clone)
 
 
 if __name__ == "__main__":
