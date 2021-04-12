@@ -18,7 +18,30 @@ from highlevel_planning_py.exploration.logic_tools import (
 
 
 MAX_DEPTH = 10
-DEBUG = True
+DEBUG = False
+
+"""
+The hierarchy of timing looks as follows:
+- time_until_result
+    - time_check_expanding
+    - time_select_child
+    - time_expand
+        - time_sim
+        - time_sample_feasible
+        
+- num_restarts
+    - num_expand
+        - num_expand_tries
+"""
+
+
+def determine_max_depth(node):
+    if len(node.children) == 0:
+        return node.state._depth
+    depths = []
+    for child in node.children:
+        depths.append(determine_max_depth(child))
+    return np.max(depths)
 
 
 def plot_graph(graph, current_node, fig, ax, explorer):
@@ -74,14 +97,31 @@ class HLPTreeSearch:
 
         self.time_budget = config.getparam(["mcts", "search_budget_sec"])
 
-        # if DEBUG:
-        plt.ion()
-        self.figure, self.ax = plt.subplots(figsize=(25, 18))
+        if DEBUG:
+            plt.ion()
+            self.figure, self.ax = plt.subplots(figsize=(25, 18))
 
     def tree_search(self):
+        metrics = dict.fromkeys(
+            [
+                "success",
+                "time_until_result",
+                "max_depth",
+                "num_restarts",
+                "num_expand",
+                "time_check_expanding",
+                "time_select_child",
+                "time_expand",
+                "time_sim",
+                "time_sample_feasible",
+                "num_expand_tries",
+            ],
+            0.0,
+        )
         start_time = time()
         counter = 0
         counter2 = 0
+        result = 0
         while time() - start_time < self.time_budget:
             counter += 1
             current_node = self.root
@@ -91,20 +131,34 @@ class HLPTreeSearch:
                     plot_graph(
                         self.root.graph, current_node, self.figure, self.ax, self.exp
                     )
-                if current_node.check_expanding(self.exp):
+
+                tic_check_expand = time()
+                expand = current_node.check_expanding(self.exp)
+                metrics["time_check_expanding"] += time() - tic_check_expand
+
+                tic_expand = time()
+                if expand:
                     # Expand
-                    current_node = current_node.expand(self.exp)
-                    # break
+                    current_node, expand_metrics = current_node.expand(self.exp)
+                    metrics["time_expand"] += time() - tic_expand
+                    metrics["num_expand"] += 1
+                    for key in expand_metrics:
+                        metrics[key] += expand_metrics[key]
                 else:
                     # Select a child to continue from
                     current_node = current_node.select_child(self.exp)
+                    metrics["time_select_child"] += time() - tic_expand
 
             # result = current_node.rollout()
             result = current_node.state.game_result(self.exp)
             result = 0 if result is None else result
             if result == 1:
-                plot_graph(self.root.graph, self.root, self.figure, self.ax, self.exp)
-                bla = input("fadsf")
+                if DEBUG:
+                    plot_graph(
+                        self.root.graph, self.root, self.figure, self.ax, self.exp
+                    )
+                print("Goal reached")
+                break
             current_node.backpropagate(result)
             # print("----------------------------------------------")
             # self.root.print()
@@ -113,6 +167,14 @@ class HLPTreeSearch:
                     counter, self.root.results[1]
                 )
             )
+
+        # Save metrics
+        metrics["success"] = False if result == 0 else True
+        metrics["num_restarts"] = counter
+        metrics["time_until_result"] = time() - start_time
+        metrics["max_depth"] = determine_max_depth(self.root)
+
+        return metrics
 
 
 class HLPTreeNode:
@@ -170,15 +232,24 @@ class HLPTreeNode:
     def expand(self, explorer):
         max_tries = 50
         counter = 0
+        metrics = dict.fromkeys(
+            ["time_sample_feasible", "time_sim", "num_expand_tries"], 0.0
+        )
+        ret_node = None
         while counter < max_tries:
             counter += 1
+            tic_find_feasible = time()
             sequence_tuple = self._sample_feasible_step(explorer)
+            metrics["time_sample_feasible"] += time() - tic_find_feasible
             if sequence_tuple is False:
                 self.cannot_expand = True
-                return self
+                ret_node = self
+                break
             if sequence_tuple in self.child_actions:
                 continue
+            tic_move = time()
             new_state = self.state.move(sequence_tuple, explorer)
+            metrics["time_sim"] = time() - tic_move
             new_child = HLPTreeNode(
                 new_state,
                 self.action_list,
@@ -189,8 +260,10 @@ class HLPTreeNode:
             )
             self.children.append(new_child)
             self.child_actions.append(sequence_tuple)
-            return new_child
-        return None
+            ret_node = new_child
+            break
+        metrics["num_expand_tries"] = counter
+        return ret_node, metrics
 
     def _sample_step(self, explorer):
         sequence = explorer._sample_sequence(length=1)

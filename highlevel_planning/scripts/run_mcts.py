@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import json
 import atexit
 import pickle
 from datetime import datetime
@@ -41,7 +42,7 @@ PATHS = {
 }
 
 
-def mcts_exit_handler(node, time_string):
+def mcts_exit_handler(node, time_string, config, metrics):
     savedir = os.path.join(PATHS["data_dir"], "mcts")
     os.makedirs(savedir, exist_ok=True)
 
@@ -49,12 +50,26 @@ def mcts_exit_handler(node, time_string):
     mcts.plot_graph(node.graph, node, figure, ax, explorer=None)
     filename = "{}_mcts_tree.png".format(time_string)
     figure.savefig(os.path.join(savedir, filename))
-    print("Saved tree figure")
 
-    filename = "{}_mcts_tree.pkl".format(time_string)
+    data = dict()
+    data["tree"] = node
+    data["config"] = config._cfg
+    data["metrics"] = metrics
+
+    filename = "{}_data.pkl".format(time_string)
     with open(os.path.join(savedir, filename), "wb") as f:
-        pickle.dump(node, f)
-    print("Saved tree data structure")
+        pickle.dump(data, f)
+
+    filename = "{}_metrics.txt".format(time_string)
+    with open(os.path.join(savedir, filename), "w") as f:
+        for key, value in metrics.items():
+            f.write(f"{key:42}: {value}\n")
+
+    filename = "{}_config.txt".format(time_string)
+    with open(os.path.join(savedir, filename), "w") as f:
+        json.dump(config._cfg, f)
+
+    print(f"Saved everything. Time string: {time_string}")
 
 
 def main():
@@ -126,11 +141,13 @@ def main():
         mcts_state, action_list, graph, relevant_objects=relevant_objects
     )
     mcts_search = mcts.HLPTreeSearch(mcts_root_node, xplorer, cfg)
-    atexit.register(mcts_exit_handler, node=mcts_root_node, time_string=time_string)
+    # atexit.register(mcts_exit_handler, node=mcts_root_node, time_string=time_string)
 
     # ---------------------------------------------------------------
 
-    mcts_search.tree_search()
+    metrics = mcts_search.tree_search()
+
+    mcts_exit_handler(mcts_root_node, time_string, cfg, metrics)
 
 
 if __name__ == "__main__":

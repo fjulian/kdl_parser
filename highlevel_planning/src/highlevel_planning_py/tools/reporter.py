@@ -97,3 +97,5 @@ class Reporter:
         self.data["metrics"] = self.metrics
         with open(os.path.join(savedir, f"{self.metrics['time']}_data.pkl"), "wb") as f:
             pickle.dump(self.data, f)
+
+        print("Reporter wrote result files")
