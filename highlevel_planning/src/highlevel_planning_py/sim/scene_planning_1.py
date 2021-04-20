@@ -24,13 +24,8 @@ class ScenePlanning1(SceneBase):
                 # init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
                 init_orient_=rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "z", -20.0),
                 grasp_links_=[-1],
-                grasp_pos_={-1: [np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0])]},
-                grasp_orient_={
-                    -1: [
-                        np.array([0.0, 0.0, 0.0, 1.0]),
-                        R.from_euler("zx", [-90, -50], degrees=True).as_quat(),
-                    ]
-                },
+                grasp_pos_={-1: [np.array([0.0, 0.0, 0.0])]},
+                grasp_orient_={-1: [np.array([0.0, 0.0, 0.0, 1.0])]},
             )
             self.objects["lego"] = ObjectInfo(
                 urdf_path_="lego/lego.urdf",
