@@ -4,11 +4,13 @@ predicates:
   on-pred:
     max_above: 0.05
 explorer:
+  search_budget_sec: 700
   max_sample_repetitions: 1
+  min_sequence_length: 1
   max_sequence_length: 2
   max_samples_per_sequence_length: 100
   max_failed_samples: 50
-  bounding_box_inflation_length: 0.2
+  bounding_box_inflation_length: 0.1
   action_denylist: []
   predicate_precondition_allowlist: ["inside", "on"]
   radii: [0.1, 1.5, 10.0]

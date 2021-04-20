@@ -4,7 +4,9 @@ predicates:
   on-pred:
     max_above: 0.05
 explorer:
+  search_budget_sec: 700
   max_sample_repetitions: 2
+  min_sequence_length: 1
   max_sequence_length: 2
   max_samples_per_sequence_length: 100
   max_failed_samples: 50

@@ -50,6 +50,7 @@ class Explorer:
         self.current_state_id = None
         self.metrics = None
         self.metrics_prefix = ""
+        self.exploration_start_time = None
 
     def set_metrics_prefix(self, prefix: str):
         self.metrics_prefix = prefix
@@ -65,6 +66,7 @@ class Explorer:
         state_id=None,
         no_seed: bool = False,
     ):
+        self.exploration_start_time = time.time()
         self.metrics = OrderedDict()
 
         if not no_seed:
@@ -206,7 +208,7 @@ class Explorer:
 
     def _explore_goal_objects(self, sequences_tried, relevant_objects=None):
         print("Exploring goal objects ...")
-        min_sequence_length = 1
+        min_sequence_length = self.config_params["min_sequence_length"]
         max_sequence_length = self.config_params["max_sequence_length"]
         found_plan = self._sampling_loops_caller(
             relevant_objects, min_sequence_length, max_sequence_length, sequences_tried
@@ -275,6 +277,14 @@ class Explorer:
     ):
         found_plan = False
         for sample_idx in range(self.config_params["max_samples_per_sequence_length"]):
+            # Quit if search budget is exceeded
+            if (
+                time.time() - self.exploration_start_time
+                > self.config_params["search_budget_sec"]
+            ):
+                print("Search budget exceeded")
+                break
+
             # Restore initial state
             self.world.restore_state(self.current_state_id)
 
