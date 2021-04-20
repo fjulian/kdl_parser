@@ -106,7 +106,7 @@ class SkillPlacing:
 def get_placing_description():
     action_name = "place"
     action_params = [
-        ["obj", "item"],
+        ["obj", "item-graspable"],
         ["pos", "position"],
         ["gid", "grasp_id"],
         ["rob", "robot"],

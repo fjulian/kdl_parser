@@ -117,7 +117,8 @@ def setup_knowledge_base(
     kb.add_type("robot")
     kb.add_type("navgoal")  # Anything we can navigate to
     kb.add_type("position", "navgoal")  # Pure positions
-    kb.add_type("item", "navgoal")  # Anything we can grasp
+    kb.add_type("item", "navgoal")
+    kb.add_type("item-graspable", "item")  # Anything we can grasp
     kb.add_type("grasp_id")
 
     # Add origin

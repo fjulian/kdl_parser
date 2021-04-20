@@ -328,6 +328,7 @@ class KnowledgeBase:
             for grasp in ["grasp0", "grasp1"]:
                 if self.predicate_funcs.call["has-grasp"](obj, grasp):
                     self.object_predicates.add(("has-grasp", obj, grasp))
+                    self.add_object(obj, "item-graspable")
 
         # Add "objects" that are always visible
         for object_name in self.objects:
