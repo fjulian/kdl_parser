@@ -5,6 +5,7 @@ predicates:
     max_above: 0.05
 explorer:
   search_budget_sec: 700
+  alternating_sequence_length: false
   max_sample_repetitions: 2
   min_sequence_length: 1
   max_sequence_length: 2
@@ -18,3 +19,6 @@ robot_arm:
   max_force_magnitude: 150
 grasping:
   pregrasp_z_offset: 0.15
+mcts:
+  search_budget_sec: 700
+  max_depth: 12

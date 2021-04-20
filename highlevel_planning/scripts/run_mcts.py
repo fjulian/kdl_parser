@@ -91,7 +91,7 @@ def main():
     objects, robot_mdl = run_util.restore_pybullet_sim(savedir, args)
 
     # Load config file
-    cfg = ConfigYaml(os.path.join(SRCROOT, "config", "mcts.yaml"))
+    cfg = ConfigYaml(os.path.join(SRCROOT, "config", "main.yaml"))
 
     time_now = datetime.now()
     time_string = time_now.strftime("%y%m%d-%H%M%S")
