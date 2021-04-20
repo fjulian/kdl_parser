@@ -474,7 +474,7 @@ class RobotArmPybullet(RobotArm):
         self.set_fingers(pos)
 
     def set_fingers(self, pos):
-        forces = [25.0, 25.0]
+        forces = [15.0, 15.0]
         self.desired_fingers = pos
         p.setJointMotorControlArray(
             self.model.uid,
@@ -502,7 +502,7 @@ class RobotArmPybullet(RobotArm):
         return joint_positions, joint_velocities, joint_torques
 
     def check_grasp(self):
-        self._world.step_seconds(0.1)
+        self._world.step_seconds(0.3)
         gripper_state = p.getJointStates(
             self.model.uid, self.joint_idx_fingers, physicsClientId=self.pb_id
         )
@@ -513,7 +513,7 @@ class RobotArmPybullet(RobotArm):
         if dist < dist_threshold:
             object_present = False
         else:
-            force_threshold = 1.0
+            force_threshold = 5.0
             force1 = gripper_state[0][3]
             force2 = gripper_state[1][3]
             if abs(force1) < force_threshold and abs(force2) < force_threshold:

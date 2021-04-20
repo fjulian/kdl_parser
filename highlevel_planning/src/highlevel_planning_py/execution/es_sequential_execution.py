@@ -96,7 +96,7 @@ class SequentialExecution(ExecutionSystem):
                     target_name = action_parameters["goal_pos"]
                     if self.knowledge_base.is_type(target_name, type_query="position"):
                         position = self.knowledge_base.lookup_table[target_name]
-                        self.skill_set_["nav"].move_to_pos(position, nav_min_dist=0.3)
+                        self.skill_set_["nav"].move_to_pos(position, nav_min_dist=0.2)
                     else:
                         self.skill_set_["nav"].move_to_object(target_name)
                 elif action_name == "place":
@@ -128,6 +128,11 @@ class SequentialExecution(ExecutionSystem):
             res = self.knowledge_base.predicate_funcs.call[effect[0]](
                 *parameterized_effect[2]
             )
+            if not res == effect[1]:
+                # Try it a second time because especially grasp detection is wonky at times.
+                res = self.knowledge_base.predicate_funcs.call[effect[0]](
+                    *parameterized_effect[2]
+                )
             if not res == effect[1]:
                 success = False
                 msgs.append(

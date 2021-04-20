@@ -53,8 +53,8 @@ class Predicates:
                 dist_finger1 = contact[8] if contact[8] < dist_finger1 else dist_finger1
             elif contact[3] == robot.joint_idx_fingers[1]:
                 dist_finger2 = contact[8] if contact[8] < dist_finger2 else dist_finger2
-        desired_object_in_hand = (abs(dist_finger1) < 0.001) and (
-            abs(dist_finger2) < 0.001
+        desired_object_in_hand = (abs(dist_finger1) < 0.01) and (
+            abs(dist_finger2) < 0.01
         )
         return (not empty_hand_res) and desired_object_in_hand
 

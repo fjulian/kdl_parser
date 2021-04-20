@@ -41,6 +41,13 @@ def parse_arguments():
         action="store_true",
         help="if given, RNGs are not initialized with a random seed.",
     )
+    parser.add_argument(
+        "-d",
+        "--domain-file",
+        action="store",
+        default="_domain.pkl",
+        help="The file name of the domain file loaded/stored by the knowledge base.",
+    )
     args = parser.parse_args()
     return args
 
@@ -88,10 +95,15 @@ def setup_robot(world, cfg, asset_dir, robot_mdl):
     return robot
 
 
-def setup_knowledge_base(paths, scene, robot, cfg, time_string):
+def setup_knowledge_base(
+    paths, scene, robot, cfg, time_string, domain_file="_domain.pkl"
+):
     # Set up planner interface and domain representation
     kb = KnowledgeBase(
-        paths, domain_name=scene.__class__.__name__, time_string=time_string
+        paths,
+        domain_name=scene.__class__.__name__,
+        time_string=time_string,
+        domain_file=domain_file,
     )
 
     # Add basic skill descriptions
