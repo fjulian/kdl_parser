@@ -29,7 +29,7 @@ def summarize_experiment(base_dir, name_string, success_label):
     for idx, f in enumerate(files):
         if not f.endswith(".pkl"):
             rm_idx.append(idx)
-        elif not f.startswith("20"):
+        elif not f.startswith("2"):
             rm_idx.append(idx)
     rm_idx.sort(reverse=True)
     for idx in rm_idx:
@@ -93,25 +93,17 @@ def summarize_experiment(base_dir, name_string, success_label):
     return summary_data, success_count
 
 
-if __name__ == "__main__":
+def main_evaluate_hlp():
     basedir = os.path.join(
         os.getenv("HOME"),
         "Polybox",
         "PhD",
         "Publications",
-        "2021 ICRA",
+        "2021 ICRA HLP",
+        "Second try",
         "Experiments",
-        "Repeated",
     )
-    experiment_string = [
-        "201006-122200",
-        "201006-143900",
-        "201006-193900",
-        "201009-173800",
-        # "201008-125800",
-        # "201008-133700",
-        "201009-104000",
-    ]
+    experiment_string = ["201006-122200"]
     experiment_success_label = ["found_plan"]
     titles = ["(a)", "(b)", "(c)", "(d)", "(e)"]
     num_seq_samples_data = list()
@@ -179,3 +171,7 @@ if __name__ == "__main__":
     #     os.path.join(basedir, "Output", f"{time_string}_boxplot.pdf"),
     #     bbox_inches="tight",
     # )
+
+
+if __name__ == "__main__":
+    pass

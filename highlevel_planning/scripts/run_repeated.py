@@ -8,26 +8,40 @@ from tqdm import tqdm
 DATA_DIR = os.path.join(os.path.expanduser("~"), "Data", "highlevel_planning")
 SRCROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+NUM_REPETITIONS = 20
+MAX_SIMULTANEOUSLY = 6
 
-def hlp_run():
+
+def hlp_run(individual_index):
     domain_dir = os.path.join(DATA_DIR, "knowledge", "ScenePlanning1", "main")
     initial_domain_file = os.path.join(domain_dir, "_domain_initial.pkl")
-    domain_file = os.path.join(domain_dir, "_domain.pkl")
+    domain_file_name = f"_domain{individual_index}.pkl"
+    domain_file = os.path.join(domain_dir, domain_file_name)
 
     if os.path.isfile(domain_file):
         os.remove(domain_file)
     shutil.copyfile(initial_domain_file, domain_file, follow_symlinks=False)
 
     script = os.path.join(SRCROOT, "scripts", "run_auto.py")
-    res = subprocess.run(
-        ["python", script, "-n", "-m", "direct", "--no-seed"],
-        capture_output=True,
+    res = subprocess.Popen(
+        [
+            "python",
+            script,
+            "-n",
+            "-m",
+            "direct",
+            "--no-seed",
+            "--domain-file",
+            domain_file_name,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
     )
     return res
 
 
-def mcts_run():
+def mcts_run(individual_index):
     script = os.path.join(SRCROOT, "scripts", "run_mcts.py")
     res = subprocess.Popen(
         ["python", script, "-n", "-m", "direct", "--no-seed"],
@@ -39,18 +53,15 @@ def mcts_run():
 
 
 if __name__ == "__main__":
-    num_repetitions = 20
-
     stdout_file = os.path.join(DATA_DIR, "reports", "repeated_stdout.txt")
-
     num_done, num_started = 0, 0
     currently_running = 0
-    max_simultaneously = 8
     open_processes = list()
     tic = time.time()
-    while num_done < num_repetitions:
-        if currently_running < max_simultaneously and num_started < num_repetitions:
-            p = mcts_run()
+    while num_done < NUM_REPETITIONS:
+        if currently_running < MAX_SIMULTANEOUSLY and num_started < NUM_REPETITIONS:
+            # p = mcts_run(num_started)
+            p = hlp_run(num_started)
             open_processes.append(p)
             num_started += 1
             currently_running += 1
@@ -85,7 +96,7 @@ if __name__ == "__main__":
             currently_running -= 1
         print("----------------")
         print(f"Currently running: {currently_running}")
-        print(f"Started: {num_started}/{num_repetitions}")
-        print(f"Done: {num_done}/{num_repetitions}")
+        print(f"Started: {num_started}/{NUM_REPETITIONS}")
+        print(f"Done: {num_done}/{NUM_REPETITIONS}")
     print("==================================")
     print(f"All done. Total time elapsed: {time.time()-tic}")

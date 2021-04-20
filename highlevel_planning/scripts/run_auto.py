@@ -88,7 +88,9 @@ def main():
 
     # -----------------------------------
 
-    kb, preds = run_util.setup_knowledge_base(PATHS, scene, robot, cfg, time_string)
+    kb, preds = run_util.setup_knowledge_base(
+        PATHS, scene, robot, cfg, time_string, args.domain_file
+    )
 
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot, cfg)

@@ -16,7 +16,9 @@ def check_path_exists(path_to_check):
 
 
 class KnowledgeBase:
-    def __init__(self, paths, domain_name="", time_string=None):
+    def __init__(
+        self, paths, domain_name="", time_string=None, domain_file="_domain.pkl"
+    ):
         self.predicate_funcs = None
 
         # Folder book keeping
@@ -52,10 +54,10 @@ class KnowledgeBase:
         # ]
         # self.goals = [("on", True, ("container2", "cube1"))]
         # self.goals = [("on", True, ("container2", "lego"))]
-        # self.goals = [("inside", True, ("container1", "cube1"))]
+        self.goals = [("inside", True, ("container1", "cube1"))]
         # self.goals = [("inside", True, ("container1", "lego"))]
         # self.goals = [("inside", True, ("container1", "duck"))]
-        self.goals = [("inside", True, ("shelf", "tall_box"))]
+        # self.goals = [("inside", True, ("shelf", "tall_box"))]
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()
@@ -64,7 +66,7 @@ class KnowledgeBase:
         self.meta_actions = dict()
 
         # Load previous knowledge base
-        self._domain_file = path.join(domain_dir, "_domain.pkl")
+        self._domain_file = path.join(domain_dir, domain_file)
         self.load_domain()
 
         # PDDL file interfaces

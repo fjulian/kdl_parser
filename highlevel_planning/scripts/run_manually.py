@@ -12,7 +12,7 @@ import pybullet as p
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import os
-
+from datetime import datetime
 
 SRCROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATHS = {
@@ -115,7 +115,7 @@ def grasp_example(
     # print(robot.get_wrist_force())
 
     # Place cube somewhere else
-    new_pos = scene.objects[object_name].init_pos + np.array([-0.2, 0.0, 0.2])
+    new_pos = scene.objects[object_name].init_pos + np.array([0.1, 0.2, -0.2])
     sk_nav.move_to_pos(new_pos)
     sk_place.place_object(new_pos)
 
@@ -193,11 +193,17 @@ def main():
     # Save state
     run_util.save_pybullet_sim(args, savedir, scene, robot)
 
+    time_now = datetime.now()
+    time_string = time_now.strftime("%y%m%d-%H%M%S")
+    kb, preds = run_util.setup_knowledge_base(
+        PATHS, scene, robot, cfg, time_string, args.domain_file
+    )
+
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot, cfg)
     sk_place = SkillPlacing(scene, robot)
     sk_nav = SkillNavigate(scene, robot)
-    sk_move = SkillMove(scene, robot, 0.02, robot._world.T_s)
+    sk_move = SkillMove(scene, robot, 0.02, world.T_s)
 
     # bbox = np.array(p.getAABB(robot.model.uid))
     # for link in robot.model.link_name_to_index:
@@ -209,15 +215,15 @@ def main():
 
     # ---------- Run examples -----------
 
-    robot._world.step_seconds(1)
+    world.step_seconds(1)
 
     # drawer_example(sk_grasp, sk_nav, robot, robot._world)
 
     # drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
 
-    # grasp_example(
-    #     sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1", grasp_id=1
-    # )
+    grasp_example(
+        sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1", grasp_id=0
+    )
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lid1")
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lego")
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="duck")

@@ -4,6 +4,7 @@ import pybullet as p
 from collections import OrderedDict
 from copy import deepcopy
 import time
+from icecream import ic
 
 from highlevel_planning_py.execution.es_sequential_execution import (
     execute_plan_sequentially,
@@ -372,14 +373,22 @@ class Explorer:
                 key_actions = last_working_completion_result[4]
 
                 effects_last_action = list()
+                no_effect_key_actions = (
+                    list()
+                )  # Collects key actions that have no corresponding precondition candidates
                 if len(last_working_completion_result[0]) > 1:
                     # Precondition discovery
-                    precondition_candidates, precondition_actions = precondition_discovery(
+                    precondition_ret = precondition_discovery(
                         relevant_objects, last_working_completion_result, self
                     )
+                    if precondition_ret is False:
+                        continue
+                    precondition_candidates, precondition_actions = precondition_ret
                     precondition_idx = 0
                     for key_action_idx in range(len(key_actions) - 1):
                         effects_this_action = list()
+
+                        # This loop finds all precondition candidates corresponding to a key action
                         while True:
                             if (
                                 precondition_idx >= len(precondition_actions)
@@ -391,25 +400,67 @@ class Explorer:
                                 precondition_candidates[precondition_idx]
                             )
                             precondition_idx += 1
+
+                        ic("Debug info:")
+                        ic(effects_this_action)
+                        ic(key_action_idx)
+                        ic(key_actions)
+                        ic(completed_sequence)
+                        ic(completed_parameters)
+                        ic(precondition_candidates)
+                        ic(precondition_actions)
+                        ic(precondition_idx)
+
+                        if len(effects_this_action) == 0:
+                            # This can happen if no precondition candidate that corresponds to this action
+                            # was discovered.
+                            no_effect_key_actions.append(key_actions[key_action_idx])
+                            continue
+
+                        # Determine all key actions to include in new meta action
+                        if len(no_effect_key_actions) > 0:
+                            first_key_action = min(no_effect_key_actions)
+                            last_key_action = key_actions[key_action_idx]
+                        else:
+                            first_key_action = key_actions[key_action_idx]
+                            last_key_action = key_actions[key_action_idx]
+                        no_effect_key_actions.clear()
+
                         self.pddl_extender.create_new_action(
                             goals=effects_this_action,
                             meta_preconditions=effects_last_action,
-                            sequence=[completed_sequence[key_actions[key_action_idx]]],
-                            parameters=[
-                                completed_parameters[key_actions[key_action_idx]]
+                            sequence=completed_sequence[
+                                first_key_action : last_key_action + 1
+                            ],
+                            parameters=completed_parameters[
+                                first_key_action : last_key_action + 1
                             ],
                         )
                         effects_last_action = deepcopy(effects_this_action)
 
                 # Add action that reaches the goal
                 if planning_failed:
+                    # Determine all key actions to include in new meta action
+                    if len(no_effect_key_actions) > 0:
+                        first_key_action = min(no_effect_key_actions)
+                        last_key_action = key_actions[-1]
+                    else:
+                        first_key_action = key_actions[-1]
+                        last_key_action = key_actions[-1]
+
                     self.pddl_extender.create_new_action(
                         goals=self.knowledge_base.goals,
                         meta_preconditions=effects_last_action,
-                        sequence=[completed_sequence[key_actions[-1]]],
-                        parameters=[completed_parameters[key_actions[-1]]],
+                        sequence=completed_sequence[
+                            first_key_action : last_key_action + 1
+                        ],
+                        parameters=completed_parameters[
+                            first_key_action : last_key_action + 1
+                        ],
                     )
                 else:
+                    if len(no_effect_key_actions) > 0:
+                        raise RuntimeError("Cannot deal with this situation")
                     self.pddl_extender.generalize_action(
                         action_name=completed_sequence[key_actions[-1]],
                         parameters=completed_parameters[key_actions[-1]],
