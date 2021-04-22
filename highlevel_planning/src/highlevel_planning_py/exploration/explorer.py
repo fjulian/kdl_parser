@@ -96,23 +96,33 @@ class Explorer:
         res = False
         if demo_sequence is not None and demo_parameters is not None:
             self.set_metrics_prefix("01_demo")
+            tic = time.time()
             res = self._explore_demonstration(
                 demo_sequence,
                 demo_parameters,
                 closeby_objects + goal_objects,
                 sequences_tried,
             )
-        if not planning_failed and not res:
+            total_time = time.time() - tic
+            self.add_metric("total_time", total_time)
+        if not planning_failed and not res and not self.budget_exceeded:
             self.set_metrics_prefix("02_prepend")
+            tic = time.time()
             res = self._explore_prepending_sequence(
                 closeby_objects + goal_objects, sequences_tried
             )
-        if not res:
+            total_time = time.time() - tic
+            self.add_metric("total_time", total_time)
+        if not res and not self.budget_exceeded:
             self.set_metrics_prefix("03_generalize")
+            tic = time.time()
             res = self._explore_generalized_action(goal_objects, sequences_tried)
+            total_time = time.time() - tic
+            self.add_metric("total_time", total_time)
         for radius in radii:
-            if not res:
+            if not res and not self.budget_exceeded:
                 self.set_metrics_prefix(f"04_rad{radius}")
+                tic = time.time()
                 closeby_objects = get_items_closeby(
                     goal_objects,
                     self.scene_objects,
@@ -123,6 +133,8 @@ class Explorer:
                 res = self._explore_goal_objects(
                     sequences_tried, goal_objects + closeby_objects
                 )
+                total_time = time.time() - tic
+                self.add_metric("total_time", total_time)
         return res, self.metrics
 
     # ----- Different sampling strategies ------------------------------------
@@ -285,6 +297,7 @@ class Explorer:
         for timer in sampling_timers:
             self.add_metric(f"t_{timer}", sampling_timers[timer])
         self.add_metric("found_plan", found_plan)
+        self.add_metric("time_budget_exceeded", self.budget_exceeded)
 
         # Restore initial state
         self.world.restore_state(self.current_state_id)
@@ -427,16 +440,6 @@ class Explorer:
                             precondition_candidates[precondition_idx]
                         )
                         precondition_idx += 1
-
-                    ic("Debug info:")
-                    ic(effects_this_action)
-                    ic(key_action_idx)
-                    ic(key_actions)
-                    ic(completed_sequence)
-                    ic(completed_parameters)
-                    ic(precondition_candidates)
-                    ic(precondition_actions)
-                    ic(precondition_idx)
 
                     if len(effects_this_action) == 0:
                         # This can happen if no precondition candidate that corresponds to this action
