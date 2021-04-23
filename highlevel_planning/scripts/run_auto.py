@@ -117,7 +117,7 @@ def main():
     while True:
         # Plan
         plan = kb.solve()
-        rep.report_after_planning(plan)
+        rep.report_after_planning(plan, kb)
 
         # Execute
         if plan is False:

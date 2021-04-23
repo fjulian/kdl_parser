@@ -24,9 +24,9 @@ class KnowledgeBase:
         # Folder book keeping
         self.bin_dir = paths["bin_dir"]
         self.knowledge_dir = path.join(paths["data_dir"], "knowledge", domain_name)
-        domain_dir = path.join(self.knowledge_dir, "main")
-        check_path_exists(domain_dir)
-        problem_dir = domain_dir
+        self.domain_dir = path.join(self.knowledge_dir, "main")
+        check_path_exists(self.domain_dir)
+        problem_dir = self.domain_dir
         temp_domain_dir = path.join(self.knowledge_dir, "explore")
         check_path_exists(temp_domain_dir)
         temp_problem_dir = temp_domain_dir
@@ -46,7 +46,7 @@ class KnowledgeBase:
         # self.goals = [("in-hand", True, ("duck", "robot1"))]
         # self.goals = [("at", True, ("container1", "robot1"))]
         # self.goals = [("at", True, ("cupboard", "robot1"))]
-        self.goals = [("on", True, ("cupboard", "cube1"))]
+        # self.goals = [("on", True, ("cupboard", "cube1"))]
         # self.goals = [("on", True, ("cupboard", "duck"))]
         # self.goals = [
         #     ("on", True, ("cupboard", "cube1")),
@@ -57,7 +57,7 @@ class KnowledgeBase:
         # self.goals = [("inside", True, ("container1", "cube1"))]
         # self.goals = [("inside", True, ("container1", "lego"))]
         # self.goals = [("inside", True, ("container1", "duck"))]
-        # self.goals = [("inside", True, ("shelf", "tall_box"))]
+        self.goals = [("inside", True, ("shelf", "tall_box"))]
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()
@@ -66,12 +66,14 @@ class KnowledgeBase:
         self.meta_actions = dict()
 
         # Load previous knowledge base
-        self._domain_file = path.join(domain_dir, domain_file)
+        self._domain_file_path = path.join(self.domain_dir, domain_file)
+        self._domain_file_name = domain_file.split(".")[0]
+        print(f"Using domain file {self._domain_file_path}")
         self.load_domain()
 
         # PDDL file interfaces
         self.pddl_if = PDDLFileInterface(
-            domain_dir, problem_dir, domain_name, time_string
+            self.domain_dir, problem_dir, domain_name, time_string
         )
         self.pddl_if_temp = PDDLFileInterface(
             temp_domain_dir, temp_problem_dir, domain_name, time_string
@@ -111,8 +113,8 @@ class KnowledgeBase:
 
     def load_domain(self):
         print("Trying to load domain file...")
-        if path.exists(self._domain_file):
-            with open(self._domain_file, "rb") as f:
+        if path.exists(self._domain_file_path):
+            with open(self._domain_file_path, "rb") as f:
                 load_obj = pickle.load(f)
             self.domain_name = load_obj[0]
             self.predicate_definitions = load_obj[1]
@@ -126,7 +128,7 @@ class KnowledgeBase:
         else:
             print("Trying to load domain file... NOT FOUND --> starting from scratch")
 
-    def save_domain(self):
+    def save_domain(self, filename_appendix=""):
         save_obj = (
             self.domain_name,
             self.predicate_definitions,
@@ -137,7 +139,9 @@ class KnowledgeBase:
             self.parameterizations,
             self.meta_actions,
         )
-        with open(self._domain_file, "wb") as f:
+        file_name = self._domain_file_name + filename_appendix + ".pkl"
+        file_path = path.join(self.domain_dir, file_name)
+        with open(file_path, "wb") as f:
             pickle.dump(save_obj, f)
         print("Saved domain file")
 
@@ -252,7 +256,9 @@ class KnowledgeBase:
                         ]
                     else:
                         raise RuntimeError(
-                            "Parameter for sub action of meta action undefined"
+                            f"Parameter '{old_param_name}' for sub action '{sub_action_name}'"
+                            f" of meta action '{action_name}' undefined. Param translator of"
+                            f" meta action: {meta_action['param_translator']}"
                         )
                 expanded_step.append(new_plan_item)
         else:

@@ -50,10 +50,11 @@ class Reporter:
         self.metrics[f"{prefix}_parameterizations"] = str(len(kb.parameterizations))
         self.metrics[f"{prefix}_meta_actions"] = str(len(kb.meta_actions))
 
-    def report_after_planning(self, plan):
+    def report_after_planning(self, plan, kb):
         self.data[f"plan_{self.planning_idx}_plan"] = deepcopy(plan)
         success = True if plan is not False else False
         self.metrics[f"plan_{self.planning_idx}_success"] = str(success)
+        kb.save_domain(filename_appendix=f"_plan_step_{self.planning_idx}")
         self.planning_idx += 1
 
     def report_after_execution(self, res: bool):
