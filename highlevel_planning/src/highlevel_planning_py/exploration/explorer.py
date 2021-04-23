@@ -615,7 +615,32 @@ class Explorer:
                             object_type=obj_type, object_value=position
                         )
                     elif self.knowledge_base.type_x_child_of_y(obj_type, "grasp_id"):
-                        object_name = parameter_samples[idx_action]["obj"]
+                        object_name = None
+                        if "obj" in parameter_samples[idx_action]:
+                            object_name = parameter_samples[idx_action]["obj"]
+                        elif action in self.knowledge_base.meta_actions:
+                            meta_param_translator = self.knowledge_base.meta_actions[
+                                action
+                            ]["param_translator"]
+                            for idx_meta in range(len(meta_param_translator)):
+                                meta_param_translator[idx_meta].values()
+                                if obj_name in meta_param_translator[idx_meta].values():
+                                    grasp_relevant_parameter_name = meta_param_translator[
+                                        idx_meta
+                                    ][
+                                        "obj"
+                                    ]
+                                    if object_name is not None:
+                                        assert (
+                                            object_name
+                                            == parameter_samples[idx_action][
+                                                grasp_relevant_parameter_name
+                                            ]
+                                        )
+                                    else:
+                                        object_name = parameter_samples[idx_action][
+                                            grasp_relevant_parameter_name
+                                        ]
                         possible_grasps = list()
                         for grasp_id in ["grasp0", "grasp1"]:
                             if self.knowledge_base.predicate_funcs.call["has-grasp"](
