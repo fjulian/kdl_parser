@@ -351,160 +351,134 @@ class Explorer:
         tic = time.time()
         completed_sequence = completion_result[0]
         completed_parameters = completion_result[1]
-        if len(completed_sequence) == 1:
-            if given_seq is not None and given_params is not None:
-                # Generalize action
-                assert (
-                    len(completed_sequence) == 1
-                ), "If the given sequence is longer than 1, this code cannot deal with it yet"
-                self.pddl_extender.generalize_action(
-                    completed_sequence[0], completed_parameters[0]
-                )
-            else:
-                # Save the successful sequence and parameters.
-                self.pddl_extender.create_new_action(
-                    goals=self.knowledge_base.goals,
-                    meta_preconditions=None,
-                    sequence=completed_sequence,
-                    parameters=completed_parameters,
-                )
-        else:
-            key_actions = completion_result[4]
+        key_actions = completion_result[4]
 
-            # Try to find actual key actions (only if there is more than 1 key action)
-            last_working_completion_result = completion_result
-            if len(key_actions) > 1:
-                maximum_pushback = [0] * len(key_actions)
-                for key_action_idx in range(len(key_actions) - 2, -1, -1):
-                    pushback = 0
-                    while True:
-                        pushback += 1
-                        if (
-                            key_actions[key_action_idx] + pushback
-                            > key_actions[key_action_idx + 1]
-                        ):
-                            break
-                        elif (
-                            key_actions[key_action_idx] + pushback
-                            < key_actions[key_action_idx + 1]
-                        ):
-                            modified_key_actions = deepcopy(key_actions)
-                            modified_key_actions[key_action_idx] += pushback
-                        else:
-                            modified_key_actions = deepcopy(key_actions)
-                            del modified_key_actions[key_action_idx]
-                        modified_sequence = [
-                            completed_sequence[i] for i in modified_key_actions
-                        ]
-                        modified_parameters = [
-                            completed_parameters[i] for i in modified_key_actions
-                        ]
-                        modified_completion_result = complete_sequence(
-                            modified_sequence,
-                            modified_parameters,
-                            relevant_objects,
-                            self,
-                        )
-                        if modified_completion_result is False:
-                            continue
-                        test_success = self._test_completed_sequence(
-                            modified_completion_result
-                        )
-                        if not test_success[2]:
-                            continue
-                        maximum_pushback[key_action_idx] = pushback
-                        last_working_completion_result = modified_completion_result
-                    key_actions[key_action_idx] += maximum_pushback[key_action_idx]
-                completed_sequence = last_working_completion_result[0]
-                completed_parameters = last_working_completion_result[1]
-                key_actions = last_working_completion_result[4]
-                self.add_metric("maximum_pushback", maximum_pushback)
-
-            effects_last_action = list()
-            no_effect_key_actions = (
-                list()
-            )  # Collects key actions that have no corresponding precondition candidates
-            if len(completed_sequence) > 1:
-                # Precondition discovery
-                precondition_ret = precondition_discovery(
-                    relevant_objects, last_working_completion_result, self
-                )
-                if precondition_ret is False:
-                    return found_plan
-                precondition_candidates, precondition_actions = precondition_ret
-                precondition_idx = 0
-                for key_action_idx in range(len(key_actions) - 1):
-                    effects_this_action = list()
-
-                    # This loop finds all precondition candidates corresponding to a key action
-                    while True:
-                        if (
-                            precondition_idx >= len(precondition_actions)
-                            or precondition_actions[precondition_idx]
-                            > key_actions[key_action_idx]
-                        ):
-                            break
-                        effects_this_action.append(
-                            precondition_candidates[precondition_idx]
-                        )
-                        precondition_idx += 1
-
-                    if len(effects_this_action) == 0:
-                        # This can happen if no precondition candidate that corresponds to this action
-                        # was discovered.
-                        no_effect_key_actions.append(key_actions[key_action_idx])
-                        continue
-
-                    # Determine all key actions to include in new meta action
-                    if len(no_effect_key_actions) > 0:
-                        first_key_action = min(no_effect_key_actions)
-                        last_key_action = key_actions[key_action_idx]
+        # Try to find actual key actions (only if there is more than 1 key action)
+        last_working_completion_result = completion_result
+        if len(key_actions) > 1:
+            maximum_pushback = [0] * len(key_actions)
+            for key_action_idx in range(len(key_actions) - 2, -1, -1):
+                pushback = 0
+                while True:
+                    pushback += 1
+                    if (
+                        key_actions[key_action_idx] + pushback
+                        > key_actions[key_action_idx + 1]
+                    ):
+                        break
+                    elif (
+                        key_actions[key_action_idx] + pushback
+                        < key_actions[key_action_idx + 1]
+                    ):
+                        modified_key_actions = deepcopy(key_actions)
+                        modified_key_actions[key_action_idx] += pushback
                     else:
-                        first_key_action = key_actions[key_action_idx]
-                        last_key_action = key_actions[key_action_idx]
-                    no_effect_key_actions.clear()
-
-                    self.pddl_extender.create_new_action(
-                        goals=effects_this_action,
-                        meta_preconditions=effects_last_action,
-                        sequence=completed_sequence[
-                            first_key_action : last_key_action + 1
-                        ],
-                        parameters=completed_parameters[
-                            first_key_action : last_key_action + 1
-                        ],
+                        modified_key_actions = deepcopy(key_actions)
+                        del modified_key_actions[key_action_idx]
+                    modified_sequence = [
+                        completed_sequence[i] for i in modified_key_actions
+                    ]
+                    modified_parameters = [
+                        completed_parameters[i] for i in modified_key_actions
+                    ]
+                    modified_completion_result = complete_sequence(
+                        modified_sequence, modified_parameters, relevant_objects, self
                     )
-                    effects_last_action = deepcopy(effects_this_action)
+                    if modified_completion_result is False:
+                        continue
+                    test_success = self._test_completed_sequence(
+                        modified_completion_result
+                    )
+                    if not test_success[2]:
+                        continue
+                    maximum_pushback[key_action_idx] = pushback
+                    last_working_completion_result = modified_completion_result
+                key_actions[key_action_idx] += maximum_pushback[key_action_idx]
+            completed_sequence = last_working_completion_result[0]
+            completed_parameters = last_working_completion_result[1]
+            key_actions = last_working_completion_result[4]
+            self.add_metric("maximum_pushback", maximum_pushback)
 
-            # Add action that reaches the goal
-            if planning_failed:
+        effects_last_action = list()
+        no_effect_key_actions = (
+            list()
+        )  # Collects key actions that have no corresponding precondition candidates
+        if len(completed_sequence) > 1:
+            # Precondition discovery
+            precondition_ret = precondition_discovery(
+                relevant_objects, last_working_completion_result, self
+            )
+            if precondition_ret is False:
+                return found_plan
+            precondition_candidates, precondition_actions = precondition_ret
+            precondition_idx = 0
+            for key_action_idx in range(len(key_actions) - 1):
+                effects_this_action = list()
+
+                # This loop finds all precondition candidates corresponding to a key action
+                while True:
+                    if (
+                        precondition_idx >= len(precondition_actions)
+                        or precondition_actions[precondition_idx]
+                        > key_actions[key_action_idx]
+                    ):
+                        break
+                    effects_this_action.append(
+                        precondition_candidates[precondition_idx]
+                    )
+                    precondition_idx += 1
+
+                if len(effects_this_action) == 0:
+                    # This can happen if no precondition candidate that corresponds to this action
+                    # was discovered.
+                    no_effect_key_actions.append(key_actions[key_action_idx])
+                    continue
+
                 # Determine all key actions to include in new meta action
                 if len(no_effect_key_actions) > 0:
                     first_key_action = min(no_effect_key_actions)
-                    last_key_action = key_actions[-1]
+                    last_key_action = key_actions[key_action_idx]
                 else:
-                    first_key_action = key_actions[-1]
-                    last_key_action = key_actions[-1]
+                    first_key_action = key_actions[key_action_idx]
+                    last_key_action = key_actions[key_action_idx]
+                no_effect_key_actions.clear()
 
                 self.pddl_extender.create_new_action(
-                    goals=self.knowledge_base.goals,
+                    goals=effects_this_action,
                     meta_preconditions=effects_last_action,
                     sequence=completed_sequence[first_key_action : last_key_action + 1],
                     parameters=completed_parameters[
                         first_key_action : last_key_action + 1
                     ],
                 )
+                effects_last_action = deepcopy(effects_this_action)
+
+        # Add action that reaches the goal
+        if planning_failed:
+            # Determine all key actions to include in new meta action
+            if len(no_effect_key_actions) > 0:
+                first_key_action = min(no_effect_key_actions)
+                last_key_action = key_actions[-1]
             else:
-                if len(no_effect_key_actions) > 0:
-                    raise RuntimeError("Cannot deal with this situation")
-                self.pddl_extender.generalize_action(
-                    action_name=completed_sequence[key_actions[-1]],
-                    parameters=completed_parameters[key_actions[-1]],
-                    additional_preconditions=effects_last_action,
-                )
+                first_key_action = key_actions[-1]
+                last_key_action = key_actions[-1]
+
+            self.pddl_extender.create_new_action(
+                goals=self.knowledge_base.goals,
+                meta_preconditions=effects_last_action,
+                sequence=completed_sequence[first_key_action : last_key_action + 1],
+                parameters=completed_parameters[first_key_action : last_key_action + 1],
+            )
+        else:
+            if len(no_effect_key_actions) > 0:
+                raise RuntimeError("Cannot deal with this situation")
+            self.pddl_extender.generalize_action(
+                action_name=completed_sequence[key_actions[-1]],
+                parameters=completed_parameters[key_actions[-1]],
+                additional_preconditions=effects_last_action,
+            )
         sampling_timers["domain_extension"] += time.time() - tic
         found_plan = True
-
         return found_plan
 
     def _sample_feasible_sequence(
