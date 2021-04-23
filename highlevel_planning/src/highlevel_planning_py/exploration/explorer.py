@@ -370,53 +370,61 @@ class Explorer:
                 )
         else:
             key_actions = completion_result[4]
-            if len(key_actions) > 2:
-                raise NotImplementedError
 
-            # Try to find actual key actions
-            i = 1
+            # Try to find actual key actions (only if there is more than 1 key action)
             last_working_completion_result = completion_result
-            while True:
-                # Idea for more than 2 key actions: shift foremost back if it is at least two before next one.
-                # Otherwise shift next one back according to the same rule. If next one is the last one, eliminate
-                # next one.
-                # TODO implement this.
-                if key_actions[0] + i > key_actions[1]:
-                    break
-                elif key_actions[0] + i < key_actions[1]:
-                    modified_sequence = [
-                        completed_sequence[key_actions[0] + i],
-                        completed_sequence[key_actions[1]],
-                    ]
-                    modified_parameters = [
-                        completed_parameters[key_actions[0] + i],
-                        completed_parameters[key_actions[1]],
-                    ]
-                else:
-                    modified_sequence = [completed_sequence[key_actions[1]]]
-                    modified_parameters = [completed_parameters[key_actions[1]]]
-                modified_completion_result = complete_sequence(
-                    modified_sequence, modified_parameters, relevant_objects, self
-                )
-                if not modified_completion_result:
-                    i += 1
-                    continue
-                test_success = self._test_completed_sequence(modified_completion_result)
-                if not test_success[2]:
-                    i += 1
-                    continue
-                last_working_completion_result = modified_completion_result
-                i += 1
-
-            completed_sequence = last_working_completion_result[0]
-            completed_parameters = last_working_completion_result[1]
-            key_actions = last_working_completion_result[4]
+            if len(key_actions) > 1:
+                maximum_pushback = [0] * len(key_actions)
+                for key_action_idx in range(len(key_actions) - 2, -1, -1):
+                    pushback = 0
+                    while True:
+                        pushback += 1
+                        if (
+                            key_actions[key_action_idx] + pushback
+                            > key_actions[key_action_idx + 1]
+                        ):
+                            break
+                        elif (
+                            key_actions[key_action_idx] + pushback
+                            < key_actions[key_action_idx + 1]
+                        ):
+                            modified_key_actions = deepcopy(key_actions)
+                            modified_key_actions[key_action_idx] += pushback
+                        else:
+                            modified_key_actions = deepcopy(key_actions)
+                            del modified_key_actions[key_action_idx]
+                        modified_sequence = [
+                            completed_sequence[i] for i in modified_key_actions
+                        ]
+                        modified_parameters = [
+                            completed_parameters[i] for i in modified_key_actions
+                        ]
+                        modified_completion_result = complete_sequence(
+                            modified_sequence,
+                            modified_parameters,
+                            relevant_objects,
+                            self,
+                        )
+                        if modified_completion_result is False:
+                            continue
+                        test_success = self._test_completed_sequence(
+                            modified_completion_result
+                        )
+                        if not test_success[2]:
+                            continue
+                        maximum_pushback[key_action_idx] = pushback
+                        last_working_completion_result = modified_completion_result
+                    key_actions[key_action_idx] += maximum_pushback[key_action_idx]
+                completed_sequence = last_working_completion_result[0]
+                completed_parameters = last_working_completion_result[1]
+                key_actions = last_working_completion_result[4]
+                self.add_metric("maximum_pushback", maximum_pushback)
 
             effects_last_action = list()
             no_effect_key_actions = (
                 list()
             )  # Collects key actions that have no corresponding precondition candidates
-            if len(last_working_completion_result[0]) > 1:
+            if len(completed_sequence) > 1:
                 # Precondition discovery
                 precondition_ret = precondition_discovery(
                     relevant_objects, last_working_completion_result, self
