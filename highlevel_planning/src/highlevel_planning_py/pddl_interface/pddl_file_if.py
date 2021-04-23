@@ -52,7 +52,10 @@ def _preprocess_knowledge(actions, objects, types, parameterizations, joker_obje
                     add_type(types_processed, new_type, hidden_param_name)
                     assert (
                         param_type_dict[hidden_param_name] not in param_type_translator
-                    ), "Code not built for this eventuality"
+                    ), (
+                        f"Code not built for this eventuality. Action: {action_name}, type "
+                        f"of param '{hidden_param_name}' is '{param_type_dict[hidden_param_name]}'."
+                    )
                     param_type_translator[param_type_dict[hidden_param_name]] = new_type
                     for hidden_param_value in parameterizations[action_name][
                         object_param_set
