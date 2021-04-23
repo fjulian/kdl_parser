@@ -3,8 +3,10 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+import pandas as pd
+import seaborn as sns
 
-print_human_readable = False
+print_human_readable = True
 
 
 def sum_metrics(metrics, label_prefixes, label_string):
@@ -20,10 +22,7 @@ def number_formatter(number):
         return f"{number:.1e}"
 
 
-def summarize_experiment(base_dir, name_string, success_label):
-    raw_data_dir = os.path.join(base_dir, name_string)
-    files = os.listdir(raw_data_dir)
-
+def filter_data_files(files):
     files.sort()
     rm_idx = list()
     for idx, f in enumerate(files):
@@ -35,10 +34,17 @@ def summarize_experiment(base_dir, name_string, success_label):
     for idx in rm_idx:
         del files[idx]
 
+
+def summarize_experiment(base_dir, name_string, success_label):
+    raw_data_dir = os.path.join(base_dir, name_string)
+    files = os.listdir(raw_data_dir)
+    filter_data_files(files)
+
     num_runs = len(files)
     success_count = 0
     summary_data = dict.fromkeys(
         [
+            "file_name",
             "num_seq_samples",
             "num_preplan_exec_success",
             "num_plan_exec_success",
@@ -46,6 +52,7 @@ def summarize_experiment(base_dir, name_string, success_label):
             "time_sequence_completion",
             "time_execution",
             "time_domain_extension",
+            "time_total",
         ]
     )
     for key in summary_data:
@@ -69,6 +76,7 @@ def summarize_experiment(base_dir, name_string, success_label):
                 label[: -(len("_found_plan"))] for label in this_success_labels
             ]
 
+            summary_data["file_name"].append(files[i])
             summary_data["num_seq_samples"].append(
                 sum_metrics(metrics, label_prefixes, "#_valid_sequences")
             )
@@ -90,6 +98,60 @@ def summarize_experiment(base_dir, name_string, success_label):
             summary_data["time_domain_extension"].append(
                 sum_metrics(metrics, label_prefixes, "t_domain_extension")
             )
+            summary_data["time_total"].append(
+                sum_metrics(metrics, label_prefixes, "total_time")
+            )
+    return summary_data, success_count
+
+
+def summarize_mcts_experiment(base_dir, name_string, success_label):
+    raw_data_dir = os.path.join(base_dir, name_string)
+    files = os.listdir(raw_data_dir)
+    filter_data_files(files)
+
+    num_runs = len(files)
+    success_count = 0
+    summary_data = dict.fromkeys(
+        [
+            "file_name",
+            "max_depth",
+            "num_restarts",
+            "num_expand",
+            "time_check_expanding",
+            "time_select_child",
+            "time_expand",
+            "time_sim",
+            "time_sample_feasible",
+            "time_total",
+        ]
+    )
+    for key in summary_data:
+        summary_data[key] = list()
+    for i in range(num_runs):
+        with open(os.path.join(raw_data_dir, files[i]), "rb") as f:
+            data = pickle.load(f)
+        metrics = data["metrics"]
+        success = False
+        this_success_labels = list()
+        for key in metrics:
+            found_success_label = [key.find(l) > -1 for l in success_label]
+            if np.all(np.array(found_success_label)):
+                this_success_labels.append(key)
+                if metrics[key]:
+                    success = True
+                    success_count += 1
+                    break
+        if success:
+            summary_data["file_name"].append(files[i])
+            summary_data["max_depth"].append(metrics["max_depth"])
+            summary_data["num_restarts"].append(metrics["num_restarts"])
+            summary_data["num_expand"].append(metrics["num_expand"])
+            summary_data["time_check_expanding"].append(metrics["time_check_expanding"])
+            summary_data["time_select_child"].append(metrics["time_select_child"])
+            summary_data["time_expand"].append(metrics["time_expand"])
+            summary_data["time_sim"].append(metrics["time_sim"])
+            summary_data["time_sample_feasible"].append(metrics["time_sample_feasible"])
+            summary_data["time_total"].append(metrics["time_until_result"])
     return summary_data, success_count
 
 
@@ -103,7 +165,7 @@ def main_evaluate_hlp():
         "Second try",
         "Experiments",
     )
-    experiment_string = ["201006-122200"]
+    experiment_string = ["210423_110900"]
     experiment_success_label = ["found_plan"]
     titles = ["(a)", "(b)", "(c)", "(d)", "(e)"]
     num_seq_samples_data = list()
@@ -173,5 +235,56 @@ def main_evaluate_hlp():
     # )
 
 
+def compare_hlp_mcts():
+    basedir = os.path.join(
+        os.getenv("HOME"),
+        "Polybox",
+        "PhD",
+        "Publications",
+        "2021 ICRA HLP",
+        "Second try",
+        "Experiments",
+    )
+    experiment_strings = {
+        "cube on cupboard": {
+            "ours, w/ alt": "210423_110900",
+            "ours, w/o alt": "210423_111200",
+            "mcts": "210423_113300",
+        },
+        "box on shelf": {
+            "ours, w/ alt": "210423_163400",
+            "ours, w/o alt": "210423_172800",
+            "mcts": "210423_151100",
+        },
+    }
+    plot_data = pd.DataFrame(columns=["experiment", "method", "total_time"])
+    for experiment_id, methods in experiment_strings.items():
+        for method, experiment_string in methods.items():
+            if "ours" in method:
+                experiment_success_label = ["found_plan"]
+                summary, success_cnt = summarize_experiment(
+                    basedir, experiment_string, experiment_success_label
+                )
+            else:
+                assert "mcts" in method
+                experiment_success_label = ["success"]
+                summary, success_cnt = summarize_mcts_experiment(
+                    basedir, experiment_string, experiment_success_label
+                )
+            if print_human_readable:
+                print(
+                    f"Experiment {experiment_id}, method {method}, success_count {success_cnt}"
+                )
+            new_rows = [[experiment_id, method, val] for val in summary["time_total"]]
+            new_rows = pd.DataFrame(
+                new_rows, columns=["experiment", "method", "total_time"]
+            )
+            plot_data = plot_data.append(new_rows)
+    ax = sns.violinplot(
+        x="experiment", y="total_time", hue="method", data=plot_data, palette="BrBG"
+    )
+    plt.show()
+
+
 if __name__ == "__main__":
-    pass
+    compare_hlp_mcts()
