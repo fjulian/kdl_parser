@@ -2,8 +2,8 @@ import os
 import shutil
 import subprocess
 import time
+import argparse
 
-from tqdm import tqdm
 
 DATA_DIR = os.path.join(os.path.expanduser("~"), "Data", "highlevel_planning")
 SRCROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -53,6 +53,14 @@ def mcts_run(individual_index):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "method",
+        action="store",
+        help="choose which method to evaluate. Choice between 'mcts' and 'ours'",
+    )
+    args = parser.parse_args()
+
     stdout_file = os.path.join(DATA_DIR, "reports", "repeated_stdout.txt")
     num_done, num_started = 0, 0
     currently_running = 0
@@ -60,8 +68,12 @@ if __name__ == "__main__":
     tic = time.time()
     while num_done < NUM_REPETITIONS:
         if currently_running < MAX_SIMULTANEOUSLY and num_started < NUM_REPETITIONS:
-            # p = mcts_run(num_started)
-            p = hlp_run(num_started)
+            if args.method == "mcts":
+                p = mcts_run(num_started)
+            elif args.method == "ours":
+                p = hlp_run(num_started)
+            else:
+                raise ValueError("Undefined method")
             open_processes.append(p)
             num_started += 1
             currently_running += 1
