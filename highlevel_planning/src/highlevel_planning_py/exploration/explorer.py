@@ -175,7 +175,9 @@ class Explorer:
             sequence, parameters, fix_all_params=True
         )
 
-        min_sequence_length = len(relevant_sequence) + 1
+        min_sequence_length = len(relevant_sequence)
+        # Removed the +1 from min_sequence_length, for the case that the sequence is sufficient but the
+        # parameterization leads to unreliable execution.
         max_sequence_length = np.max(
             (self.config_params["max_sequence_length"], len(relevant_sequence) + 1)
         )
@@ -399,6 +401,7 @@ class Explorer:
             completed_parameters = last_working_completion_result[1]
             key_actions = last_working_completion_result[4]
             self.add_metric("maximum_pushback", maximum_pushback)
+            print("Key actions refined")
 
         effects_last_action = list()
         no_effect_key_actions = (
@@ -410,6 +413,7 @@ class Explorer:
                 relevant_objects, last_working_completion_result, self
             )
             if precondition_ret is False:
+                print("Precondition discovery failed")
                 return found_plan
             precondition_candidates, precondition_actions = precondition_ret
             precondition_idx = 0
@@ -453,6 +457,7 @@ class Explorer:
                     ],
                 )
                 effects_last_action = deepcopy(effects_this_action)
+            print("Precondition discovery completed")
 
         # Add action that reaches the goal
         if planning_failed:
@@ -470,14 +475,25 @@ class Explorer:
                 sequence=completed_sequence[first_key_action : last_key_action + 1],
                 parameters=completed_parameters[first_key_action : last_key_action + 1],
             )
+            print("New action created")
         else:
             if len(no_effect_key_actions) > 0:
+                # Thoughts: this can occur in two situations:
+                # 1) A sequence needs to be prepended, a new extended sequence was found successfully, but
+                #    the precondition discovery couldn't find out what difference the prepended part makes.
+                #    In this case, we could introduce a dummy predicate that gets set by the precondition
+                #    sequence, and that the final action depends on. However, we have no chance to detect
+                #    what the predicate should be in a new situation, so it's useless.
+                # 2) The execution of a sequence failed, because of some random error (e.g. box is super close
+                #    shelf's edge and thus not detected to be "inside" the shelf). The two cases cannot really
+                #    be distinguished.
                 raise RuntimeError("Cannot deal with this situation")
             self.pddl_extender.generalize_action(
                 action_name=completed_sequence[key_actions[-1]],
                 parameters=completed_parameters[key_actions[-1]],
                 additional_preconditions=effects_last_action,
             )
+            print("Previous action generalized")
         sampling_timers["domain_extension"] += time.time() - tic
         found_plan = True
         return found_plan

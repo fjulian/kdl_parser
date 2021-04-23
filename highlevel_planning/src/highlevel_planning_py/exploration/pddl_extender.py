@@ -145,8 +145,15 @@ class PDDLExtender(object):
             ):
                 self.knowledge_base.add_object(parameter_value, parameter_type)
             param_list.append((parameter_name, parameter_type, parameter_value))
-        self._add_parameterization(param_list, action_name)
         self._extend_parameterizations(action_name, new_description, parameters)
+
+        # Check if there already is a parameterization recorded for the objects passed.
+        # This can happen when the existing parameterization is flaky and often doesn't work
+        # in practice. If yes, remove old parameterization.
+        self._remove_parameterization(param_list, action_name)
+
+        # Add new parameterization
+        self._add_parameterization(param_list, action_name)
 
     def _retype_argument(self, arg, action_params, already_retyped, time_string):
         if arg not in already_retyped:
@@ -199,6 +206,20 @@ class PDDLExtender(object):
                 self.knowledge_base.parameterizations[action_name][object_params][
                     param[0]
                 ].add(param[2])
+
+    def _remove_parameterization(self, param_list, action_name):
+        object_params = list()
+        for param in param_list:
+            if param[1] != "position":
+                object_params.append(param)
+        object_params = tuple(object_params)
+        if object_params in self.knowledge_base.parameterizations[action_name]:
+            for name in self.knowledge_base.parameterizations[action_name][
+                object_params
+            ]:
+                self.knowledge_base.parameterizations[action_name][object_params][
+                    name
+                ] = set()
 
     def _extend_parameterizations(
         self, action_name: str, action_description, parameters

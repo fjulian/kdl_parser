@@ -169,6 +169,17 @@ class KnowledgeBase:
             assert isinstance(predicate_name, str)
             self.predicate_definitions[predicate_name] = predicate_definition
 
+    def add_artificial_predicate(self):
+        counter = 1
+        while True:
+            predicate_name = "artificial_predicate_{}".format(counter)
+            if predicate_name not in self.predicate_definitions:
+                break
+            counter += 1
+        predicate_definition = []
+        self.add_predicate(predicate_name, predicate_definition, overwrite=False)
+        return predicate_name
+
     def add_type(self, new_type, parent_type=None):
         assert isinstance(new_type, str)
         if new_type in self.types:
