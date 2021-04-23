@@ -256,6 +256,11 @@ def compare_hlp_mcts():
             "ours, w/o alt": "210423_172800",
             "mcts": "210423_151100",
         },
+        "cube in container (w/lid)": {
+            "ours, w/ alt": "210423_181300",
+            "ours, w/o alt": "210423_182000",
+            "mcts": "210423_182500",
+        },
     }
     plot_data = pd.DataFrame(columns=["experiment", "method", "total_time"])
     for experiment_id, methods in experiment_strings.items():
@@ -280,8 +285,16 @@ def compare_hlp_mcts():
                 new_rows, columns=["experiment", "method", "total_time"]
             )
             plot_data = plot_data.append(new_rows)
-    ax = sns.violinplot(
-        x="experiment", y="total_time", hue="method", data=plot_data, palette="BrBG"
+    # ax = sns.violinplot(
+    #     x="experiment", y="total_time", hue="method", data=plot_data, scale="area", palette="CMRmap"
+    # )
+    ax = sns.boxplot(
+        x="experiment",
+        y="total_time",
+        hue="method",
+        data=plot_data,
+        dodge=True,
+        palette="Paired",
     )
     plt.show()
 
