@@ -217,6 +217,7 @@ class Explorer:
             sequences_tried,
             relevant_sequence,
             relevant_parameters,
+            planning_failed=False,
         )
         return found_plan
 
