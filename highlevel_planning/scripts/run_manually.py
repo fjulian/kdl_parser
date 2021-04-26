@@ -1,4 +1,5 @@
 from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
+from highlevel_planning_py.sim.scene_planning_2 import ScenePlanning2
 from highlevel_planning_py.sim.scene_move_skill import SceneMoveSkill
 from highlevel_planning_py.skills.navigate import SkillNavigate
 from highlevel_planning_py.skills.grasping import SkillGrasping
@@ -186,7 +187,7 @@ def main():
 
     # Create world
     scene, world = run_util.setup_pybullet_world(
-        ScenePlanning1, PATHS["asset_dir"], args, savedir, objects
+        ScenePlanning2, PATHS["asset_dir"], args, savedir, objects
     )
     robot = run_util.setup_robot(world, cfg, PATHS["asset_dir"], robot_mdl)
 
@@ -221,9 +222,9 @@ def main():
 
     # drawer_example_auto(sk_grasp, sk_nav, sk_move, robot, scene)
 
-    grasp_example(
-        sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1", grasp_id=0
-    )
+    # grasp_example(
+    #     sk_grasp, sk_nav, robot, scene, sk_place, object_name="cube1", grasp_id=0
+    # )
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lid1")
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="lego")
     # grasp_example(sk_grasp, sk_nav, robot, scene, sk_place, object_name="duck")
@@ -239,11 +240,11 @@ def main():
 
     # navigation_example(sk_nav, world)
 
-    shelf_example(sk_nav, sk_grasp, sk_place, scene, robot)
+    # shelf_example(sk_nav, sk_grasp, sk_place, scene, robot)
 
     # -----------------------------------
 
-    robot._world.step_seconds(2)
+    world.step_seconds(200)
 
 
 if __name__ == "__main__":
