@@ -12,6 +12,7 @@ mpl.use("TkAgg")
 
 # Simulation
 from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
+from highlevel_planning_py.sim.scene_planning_2 import ScenePlanning2
 
 # Skills
 from highlevel_planning_py.skills.navigate import SkillNavigate
@@ -100,7 +101,7 @@ def main():
 
     # Populate simulation
     scene, world = run_util.setup_pybullet_world(
-        ScenePlanning1, PATHS["asset_dir"], args, savedir, objects
+        ScenePlanning2, PATHS["asset_dir"], args, savedir, objects
     )
     robot = run_util.setup_robot(world, cfg, PATHS["asset_dir"], robot_mdl)
 

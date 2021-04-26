@@ -148,16 +148,28 @@ class KnowledgeBase:
 
     # ----- Adding to the domain description ------------------------------------
 
-    def add_action(self, action_name, action_definition, overwrite=False):
+    def add_action(
+        self, action_name, action_definition, overwrite=False, rename_if_exists=False
+    ):
         if not overwrite and action_name in self.actions:
-            print(
-                "Action "
-                + action_name
-                + " already exists and no overwrite was requested. Ignoring request."
-            )
-        else:
-            assert isinstance(action_name, str)
-            self.actions[action_name] = action_definition
+            if rename_if_exists:
+                i = 1
+                while True:
+                    new_name = action_name + "-" + str(i)
+                    i += 1
+                    if new_name not in self.actions:
+                        break
+                action_name = new_name
+            else:
+                print(
+                    "Action "
+                    + action_name
+                    + " already exists and no overwrite was requested. Ignoring request."
+                )
+                return False
+        assert isinstance(action_name, str)
+        self.actions[action_name] = action_definition
+        return action_name
 
     def add_predicate(self, predicate_name, predicate_definition, overwrite=False):
         if not overwrite and predicate_name in self.predicate_definitions:

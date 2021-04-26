@@ -13,7 +13,7 @@ MAX_SIMULTANEOUSLY = 6
 
 
 def hlp_run(individual_index):
-    domain_dir = os.path.join(DATA_DIR, "knowledge", "ScenePlanning1", "main")
+    domain_dir = os.path.join(DATA_DIR, "knowledge", "ScenePlanning2", "main")
     initial_domain_file = os.path.join(domain_dir, "_domain_initial.pkl")
     domain_file_name = f"_domain{individual_index}.pkl"
     domain_file = os.path.join(domain_dir, domain_file_name)

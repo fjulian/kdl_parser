@@ -63,9 +63,11 @@ class PDDLExtender(object):
             "effects": action_effects,
         }
 
-        self.knowledge_base.add_action(
-            action_name, new_action_description, overwrite=False
+        action_name = self.knowledge_base.add_action(
+            action_name, new_action_description, overwrite=False, rename_if_exists=True
         )
+        if action_name is False:
+            raise ValueError("Failure when trying to add new action to knowledge base.")
 
         # Determine hidden parameters
         hidden_parameters = [{}] * len(parameters)

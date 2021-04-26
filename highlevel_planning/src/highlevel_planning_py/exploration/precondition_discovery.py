@@ -41,6 +41,7 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
         explorer.knowledge_base,
     )
     if not res:
+        print("[precondition discovery] Failure during precondition sequence execution")
         return False
 
     current_predicates = measure_predicates(
@@ -67,6 +68,7 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
             explorer.knowledge_base,
         )
         if not res:
+            print(f"[precondition discovery] Failure during action {action}")
             return False
         current_predicates = measure_predicates(
             relevant_predicates, explorer.knowledge_base

@@ -107,8 +107,8 @@ def main():
 
     # Define a demonstration to guide exploration
     demo_sequence, demo_parameters = None, None
-    # demo_sequence = ["place", "place"]
-    # demo_parameters = [{"obj": "lid1"}, {"obj": "duck"}]
+    demo_sequence = ["place", "place", "place"]
+    demo_parameters = [{"obj": "lid1"}, {"obj": "lid2"}, {"obj": "cube2"}]
 
     # ---------------------------------------------------------------
 
