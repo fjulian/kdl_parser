@@ -34,37 +34,29 @@ def _preprocess_knowledge(actions, objects, types, parameterizations, joker_obje
             action_suffix = 1
             type_suffix = 1
             for object_param_set in parameterizations[action_name]:
-                param_type_translator = dict()
+                new_param_types = dict()
                 for object_param in object_param_set:
                     new_type = "".join((object_param[1], "_", str(type_suffix)))
                     type_suffix += 1
                     add_type(types_processed, new_type, object_param[1])
                     add_object(objects_processed, object_param[2], new_type)
-                    assert (
-                        object_param[1] not in param_type_translator
-                    ), "Code not built for this eventuality"
-                    param_type_translator[object_param[1]] = new_type
+                    new_param_types[object_param[0]] = new_type
                 for hidden_param_name in parameterizations[action_name][
                     object_param_set
                 ]:
                     new_type = "".join((hidden_param_name, "_", str(type_suffix)))
                     type_suffix += 1
                     add_type(types_processed, new_type, hidden_param_name)
-                    assert (
-                        param_type_dict[hidden_param_name] not in param_type_translator
-                    ), (
-                        f"Code not built for this eventuality. Action: {action_name}, type "
-                        f"of param '{hidden_param_name}' is '{param_type_dict[hidden_param_name]}'."
-                    )
-                    param_type_translator[param_type_dict[hidden_param_name]] = new_type
+                    new_param_types[hidden_param_name] = new_type
                     for hidden_param_value in parameterizations[action_name][
                         object_param_set
                     ][hidden_param_name]:
                         add_object(objects_processed, hidden_param_value, new_type)
                 new_params = [
-                    [old_param_spec[0], param_type_translator[old_param_spec[1]]]
+                    [old_param_spec[0], new_param_types[old_param_spec[0]]]
                     for old_param_spec in action_descr["params"]
                 ]
+
                 new_action_name = "".join((action_name, "_", str(action_suffix)))
                 action_suffix += 1
                 actions_processed[new_action_name] = {
