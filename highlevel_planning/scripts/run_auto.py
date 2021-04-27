@@ -106,7 +106,7 @@ def main():
     xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg, world)
 
     # Define a demonstration to guide exploration
-    demo_sequence, demo_parameters = None, None
+    # demo_sequence, demo_parameters = None, None
     demo_sequence = ["place", "place", "place"]
     demo_parameters = [{"obj": "lid1"}, {"obj": "lid2"}, {"obj": "cube2"}]
 
@@ -115,6 +115,7 @@ def main():
     # Store initial state
     initial_state_id = world.save_state()
 
+    explored = False
     while True:
         # Plan
         plan = kb.solve()
@@ -139,6 +140,9 @@ def main():
                 break
             else:
                 print("Failure during plan execution.")
+                if explored:
+                    print("Already explored once, aborting.")
+                    break
 
         # Decide what happens next
         if not args.noninteractive:
@@ -147,6 +151,7 @@ def main():
             choice = "e"
         if choice == "e":
             # Exploration
+            explored = True
             rep.report_before_exploration(kb, plan)
             success, metrics = xplorer.exploration(
                 planning_failed,
