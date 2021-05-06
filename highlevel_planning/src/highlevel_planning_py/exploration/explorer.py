@@ -96,6 +96,8 @@ class Explorer:
         res = False
         if demo_sequence is not None and demo_parameters is not None:
             self.set_metrics_prefix("01_demo")
+            self.add_metric("demo_sequence", demo_sequence)
+            self.add_metric("demo_parameters", demo_parameters)
             tic = time.time()
             res = self._explore_demonstration(
                 demo_sequence,

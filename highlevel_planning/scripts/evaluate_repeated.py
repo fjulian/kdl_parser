@@ -6,7 +6,7 @@ from datetime import datetime
 import pandas as pd
 import seaborn as sns
 
-print_human_readable = True
+print_human_readable = False
 
 
 def sum_metrics(metrics, label_prefixes, label_string):
@@ -245,26 +245,48 @@ def compare_hlp_mcts():
         "Second try",
         "Experiments",
     )
+    method_strings = ["ours, w/ alt", "ours, w/o alt", "ours, demo", "mcts"]
     experiment_strings = {
-        "cube on cupboard": {
-            "ours, w/ alt": "210423_110900",
-            "ours, w/o alt": "210423_111200",
-            "mcts": "210423_113300",
+        # cube on cupboard
+        "(a)": {
+            method_strings[0]: "210426_093200",
+            method_strings[1]: "210426_093600",
+            method_strings[3]: "210426_093900",
         },
-        "box on shelf": {
-            "ours, w/ alt": "210423_163400",
-            "ours, w/o alt": "210423_172800",
-            "mcts": "210423_151100",
+        # box on shelf
+        "(b)": {
+            method_strings[0]: "210426_103100",
+            method_strings[1]: "210426_110600",
+            method_strings[3]: "210426_113200",
         },
-        "cube in container (w/lid)": {
-            "ours, w/ alt": "210423_181300",
-            "ours, w/o alt": "210423_182000",
-            "mcts": "210423_182500",
+        # cube in container (w/lid)
+        "(c)": {
+            method_strings[0]: "210423_181300",
+            method_strings[1]: "210426_075600",
+            method_strings[2]: "210427_142300",
+            method_strings[3]: "210426_082000",
+        },
+        # cube from container to container (w/lids)
+        "(d)": {
+            method_strings[0]: "210427_130200",
+            method_strings[1]: "210427_141400",
+            method_strings[2]: "210427_101600",
+            method_strings[3]: "210426_190200",
         },
     }
     plot_data = pd.DataFrame(columns=["experiment", "method", "total_time"])
+    table_combined_str = ""
+    table_ours_str = ""
+    table_mcts_str = ""
+    funcs = [np.median, np.mean, np.std]
     for experiment_id, methods in experiment_strings.items():
-        for method, experiment_string in methods.items():
+        table_data = dict()
+        for method in method_strings:
+            table_data[method] = dict.fromkeys(["success_cnt", "summary"], None)
+            if method not in methods:
+                continue
+            experiment_string = methods[method]
+
             if "ours" in method:
                 experiment_success_label = ["found_plan"]
                 summary, success_cnt = summarize_experiment(
@@ -276,27 +298,85 @@ def compare_hlp_mcts():
                 summary, success_cnt = summarize_mcts_experiment(
                     basedir, experiment_string, experiment_success_label
                 )
-            if print_human_readable:
-                print(
-                    f"Experiment {experiment_id}, method {method}, success_count {success_cnt}"
-                )
-            new_rows = [[experiment_id, method, val] for val in summary["time_total"]]
+
+            # Plot data
+            new_rows = [
+                [experiment_id, method, summary["time_total"][sum_idx]]
+                for sum_idx in range(success_cnt)
+            ]
             new_rows = pd.DataFrame(
                 new_rows, columns=["experiment", "method", "total_time"]
             )
             plot_data = plot_data.append(new_rows)
-    # ax = sns.violinplot(
-    #     x="experiment", y="total_time", hue="method", data=plot_data, scale="area", palette="CMRmap"
-    # )
-    ax = sns.boxplot(
+
+            # Table data
+            table_data[method]["success_cnt"] = success_cnt
+            table_data[method]["summary"] = summary
+
+        # Combined table
+        table_combined_str += f"\\multirow{{4}}{{*}}{{{experiment_id}}} & \\multicolumn{{2}}{{c|}}{{Success count [-]}} "
+        for method in method_strings:
+            if table_data[method]["success_cnt"] is None:
+                table_combined_str += "& "
+            else:
+                table_combined_str += f"& \\num{{{table_data[method]['success_cnt']}}} "
+        table_combined_str += "\\\\\n"
+        starts_combined = [
+            f"& \\multirow{{3}}{{*}}{{Total time [s]}} & $m$ ",
+            f"& & $\\mu$ ",
+            f"& & $\\sigma$ ",
+        ]
+        starts_individual = [
+            f"\\multirow{{3}}{{*}}{{{experiment_id}}} & $m$ ",
+            f"& $\\mu$ ",
+            f"& $\\sigma$ ",
+        ]
+        for j in range(len(funcs)):
+            table_combined_str += starts_combined[j]
+            for method in method_strings:
+                if (
+                    table_data[method]["success_cnt"] is None
+                    or table_data[method]["success_cnt"] == 0
+                ):
+                    table_combined_str += "& "
+                else:
+                    table_combined_str += f" & \\num{{{number_formatter(funcs[j](table_data[method]['summary']['time_total']))}}} "
+            table_combined_str += "\\\\\n"
+
+            # table_ours_str += starts_individual[j]
+            # table_ours_str += f"& \\num{{{number_formatter(funcs[j](summary['num_seq_samples']))}}}"
+        table_combined_str += "\\hline\n"
+    print(table_combined_str)
+
+    # Plot timing data
+    fig1, ax1 = plt.subplots(figsize=(7, 3.5))
+    sns.boxplot(
         x="experiment",
         y="total_time",
         hue="method",
         data=plot_data,
         dodge=True,
         palette="Paired",
+        ax=ax1,
     )
     plt.show()
+
+    # Plot success data
+    fig2, ax2 = plt.subplots(figsize=(7, 4))
+    sns.countplot(x="experiment", hue="method", data=plot_data, ax=ax2)
+    plt.show()
+
+    # Save figures
+    # time_now = datetime.now()
+    # time_string = time_now.strftime("%y%m%d-%H%M%S")
+    # fig1.savefig(
+    #     os.path.join(basedir, "Output", f"{time_string}_boxplot.pdf"),
+    #     bbox_inches="tight",
+    # )
+    # fig2.savefig(
+    #     os.path.join(basedir, "Output", f"{time_string}_barplot.pdf"),
+    #     bbox_inches="tight",
+    # )
 
 
 if __name__ == "__main__":
