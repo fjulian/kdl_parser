@@ -76,11 +76,7 @@ def main():
     time_now = datetime.now()
     time_string = time_now.strftime("%y%m%d-%H%M%S")
     rep = Reporter(
-        PATHS,
-        cfg,
-        domain_name=scene.__class__.__name__,
-        time_string=time_string,
-        noninteractive=args.noninteractive,
+        PATHS, cfg, domain_name=scene.__class__.__name__, time_string=time_string
     )
     atexit.register(exit_handler, rep)
 
@@ -106,9 +102,9 @@ def main():
     xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg, world)
 
     # Define a demonstration to guide exploration
-    # demo_sequence, demo_parameters = None, None
-    demo_sequence = ["place", "place"]
-    demo_parameters = [{"obj": "lid2"}, {"obj": "cube1"}]
+    demo_sequence, demo_parameters = None, None
+    # demo_sequence = ["place", "place"]
+    # demo_parameters = [{"obj": "lid2"}, {"obj": "cube1"}]
 
     # ---------------------------------------------------------------
 

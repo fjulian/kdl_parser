@@ -180,7 +180,11 @@ class Predicates:
         above_tol = self._cfg.getparam(
             ["predicates", "on-pred", "max_above"], default_value=0.05
         )
-        above = lower_supported[2] > upper_supporting[2] - above_tol
+        above = (
+            upper_supporting[2] - above_tol
+            < lower_supported[2]
+            < upper_supporting[2] + above_tol
+        )
 
         # Check if supported object is within footprint of supporting one (xy-plane).
         # Currently this is based on the position of the supported object. Need to see whether this makes sense.

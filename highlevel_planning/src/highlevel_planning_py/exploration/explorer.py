@@ -1,14 +1,9 @@
 # Imports
 import numpy as np
-import pybullet as p
 from collections import OrderedDict
 from copy import deepcopy
 import time
-from icecream import ic
 
-from highlevel_planning_py.execution.es_sequential_execution import (
-    execute_plan_sequentially,
-)
 from highlevel_planning_py.tools.util import get_combined_aabb
 from highlevel_planning_py.exploration import logic_tools
 from highlevel_planning_py.exploration.sequence_completion import complete_sequence
@@ -16,6 +11,7 @@ from highlevel_planning_py.exploration.precondition_discovery import (
     precondition_discovery,
 )
 from highlevel_planning_py.exploration.exploration_tools import get_items_closeby
+from highlevel_planning_py.execution.es_sequential_execution import SequentialExecution
 
 
 class Explorer:
@@ -341,7 +337,9 @@ class Explorer:
         counters["valid_sequences"] += 1
 
         tic = time.time()
-        test_success = self._test_completed_sequence(completion_result)
+        test_success, test_success_idx = self._test_completed_sequence(
+            completion_result
+        )
         sampling_timers["execution"] += time.time() - tic
         counters["preplan_success"] += test_success[0]
         counters["plan_success"] += test_success[1]
@@ -349,6 +347,24 @@ class Explorer:
         if test_success[2] == 0:
             return found_plan
         print("SUCCESS. Achieved goal, now extending symbolic description.")
+
+        # Trim sequence if not the whole sequence was needed for success
+        assert test_success_idx[0] == "pre" or test_success_idx[0] == "main"
+        if test_success_idx[0] == "pre":
+            short_seq = completion_result[2][: test_success_idx[1] + 1]
+            short_params = completion_result[3][: test_success_idx[1] + 1]
+            completion_result = complete_sequence(
+                short_seq, short_params, relevant_objects, self
+            )
+        elif (
+            test_success_idx[0] == "main"
+            and test_success_idx[1] < len(completion_result[0]) - 1
+        ):
+            short_seq = completion_result[0][: test_success_idx[1] + 1]
+            short_params = completion_result[1][: test_success_idx[1] + 1]
+            completion_result = complete_sequence(
+                short_seq, short_params, relevant_objects, self
+            )
 
         # -----------------------------------------------
         # Extend the symbolic description appropriately
@@ -380,6 +396,8 @@ class Explorer:
                     else:
                         modified_key_actions = deepcopy(key_actions)
                         del modified_key_actions[key_action_idx]
+                    modified_key_actions = list(set(modified_key_actions))
+                    modified_key_actions.sort()
                     modified_sequence = [
                         completed_sequence[i] for i in modified_key_actions
                     ]
@@ -391,7 +409,7 @@ class Explorer:
                     )
                     if modified_completion_result is False:
                         continue
-                    test_success = self._test_completed_sequence(
+                    test_success, _ = self._test_completed_sequence(
                         modified_completion_result
                     )
                     if not test_success[2]:
@@ -813,8 +831,9 @@ class Explorer:
     def _test_completed_sequence(self, completion_result):
         # Restore initial state
         self.world.restore_state(self.current_state_id)
-
         success = np.array([0, 0, 0])
+        success_idx = None
+
         (
             completed_sequence,
             completed_parameters,
@@ -823,31 +842,42 @@ class Explorer:
             key_actions,
         ) = completion_result
 
-        # Found a feasible action sequence. Now test it.
-        preplan_success = execute_plan_sequentially(
+        # Precondition sequence
+        es = SequentialExecution(
+            self.skill_set,
             precondition_sequence,
             precondition_parameters,
-            self.skill_set,
             self.knowledge_base,
         )
-        if not preplan_success:
-            return success
+        es.setup()
+        for i in range(len(precondition_sequence)):
+            step_success, _, step_msgs = es.step(index=i)
+            if not step_success:
+                return success, success_idx
+            goal_success = self.knowledge_base.test_goals()
+            if goal_success:
+                success[0] = 1
+                success[2] = 1
+                success_idx = ("pre", i)
+                return success, success_idx
         success[0] = 1
 
-        # Try actual plan
-        plan_success = execute_plan_sequentially(
+        # Main sequence
+        es = SequentialExecution(
+            self.skill_set,
             completed_sequence,
             completed_parameters,
-            self.skill_set,
             self.knowledge_base,
         )
-        if not plan_success:
-            return success
+        es.setup()
+        for i in range(len(completed_sequence)):
+            step_success, _, step_msgs = es.step(index=i)
+            if not step_success:
+                return success, success_idx
+            goal_success = self.knowledge_base.test_goals()
+            if goal_success:
+                success[2] = 1
+                success_idx = ("main", i)
+                break
         success[1] = 1
-
-        # Check if the goal was reached
-        goal_success = self.knowledge_base.test_goals()
-        if not goal_success:
-            return success
-        success[2] = 1
-        return success
+        return success, success_idx

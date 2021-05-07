@@ -2,13 +2,13 @@ predicates:
   at:
     max_distance: 1.0
   on-pred:
-    max_above: 0.05
+    max_above: 0.03
 explorer:
   search_budget_sec: 700
   alternating_sequence_length: false
   max_sample_repetitions: 3
-  min_sequence_length: 1
-  max_sequence_length: 3
+  min_sequence_length: 4
+  max_sequence_length: 4
   max_samples_per_sequence_length: 100
   max_failed_samples: 50
   bounding_box_inflation_length: 0.1

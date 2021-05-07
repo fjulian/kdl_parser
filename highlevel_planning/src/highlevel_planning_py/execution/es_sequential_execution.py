@@ -55,16 +55,18 @@ class SequentialExecution(ExecutionSystem):
             ],
         }
 
-    def step(self):
+    def step(self, index=None):
+        idx = self.current_idx_ if index is None else index
+
         success = True
         msgs = []
         if not self.finished_plan:
-            action_name = self.sequence[self.current_idx_]
+            action_name = self.sequence[idx]
             action_name = action_name.split("_")[0]
-            action_parameters = self.parameters[self.current_idx_]
+            action_parameters = self.parameters[idx]
             success, msgs = self.execute_action(action_name, action_parameters)
 
-            if success:
+            if success and index is None:
                 self.current_idx_ += 1
                 if self.current_idx_ == len(self.sequence):
                     self.finished_plan = True

@@ -9,14 +9,7 @@ from highlevel_planning_py.tools.config import ConfigYaml
 
 
 class Reporter:
-    def __init__(
-        self,
-        paths,
-        config: ConfigYaml,
-        domain_name,
-        time_string: str = None,
-        noninteractive: bool = False,
-    ):
+    def __init__(self, paths, config: ConfigYaml, domain_name, time_string: str = None):
         self.paths = paths
         self.domain_name = domain_name
         self.data = dict()
@@ -27,10 +20,6 @@ class Reporter:
         else:
             self.metrics["time"] = time_string
         print(f"Time string for reporting is {self.metrics['time']}")
-        if noninteractive:
-            self.metrics["description"] = ""
-        else:
-            self.metrics["description"] = input("Experiment description: ")
         self.data["configuration"] = deepcopy(config._cfg)
 
         self.planning_idx = 0
