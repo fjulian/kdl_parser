@@ -59,23 +59,29 @@ if __name__ == "__main__":
         action="store",
         help="choose which method to evaluate. Choice between 'mcts' and 'ours'",
     )
+    parser.add_argument("-i", "--start-file-idx", type=int, default=0)
     args = parser.parse_args()
+
+    print(f"Start file index: {args.start_file_idx}")
+    input("Press enter to start...")
 
     stdout_file = os.path.join(DATA_DIR, "reports", "repeated_stdout.txt")
     num_done, num_started = 0, 0
+    file_idx = args.start_file_idx
     currently_running = 0
     open_processes = list()
     tic = time.time()
     while num_done < NUM_REPETITIONS:
         if currently_running < MAX_SIMULTANEOUSLY and num_started < NUM_REPETITIONS:
             if args.method == "mcts":
-                p = mcts_run(num_started)
+                p = mcts_run(file_idx)
             elif args.method == "ours":
-                p = hlp_run(num_started)
+                p = hlp_run(file_idx)
             else:
                 raise ValueError("Undefined method")
             open_processes.append(p)
             num_started += 1
+            file_idx += 1
             currently_running += 1
             time.sleep(5)
         else:

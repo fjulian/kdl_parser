@@ -42,6 +42,7 @@ def summarize_experiment(base_dir, name_string, success_label):
 
     num_runs = len(files)
     success_count = 0
+    timeout_count = 0
     summary_data = dict.fromkeys(
         [
             "file_name",
@@ -62,8 +63,10 @@ def summarize_experiment(base_dir, name_string, success_label):
             data = pickle.load(f)
         metrics = data["metrics"]
         success = False
+        timed_out = False
         this_success_labels = list()
         for key in metrics:
+            # Check for success
             found_success_label = [key.find(l) > -1 for l in success_label]
             if np.all(np.array(found_success_label)):
                 this_success_labels.append(key)
@@ -71,6 +74,14 @@ def summarize_experiment(base_dir, name_string, success_label):
                     success = True
                     success_count += 1
                     break
+
+            # Check for timeout
+            found_timeout_label = "time_budget_exceeded" in key
+            if found_timeout_label and metrics[key]:
+                timed_out = True
+                timeout_count += 1
+                break
+        assert not (success and timed_out)
         if success:
             label_prefixes = [
                 label[: -(len("_found_plan"))] for label in this_success_labels
@@ -101,7 +112,7 @@ def summarize_experiment(base_dir, name_string, success_label):
             summary_data["time_total"].append(
                 sum_metrics(metrics, label_prefixes, "total_time")
             )
-    return summary_data, success_count
+    return summary_data, success_count, timeout_count
 
 
 def summarize_mcts_experiment(base_dir, name_string, success_label):
@@ -111,6 +122,7 @@ def summarize_mcts_experiment(base_dir, name_string, success_label):
 
     num_runs = len(files)
     success_count = 0
+    timeout_count = 0
     summary_data = dict.fromkeys(
         [
             "file_name",
@@ -132,6 +144,7 @@ def summarize_mcts_experiment(base_dir, name_string, success_label):
             data = pickle.load(f)
         metrics = data["metrics"]
         success = False
+        timed_out = False
         this_success_labels = list()
         for key in metrics:
             found_success_label = [key.find(l) > -1 for l in success_label]
@@ -141,6 +154,15 @@ def summarize_mcts_experiment(base_dir, name_string, success_label):
                     success = True
                     success_count += 1
                     break
+
+            # Check for timeout
+            found_timeout_label = "time_until_result" in key
+            if found_timeout_label:
+                if metrics[key] >= data["config"]["mcts"]["search_budget_sec"]:
+                    timed_out = True
+                    timeout_count += 1
+                    break
+        assert not (success and timed_out)
         if success:
             summary_data["file_name"].append(files[i])
             summary_data["max_depth"].append(metrics["max_depth"])
@@ -152,7 +174,7 @@ def summarize_mcts_experiment(base_dir, name_string, success_label):
             summary_data["time_sim"].append(metrics["time_sim"])
             summary_data["time_sample_feasible"].append(metrics["time_sample_feasible"])
             summary_data["time_total"].append(metrics["time_until_result"])
-    return summary_data, success_count
+    return summary_data, success_count, timeout_count
 
 
 def main_evaluate_hlp():
@@ -170,7 +192,7 @@ def main_evaluate_hlp():
     titles = ["(a)", "(b)", "(c)", "(d)", "(e)"]
     num_seq_samples_data = list()
     for i in range(len(experiment_string)):
-        summary, success_cnt = summarize_experiment(
+        summary, success_cnt, _ = summarize_experiment(
             basedir, experiment_string[i], experiment_success_label
         )
         if print_human_readable:
@@ -245,33 +267,42 @@ def compare_hlp_mcts():
         "Second try",
         "Experiments",
     )
-    method_strings = ["ours, w/ alt", "ours, w/o alt", "ours, demo", "mcts"]
+    method_strings = [
+        "ours, w/ alt",
+        "ours, w/o alt",
+        "ours, chck evry",
+        "ours, demo",
+        "mcts",
+    ]
     experiment_strings = {
         # cube on cupboard
         "(a)": {
             method_strings[0]: "210426_093200",
             method_strings[1]: "210426_093600",
-            method_strings[3]: "210426_093900",
+            method_strings[2]: "210507_123600",
+            method_strings[4]: "210426_093900",
         },
         # box on shelf
         "(b)": {
             method_strings[0]: "210426_103100",
             method_strings[1]: "210426_110600",
-            method_strings[3]: "210426_113200",
+            method_strings[2]: "210507_133700",
+            method_strings[4]: "210426_113200",
         },
         # cube in container (w/lid)
         "(c)": {
             method_strings[0]: "210423_181300",
             method_strings[1]: "210426_075600",
-            method_strings[2]: "210427_142300",
-            method_strings[3]: "210426_082000",
+            method_strings[2]: "210507_145600",
+            method_strings[3]: "210427_142300",
+            method_strings[4]: "210426_082000",
         },
         # cube from container to container (w/lids)
         "(d)": {
             method_strings[0]: "210427_130200",
             method_strings[1]: "210427_141400",
-            method_strings[2]: "210427_101600",
-            method_strings[3]: "210426_190200",
+            method_strings[3]: "210427_101600",
+            method_strings[4]: "210426_190200",
         },
     }
     plot_data = pd.DataFrame(columns=["experiment", "method", "total_time"])
@@ -279,23 +310,26 @@ def compare_hlp_mcts():
     table_ours_str = ""
     table_mcts_str = ""
     funcs = [np.median, np.mean, np.std]
+    counts = dict()
     for experiment_id, methods in experiment_strings.items():
         table_data = dict()
         for method in method_strings:
-            table_data[method] = dict.fromkeys(["success_cnt", "summary"], None)
+            table_data[method] = dict.fromkeys(
+                ["success_cnt", "timeout_cnt", "summary"], None
+            )
             if method not in methods:
                 continue
             experiment_string = methods[method]
 
             if "ours" in method:
                 experiment_success_label = ["found_plan"]
-                summary, success_cnt = summarize_experiment(
+                summary, success_cnt, timeout_cnt = summarize_experiment(
                     basedir, experiment_string, experiment_success_label
                 )
             else:
                 assert "mcts" in method
                 experiment_success_label = ["success"]
-                summary, success_cnt = summarize_mcts_experiment(
+                summary, success_cnt, timeout_cnt = summarize_mcts_experiment(
                     basedir, experiment_string, experiment_success_label
                 )
 
@@ -311,7 +345,10 @@ def compare_hlp_mcts():
 
             # Table data
             table_data[method]["success_cnt"] = success_cnt
+            table_data[method]["timeout_cnt"] = timeout_cnt
             table_data[method]["summary"] = summary
+
+        counts[experiment_id] = table_data
 
         # Combined table
         table_combined_str += f"\\multirow{{4}}{{*}}{{{experiment_id}}} & \\multicolumn{{2}}{{c|}}{{Success count [-]}} "
@@ -349,21 +386,62 @@ def compare_hlp_mcts():
     print(table_combined_str)
 
     # Plot timing data
-    fig1, ax1 = plt.subplots(figsize=(7, 3.5))
+    fig1, ax1 = plt.subplots(figsize=(7, 4))
+    color_palette = ["#007F5F", "#55A630", "#AACC00", "#D4D700", "#ff006e"]
     sns.boxplot(
         x="experiment",
         y="total_time",
         hue="method",
+        hue_order=method_strings,
         data=plot_data,
         dodge=True,
-        palette="Paired",
+        palette=color_palette,
         ax=ax1,
     )
+    label_dist = 0.33
+    label_offsets = np.arange(
+        -label_dist,
+        label_dist + 2 * label_dist / (len(method_strings) - 1),
+        2 * label_dist / (len(method_strings) - 1),
+    )
+    for i in range(len(experiment_strings)):
+        for j in range(len(method_strings)):
+            pos_x = i + label_offsets[j]
+            pos_y = 760
+            tmp = list(experiment_strings.keys())
+            tmt_cnt = counts[tmp[i]][method_strings[j]]["timeout_cnt"]
+            label_text = f"{tmt_cnt}" if tmt_cnt is not None else ""
+            plt.text(pos_x, pos_y, label_text, horizontalalignment="center")
+    lgd1 = plt.legend(
+        bbox_to_anchor=(0.0, 1.02, 1.0, 0.102),
+        loc="lower left",
+        ncol=3,
+        mode="expand",
+        borderaxespad=0.0,
+    )
+    vline_pos = np.arange(0.5, len(experiment_strings) - 0.5, 1.0)
+    plt.vlines(vline_pos, ymin=0, ymax=830, colors="gray", linestyles="dashed")
+    plt.ylim([-20, 850])
+    plt.xlim([-0.5, len(experiment_strings) - 1 + 0.5])
     plt.show()
 
     # Plot success data
     fig2, ax2 = plt.subplots(figsize=(7, 4))
-    sns.countplot(x="experiment", hue="method", data=plot_data, ax=ax2)
+    sns.countplot(
+        x="experiment",
+        hue="method",
+        hue_order=method_strings,
+        data=plot_data,
+        palette=color_palette,
+        ax=ax2,
+    )
+    lgd2 = plt.legend(
+        bbox_to_anchor=(0.0, 1.02, 1.0, 0.102),
+        loc="lower left",
+        ncol=3,
+        mode="expand",
+        borderaxespad=0.0,
+    )
     plt.show()
 
     # Save figures
@@ -371,10 +449,12 @@ def compare_hlp_mcts():
     # time_string = time_now.strftime("%y%m%d-%H%M%S")
     # fig1.savefig(
     #     os.path.join(basedir, "Output", f"{time_string}_boxplot.pdf"),
+    #     bbox_extra_artists = (lgd1,),
     #     bbox_inches="tight",
     # )
     # fig2.savefig(
     #     os.path.join(basedir, "Output", f"{time_string}_barplot.pdf"),
+    #     bbox_extra_artists = (lgd1,),
     #     bbox_inches="tight",
     # )
 
