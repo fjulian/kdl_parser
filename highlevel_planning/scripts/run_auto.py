@@ -76,7 +76,11 @@ def main():
     time_now = datetime.now()
     time_string = time_now.strftime("%y%m%d-%H%M%S")
     rep = Reporter(
-        PATHS, cfg, domain_name=scene.__class__.__name__, time_string=time_string
+        PATHS,
+        cfg,
+        domain_name=scene.__class__.__name__,
+        time_string=time_string,
+        domain_file=args.domain_file,
     )
     atexit.register(exit_handler, rep)
 

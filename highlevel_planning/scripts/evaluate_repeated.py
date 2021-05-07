@@ -290,7 +290,7 @@ def compare_hlp_mcts():
             method_strings[4]: "210426_113200",
         },
         # cube in container (w/lid)
-        "(c)": {
+        "(c1)": {
             method_strings[0]: "210423_181300",
             method_strings[1]: "210426_075600",
             method_strings[2]: "210507_145600",
@@ -301,6 +301,7 @@ def compare_hlp_mcts():
         "(d)": {
             method_strings[0]: "210427_130200",
             method_strings[1]: "210427_141400",
+            method_strings[2]: "210507_161200",
             method_strings[3]: "210427_101600",
             method_strings[4]: "210426_190200",
         },
@@ -407,11 +408,17 @@ def compare_hlp_mcts():
     for i in range(len(experiment_strings)):
         for j in range(len(method_strings)):
             pos_x = i + label_offsets[j]
-            pos_y = 760
+            pos_y = 790
             tmp = list(experiment_strings.keys())
             tmt_cnt = counts[tmp[i]][method_strings[j]]["timeout_cnt"]
             label_text = f"{tmt_cnt}" if tmt_cnt is not None else ""
-            plt.text(pos_x, pos_y, label_text, horizontalalignment="center")
+            plt.text(
+                pos_x,
+                pos_y,
+                label_text,
+                horizontalalignment="center",
+                color=color_palette[j],
+            )
     lgd1 = plt.legend(
         bbox_to_anchor=(0.0, 1.02, 1.0, 0.102),
         loc="lower left",

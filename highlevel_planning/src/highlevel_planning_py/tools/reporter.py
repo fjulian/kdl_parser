@@ -9,9 +9,17 @@ from highlevel_planning_py.tools.config import ConfigYaml
 
 
 class Reporter:
-    def __init__(self, paths, config: ConfigYaml, domain_name, time_string: str = None):
+    def __init__(
+        self,
+        paths,
+        config: ConfigYaml,
+        domain_name,
+        time_string: str = None,
+        domain_file="_domain.pkl",
+    ):
         self.paths = paths
         self.domain_name = domain_name
+        self.domain_file = domain_file
         self.data = dict()
         self.metrics = OrderedDict()
         if time_string is None:
@@ -19,6 +27,7 @@ class Reporter:
             self.metrics["time"] = time_stamp.strftime("%y%m%d-%H%M%S")
         else:
             self.metrics["time"] = time_string
+        self.metrics["domain_file"] = domain_file
         print(f"Time string for reporting is {self.metrics['time']}")
         self.data["configuration"] = deepcopy(config._cfg)
 
@@ -51,7 +60,9 @@ class Reporter:
         self.run_idx += 1
 
     def report_before_exploration(self, knowledge_base: KnowledgeBase, plan):
-        kb_clone = KnowledgeBase(self.paths, domain_name=self.domain_name)
+        kb_clone = KnowledgeBase(
+            self.paths, domain_name=self.domain_name, domain_file=self.domain_file
+        )
         kb_clone.duplicate(knowledge_base)
         self.data[f"explore_{self.explore_idx}_kb_before"] = kb_clone
         self.metrics[f"explore_{self.explore_idx}_goal"] = str(kb_clone.goals)
@@ -64,7 +75,9 @@ class Reporter:
     def report_after_exploration(
         self, knowledge_base: KnowledgeBase, exploration_metrics: OrderedDict
     ):
-        kb_clone = KnowledgeBase(self.paths, domain_name=self.domain_name)
+        kb_clone = KnowledgeBase(
+            self.paths, domain_name=self.domain_name, domain_file=self.domain_file
+        )
         kb_clone.duplicate(knowledge_base)
         self.data[f"explore_{self.explore_idx}_kb_after"] = kb_clone
         self._extract_kb_metrics(kb_clone, f"explore_{self.explore_idx}_kb_after")
