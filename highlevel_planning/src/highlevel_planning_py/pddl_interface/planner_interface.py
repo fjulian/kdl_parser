@@ -9,7 +9,7 @@ def pddl_planner(domain_file, problem_file, action_specs, bin_dir, debug_print=F
             [
                 os.path.join(bin_dir, "ff"),
                 "-s",
-                "2",
+                "0",
                 "-o",
                 domain_file,
                 "-f",
