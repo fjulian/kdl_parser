@@ -110,6 +110,9 @@ class PDDLExtender(object):
     def generalize_action(
         self, action_name: str, parameters: dict, additional_preconditions=None
     ):
+        if action_name not in self.knowledge_base.meta_actions:
+            return
+
         parameters = deepcopy(parameters)
         time_string = time.strftime("%y%m%d%H%M%S")
 
@@ -232,6 +235,11 @@ class PDDLExtender(object):
         Returns:
 
         """
+
+        if action_name not in self.knowledge_base.parameterizations:
+            # No need to extend anything
+            return
+
         parameterization_replacements = dict()
         gt_parameter_name_list = [
             param[0] for param in action_description["params"] if param[1] != "position"
