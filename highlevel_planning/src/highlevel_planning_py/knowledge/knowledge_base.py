@@ -83,7 +83,7 @@ class KnowledgeBase:
         # Temporary variables (e.g. for exploration)
         self._temp_objects = dict()
         self._temp_object_predicates = set()
-        self._temp_generalized_objects = list()
+        self._temp_generalized_objects = set()
 
     def duplicate(self, original):
         self.domain_name = deepcopy(original.domain_name)
@@ -393,6 +393,7 @@ class KnowledgeBase:
         objects_by_type,
         object_set=None,
         visible_only=False,
+        include_generalized_objects=False,
     ):
         if object_set is None:
             object_set = set()
@@ -409,6 +410,10 @@ class KnowledgeBase:
                     object_set,
                     visible_only=visible_only,
                 )
+        if include_generalized_objects:
+            for obj in self._temp_generalized_objects:
+                if not visible_only or obj in self.visible_objects:
+                    object_set.add(obj)
         return object_set
 
     # ----- Handling temporary goals, e.g. for exploration ---------------------
@@ -450,9 +455,7 @@ class KnowledgeBase:
 
     def generalize_temp_object(self, object_name):
         assert object_name in self.objects
-        self._temp_generalized_objects.append(object_name)
-        # for new_type in self.types:
-        #     self.add_temp_object(object_type=new_type, object_name=object_name)
+        self._temp_generalized_objects.add(object_name)
 
     def make_permanent(self, obj_name):
         self.objects[obj_name] = self._temp_objects[obj_name]
@@ -490,10 +493,13 @@ class KnowledgeBase:
             self.bin_dir,
         )
 
-    def clear_temp(self):
+    def clear_temp_samples(self):
         for obj in self._temp_objects:
             if obj in self.lookup_table:
                 del self.lookup_table[obj]
         self._temp_objects.clear()
         self._temp_object_predicates.clear()
-        del self._temp_generalized_objects[:]
+
+    def clear_temp(self):
+        self.clear_temp_samples()
+        self._temp_generalized_objects.clear()

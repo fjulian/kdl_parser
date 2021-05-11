@@ -414,11 +414,14 @@ class Explorer:
                     maximum_pushback[key_action_idx] = pushback
                     last_working_completion_result = modified_completion_result
                 key_actions[key_action_idx] += maximum_pushback[key_action_idx]
-            completed_sequence = last_working_completion_result[0]
-            completed_parameters = last_working_completion_result[1]
             key_actions = last_working_completion_result[4]
             self.add_metric("maximum_pushback", maximum_pushback)
             print("Key actions refined")
+
+        completed_sequence = last_working_completion_result[0]
+        completed_parameters = last_working_completion_result[1]
+        precondition_sequence = last_working_completion_result[2]
+        precondition_parameters = last_working_completion_result[3]
 
         effects_last_action = list()
         no_effect_key_actions = (
@@ -475,6 +478,12 @@ class Explorer:
                 )
                 effects_last_action = deepcopy(effects_this_action)
             print("Precondition discovery completed")
+
+        # Make sure that the parameters fit all precondition sequence parameter types
+        for idx_action, action in enumerate(precondition_sequence):
+            self.pddl_extender.generalize_action(
+                action_name=action, parameters=precondition_parameters[idx_action]
+            )
 
         # Add action that reaches the goal
         if planning_failed:
