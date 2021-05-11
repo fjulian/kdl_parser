@@ -202,9 +202,7 @@ class Explorer:
         )
 
         min_sequence_length = len(relevant_sequence)
-        max_sequence_length = np.max(
-            (self.config_params["max_sequence_length"], len(relevant_sequence))
-        )
+        max_sequence_length = len(relevant_sequence)
         found_plan = self._sampling_loops_caller(
             special_objects,
             min_sequence_length,
