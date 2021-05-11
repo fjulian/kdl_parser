@@ -22,6 +22,15 @@ def add_object(object_dict, object_name, object_type, object_value=None):
         object_dict[object_name] = [object_type]
 
 
+def type_x_child_of_y(type_dict, x, y):
+    parent_type = type_dict[x]
+    if x == y:
+        return True
+    elif parent_type is None:
+        return False
+    return type_x_child_of_y(type_dict, parent_type, y)
+
+
 def _preprocess_knowledge(actions, objects, types, parameterizations, joker_objects):
     actions_processed = dict()
     types_processed = deepcopy(types)
@@ -46,7 +55,9 @@ def _preprocess_knowledge(actions, objects, types, parameterizations, joker_obje
                 ]:
                     new_type = "".join((hidden_param_name, "_", str(type_suffix)))
                     type_suffix += 1
-                    add_type(types_processed, new_type, hidden_param_name)
+                    add_type(
+                        types_processed, new_type, "position"
+                    )  # Works because only positions can be hidden parameters for now
                     new_param_types[hidden_param_name] = new_type
                     for hidden_param_value in parameterizations[action_name][
                         object_param_set
@@ -69,6 +80,8 @@ def _preprocess_knowledge(actions, objects, types, parameterizations, joker_obje
 
     if joker_objects is not None and len(joker_objects) > 0:
         for new_type in types_processed:
+            if not type_x_child_of_y(types_processed, new_type, "item"):
+                continue
             for obj in joker_objects:
                 add_object(objects_processed, obj, new_type)
 

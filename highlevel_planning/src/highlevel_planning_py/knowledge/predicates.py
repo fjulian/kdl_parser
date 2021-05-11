@@ -148,6 +148,8 @@ class Predicates:
         Returns:
             bool: Whether the container object contains the contained one.
         """
+        if contained_object == container_object:
+            return False
         container_uid = self._scene.objects[container_object].model.uid
         contained_uid = self._scene.objects[contained_object].model.uid
         aabb_container = get_combined_aabb(container_uid)
@@ -164,6 +166,8 @@ class Predicates:
             supporting_object ([type]): [description]
             supported_object ([type]): [description]
         """
+        if supporting_object == supported_object:
+            return False
         supporting_uid = self._scene.objects[supporting_object].model.uid
         supported_uid = self._scene.objects[supported_object].model.uid
         aabb_supporting = get_combined_aabb(supporting_uid)
