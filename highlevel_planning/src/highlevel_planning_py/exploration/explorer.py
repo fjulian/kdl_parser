@@ -66,6 +66,7 @@ class Explorer:
         self.exploration_start_time = time.time()
         self.budget_exceeded = False
         self.metrics = OrderedDict()
+        self.knowledge_base.clear_temp()
 
         if not no_seed:
             np.random.seed(0)
@@ -82,12 +83,12 @@ class Explorer:
         goal_objects = self._get_items_goal()
         radii = self.config_params["radii"]
 
+        dist_limit = self.config_params["distance_limit_closeby_objects"]
         closeby_objects = get_items_closeby(
-            goal_objects,
-            self.scene_objects,
-            self.robot_uid_,
-            distance_limit=0.5,  # TODO move magic number to parameters
+            goal_objects, self.scene_objects, self.robot_uid_, distance_limit=dist_limit
         )
+
+        special_objects = {"goal": goal_objects, "closeby": closeby_objects}
 
         res = False
         if demo_sequence is not None and demo_parameters is not None:
@@ -96,25 +97,20 @@ class Explorer:
             self.add_metric("demo_parameters", demo_parameters)
             tic = time.time()
             res = self._explore_demonstration(
-                demo_sequence,
-                demo_parameters,
-                closeby_objects + goal_objects,
-                sequences_tried,
+                demo_sequence, demo_parameters, special_objects, sequences_tried
             )
             total_time = time.time() - tic
             self.add_metric("total_time", total_time)
         if not planning_failed and not res and not self.budget_exceeded:
             self.set_metrics_prefix("02_prepend")
             tic = time.time()
-            res = self._explore_prepending_sequence(
-                closeby_objects + goal_objects, sequences_tried
-            )
+            res = self._explore_prepending_sequence(special_objects, sequences_tried)
             total_time = time.time() - tic
             self.add_metric("total_time", total_time)
         if not res and not self.budget_exceeded:
             self.set_metrics_prefix("03_generalize")
             tic = time.time()
-            res = self._explore_generalized_action(goal_objects, sequences_tried)
+            res = self._explore_generalized_action(special_objects, sequences_tried)
             total_time = time.time() - tic
             self.add_metric("total_time", total_time)
         for radius in radii:
@@ -128,9 +124,7 @@ class Explorer:
                     distance_limit=radius,
                 )
                 self.add_metric("closeby_objects", closeby_objects)
-                res = self._explore_goal_objects(
-                    sequences_tried, goal_objects + closeby_objects
-                )
+                res = self._explore_goal_objects(sequences_tried, special_objects)
                 total_time = time.time() - tic
                 self.add_metric("total_time", total_time)
         return res, self.metrics
@@ -150,11 +144,11 @@ class Explorer:
         )
 
     def _explore_demonstration(
-        self, demo_sequence, demo_parameters, relevant_objects, sequences_tried
+        self, demo_sequence, demo_parameters, special_objects, sequences_tried
     ):
         print("Exploring demonstration ...")
         found_plan = self._sampling_loops_caller(
-            relevant_objects,
+            special_objects,
             len(demo_sequence),
             len(demo_sequence),
             sequences_tried,
@@ -163,7 +157,7 @@ class Explorer:
         )
         return found_plan
 
-    def _explore_prepending_sequence(self, relevant_objects, sequences_tried):
+    def _explore_prepending_sequence(self, special_objects, sequences_tried):
         print("Exploring prepending sequence ...")
         plan = self.knowledge_base.solve()
         if not plan:
@@ -180,7 +174,7 @@ class Explorer:
             (self.config_params["max_sequence_length"], len(relevant_sequence) + 1)
         )
         found_plan = self._sampling_loops_caller(
-            relevant_objects,
+            special_objects,
             min_sequence_length,
             max_sequence_length,
             sequences_tried,
@@ -190,11 +184,12 @@ class Explorer:
         )
         return found_plan
 
-    def _explore_generalized_action(self, relevant_objects, sequences_tried):
+    def _explore_generalized_action(self, special_objects, sequences_tried):
         print("Exploring generalizing action ...")
 
         # Check if an action with a similar effect already exists
         self.knowledge_base.clear_temp()
+        relevant_objects = special_objects["goal"] + special_objects["closeby"]
         for obj in relevant_objects:
             self.knowledge_base.generalize_temp_object(obj)
         plan = self.knowledge_base.solve_temp(self.knowledge_base.goals)
@@ -211,7 +206,7 @@ class Explorer:
             (self.config_params["max_sequence_length"], len(relevant_sequence))
         )
         found_plan = self._sampling_loops_caller(
-            relevant_objects,
+            special_objects,
             min_sequence_length,
             max_sequence_length,
             sequences_tried,
@@ -221,12 +216,12 @@ class Explorer:
         )
         return found_plan
 
-    def _explore_goal_objects(self, sequences_tried, relevant_objects=None):
+    def _explore_goal_objects(self, sequences_tried, special_objects=None):
         print("Exploring goal objects ...")
         min_sequence_length = self.config_params["min_sequence_length"]
         max_sequence_length = self.config_params["max_sequence_length"]
         found_plan = self._sampling_loops_caller(
-            relevant_objects, min_sequence_length, max_sequence_length, sequences_tried
+            special_objects, min_sequence_length, max_sequence_length, sequences_tried
         )
         return found_plan
 
@@ -234,7 +229,7 @@ class Explorer:
 
     def _sampling_loops_caller(
         self,
-        relevant_objects,
+        special_objects,
         min_sequence_length,
         max_sequence_length,
         sequences_tried,
@@ -243,7 +238,6 @@ class Explorer:
         planning_failed=True,
     ):
         found_plan = False
-        self.knowledge_base.clear_temp()
         sampling_counters = self.get_sampling_counters_dict()
         sampling_timers = self.get_timing_counters_dict()
         sequence_lengths = list(range(min_sequence_length, max_sequence_length + 1))
@@ -282,12 +276,15 @@ class Explorer:
                     seq_len,
                     given_seq=given_sequence,
                     given_params=given_parameters,
-                    relevant_objects=relevant_objects,  # TODO check if it makes sense that we only sample goal actions
+                    special_objects=special_objects,  # TODO check if it makes sense that we only sample goal actions
                     planning_failed=planning_failed,
                 )
                 if found_plan:
                     self.add_metric("successful_seq_len", seq_len)
                     break
+                else:
+                    # Avoid large numbers of samples piling up. Keeps symbolic description light.
+                    self.knowledge_base.clear_temp_samples()
             sequences_tried.clear()
             if found_plan or self.budget_exceeded:
                 break
@@ -302,6 +299,7 @@ class Explorer:
 
         # Restore initial state
         self.world.restore_state(self.current_state_id)
+        self.knowledge_base.clear_temp()
         return found_plan
 
     def _sampling_loop(
@@ -312,11 +310,11 @@ class Explorer:
         seq_len: int,
         given_seq=None,
         given_params=None,
-        relevant_objects=None,
-        do_complete_sequence=False,
+        special_objects=None,
         planning_failed=True,
     ):
         found_plan = False
+        relevant_objects = special_objects["goal"] + special_objects["closeby"]
 
         # Restore initial state
         self.world.restore_state(self.current_state_id)
@@ -328,8 +326,7 @@ class Explorer:
             sampling_timers,
             given_seq=given_seq,
             given_params=given_params,
-            relevant_objects=relevant_objects,
-            do_complete_sequence=do_complete_sequence,
+            special_objects=special_objects,
         )
         if not success:
             print("Sampling failed. Abort searching in this sequence length.")
@@ -525,8 +522,7 @@ class Explorer:
         sampling_timers: OrderedDict,
         given_seq: list = None,
         given_params: list = None,
-        relevant_objects=None,
-        do_complete_sequence: bool = False,
+        special_objects=None,
     ):
         """
         Sample sequences until an abstractly feasible one was found
@@ -539,6 +535,8 @@ class Explorer:
             assert len(given_seq) <= sequence_length
             given_seq = deepcopy(given_seq)
             given_params = deepcopy(given_params)
+
+        relevant_objects = special_objects["goal"] + special_objects["closeby"]
 
         failed_samples = 0
         success = True
@@ -572,25 +570,12 @@ class Explorer:
             sequences_tried.add(sequence_tuple)
             sampling_timers["sampling"] += time.time() - tic
 
-            # if given_seq is None or do_complete_sequence:
             # Fill in the gaps of the sequence to make it feasible
             tic = time.time()
             completion_result = complete_sequence(seq, params, relevant_objects, self)
             sampling_timers["sequence_completion"] += time.time() - tic
             if completion_result is False:
                 continue
-            # else:
-            #     # TODO test if this is needed or if we can run this through the completion anyways
-            #     completed_sequence = seq
-            #     completed_parameters = params
-            #     sequence_preconds = logic_tools.determine_sequence_preconds(
-            #         self.knowledge_base, completed_sequence, completed_parameters
-            #     )
-            #     precondition_plan = self.knowledge_base.solve_temp(sequence_preconds)
-            #     if not precondition_plan:
-            #         success = False
-            #         break
-            #     precondition_sequence, precondition_parameters = precondition_plan
             break
         return success, completion_result
 
@@ -686,12 +671,15 @@ class Explorer:
                         if len(possible_grasps) == 0:
                             raise NameError("No grasp for target object")
                         obj_sample = np.random.choice(possible_grasps)
+                    elif self.knowledge_base.type_x_child_of_y(obj_type, "robot"):
+                        obj_sample = "robot1"
                     else:
                         objects_to_sample_from = self.knowledge_base.get_objects_by_type(
                             obj_type,
                             types_by_parent,
                             objects_of_interest_by_type,
                             visible_only=True,
+                            include_generalized_objects=True,
                         )
                         if len(objects_to_sample_from) == 0:
                             # If no suitable object is in the objects of interest, check among all objects
@@ -703,6 +691,7 @@ class Explorer:
                                 types_by_parent,
                                 objects_all_by_type,
                                 visible_only=False,
+                                include_generalized_objects=True,
                             )
                             if len(objects_to_sample_from) == 0:
                                 # No object of the desired type exists, sample new sequence
