@@ -297,6 +297,8 @@ def compare_hlp_mcts():
             method_strings[3]: "210427_142300",
             method_strings[4]: "210426_082000",
         },
+        # duck in container (knowledge from (c1), same container)
+        "(c2)": {method_strings[2]: "210507_181100"},
         # cube from container to container (w/lids)
         "(d)": {
             method_strings[0]: "210427_130200",
@@ -387,7 +389,7 @@ def compare_hlp_mcts():
     print(table_combined_str)
 
     # Plot timing data
-    fig1, ax1 = plt.subplots(figsize=(7, 4))
+    fig1, ax1 = plt.subplots(figsize=(8, 4))
     color_palette = ["#007F5F", "#55A630", "#AACC00", "#D4D700", "#ff006e"]
     sns.boxplot(
         x="experiment",
@@ -433,7 +435,7 @@ def compare_hlp_mcts():
     plt.show()
 
     # Plot success data
-    fig2, ax2 = plt.subplots(figsize=(7, 4))
+    fig2, ax2 = plt.subplots(figsize=(8, 4))
     sns.countplot(
         x="experiment",
         hue="method",
