@@ -177,12 +177,17 @@ def get_nav_in_reach_description():
         ("at", True, ["goal_pos", "rob"]),
         ("at", False, ["current_pos", "rob"]),
     ]
+    action_exec_ignore_effects = [
+        ("at", False, ["current_pos", "rob"]),
+        ("in-reach", False, ["current_pos", "rob"]),
+    ]
     return (
         action_name,
         {
             "params": action_params,
             "preconds": action_preconditions,
             "effects": action_effects,
+            "exec_ignore_effects": action_exec_ignore_effects,
         },
     )
 
@@ -200,11 +205,16 @@ def get_nav_at_description():
         ("at", False, ["current_pos", "rob"]),
         ("in-reach", False, ["current_pos", "rob"]),
     ]
+    action_exec_ignore_effects = [
+        ("at", False, ["current_pos", "rob"]),
+        ("in-reach", False, ["current_pos", "rob"]),
+    ]
     return (
         action_name,
         {
             "params": action_params,
             "preconds": action_preconditions,
             "effects": action_effects,
+            "exec_ignore_effects": action_exec_ignore_effects,
         },
     )

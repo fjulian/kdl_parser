@@ -119,13 +119,14 @@ class SequentialExecution(ExecutionSystem):
         # Check if the effects were reached successfully
         action_description = self.knowledge_base.actions[action_name]
         for effect in action_description["effects"]:
-            if action_name in self.ignore_effects:
-                skip_effect = False
-                for ignore_effect in self.ignore_effects[action_name]:
-                    if ignore_effect == effect:
-                        skip_effect = True
-                if skip_effect:
-                    continue
+            skip_effect = False
+            for ignore_effect in action_description["exec_ignore_effects"]:
+                if ignore_effect == effect:
+                    skip_effect = True
+                    break
+            if skip_effect:
+                continue
+
             parameterized_effect = parametrize_predicate(effect, action_parameters)
             res = self.knowledge_base.predicate_funcs.call[effect[0]](
                 *parameterized_effect[2]
@@ -139,7 +140,7 @@ class SequentialExecution(ExecutionSystem):
                 success = False
                 msgs.append(
                     "Failed to reach effect {} during action {}".format(
-                        effect[0], action_name
+                        parameterized_effect, action_name
                     )
                 )
 

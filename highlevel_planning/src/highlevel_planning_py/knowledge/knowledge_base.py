@@ -169,6 +169,8 @@ class KnowledgeBase:
                 )
                 return False
         assert isinstance(action_name, str)
+        for field in ["params", "preconds", "effects", "exec_ignore_effects"]:
+            assert field in action_definition
         self.actions[action_name] = action_definition
         return action_name
 

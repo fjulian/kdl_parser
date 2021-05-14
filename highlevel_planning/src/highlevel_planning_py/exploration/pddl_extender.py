@@ -56,11 +56,21 @@ class PDDLExtender(object):
                 self._retype_argument(arg, action_params, already_retyped, time_string)
             action_preconditions.append(meta_precond)
 
+        # Collect any effects that shall be ignored during execution
+        action_exec_ignore_effects = list()
+        for action in sequence:
+            for ignore_effect in self.knowledge_base.actions[action][
+                "exec_ignore_effects"
+            ]:
+                if ignore_effect in action_effects:
+                    action_exec_ignore_effects.append(ignore_effect)
+
         # Submit new action description
         new_action_description = {
             "params": action_params,
             "preconds": action_preconditions,
             "effects": action_effects,
+            "exec_ignore_effects": action_exec_ignore_effects,
         }
 
         action_name = self.knowledge_base.add_action(

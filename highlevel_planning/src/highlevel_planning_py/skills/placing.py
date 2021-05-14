@@ -122,11 +122,13 @@ def get_placing_description():
         ("in-hand", False, ["obj", "rob"]),
         ("grasped-with", False, ["obj", "gid", "rob"]),
     ]
+    action_exec_ignore_effects = list()
     return (
         action_name,
         {
             "params": action_params,
             "preconds": action_preconditions,
             "effects": action_effects,
+            "exec_ignore_effects": action_exec_ignore_effects,
         },
     )

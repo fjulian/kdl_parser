@@ -160,11 +160,13 @@ def get_grasping_description():
         ("in-hand", True, ["obj", "rob"]),
         ("grasped-with", True, ["obj", "gid", "rob"]),
     ]
+    action_exec_ignore_effects = list()
     return (
         action_name,
         {
             "params": action_params,
             "preconds": action_preconditions,
             "effects": action_effects,
+            "exec_ignore_effects": action_exec_ignore_effects,
         },
     )
