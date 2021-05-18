@@ -265,7 +265,7 @@ def compare_hlp_mcts():
         "Publications",
         "2021 ICRA HLP",
         "Second try",
-        "Experiments",
+        "quantitative_experiments",
     )
     method_strings = [
         "ours, w/ alt",
@@ -458,12 +458,12 @@ def compare_hlp_mcts():
     # time_string = time_now.strftime("%y%m%d-%H%M%S")
     # fig1.savefig(
     #     os.path.join(basedir, "Output", f"{time_string}_boxplot.pdf"),
-    #     bbox_extra_artists = (lgd1,),
+    #     bbox_extra_artists=(lgd1,),
     #     bbox_inches="tight",
     # )
     # fig2.savefig(
     #     os.path.join(basedir, "Output", f"{time_string}_barplot.pdf"),
-    #     bbox_extra_artists = (lgd1,),
+    #     bbox_extra_artists=(lgd2,),
     #     bbox_inches="tight",
     # )
 

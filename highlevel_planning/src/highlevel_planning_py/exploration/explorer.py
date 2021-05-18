@@ -1,6 +1,6 @@
 # Imports
 import numpy as np
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from copy import deepcopy
 import time
 
@@ -46,8 +46,6 @@ class Explorer:
         self.current_state_id = None
         self.metrics = None
         self.metrics_prefix = ""
-        self.exploration_start_time = None
-        self.budget_exceeded = False
 
     def set_metrics_prefix(self, prefix: str):
         self.metrics_prefix = prefix
@@ -63,8 +61,9 @@ class Explorer:
         state_id=None,
         no_seed: bool = False,
     ):
-        self.exploration_start_time = time.time()
-        self.budget_exceeded = False
+        exploration_start_time = time.time()
+        total_time_budget = self.config_params["search_budget_sec"]
+        total_time_budget_exceeded = False
         self.metrics = OrderedDict()
         self.knowledge_base.clear_temp()
 
@@ -83,9 +82,9 @@ class Explorer:
         goal_objects = self._get_items_goal()
         radii = self.config_params["radii"]
 
-        dist_limit = self.config_params["distance_limit_closeby_objects"]
+        # Default closeby objects for demo, prepending and generalization exploration
         closeby_objects = get_items_closeby(
-            goal_objects, self.scene_objects, self.robot_uid_, distance_limit=dist_limit
+            goal_objects, self.scene_objects, self.robot_uid_, distance_limit=radii[0]
         )
 
         special_objects = {"goal": goal_objects, "closeby": closeby_objects}
@@ -96,25 +95,49 @@ class Explorer:
             self.add_metric("demo_sequence", demo_sequence)
             self.add_metric("demo_parameters", demo_parameters)
             tic = time.time()
+            time_budget = 0.8 * (total_time_budget - (tic - exploration_start_time))
+            self.add_metric("time_budget", time_budget)
             res = self._explore_demonstration(
-                demo_sequence, demo_parameters, special_objects, sequences_tried
+                demo_sequence,
+                demo_parameters,
+                special_objects,
+                sequences_tried,
+                time_budget,
             )
             total_time = time.time() - tic
             self.add_metric("total_time", total_time)
-        if not planning_failed and not res and not self.budget_exceeded:
+            total_time_budget_exceeded = (
+                tic + total_time - exploration_start_time > total_time_budget
+            )
+        if not planning_failed and not res and not total_time_budget_exceeded:
             self.set_metrics_prefix("02_prepend")
             tic = time.time()
-            res = self._explore_prepending_sequence(special_objects, sequences_tried)
+            time_budget = 0.8 * (total_time_budget - (tic - exploration_start_time))
+            self.add_metric("time_budget", time_budget)
+            res = self._explore_prepending_sequence(
+                special_objects, sequences_tried, time_budget, tic
+            )
             total_time = time.time() - tic
             self.add_metric("total_time", total_time)
-        if not res and not self.budget_exceeded:
+            total_time_budget_exceeded = (
+                tic + total_time - exploration_start_time > total_time_budget
+            )
+        if not res and not total_time_budget_exceeded:
             self.set_metrics_prefix("03_generalize")
             tic = time.time()
-            res = self._explore_generalized_action(special_objects, sequences_tried)
+            time_budget = 0.8 * (total_time_budget - (tic - exploration_start_time))
+            self.add_metric("time_budget", time_budget)
+            res = self._explore_generalized_action(
+                special_objects, sequences_tried, time_budget, tic
+            )
             total_time = time.time() - tic
             self.add_metric("total_time", total_time)
+            total_time_budget_exceeded = (
+                tic + total_time - exploration_start_time > total_time_budget
+            )
+        time_per_radius = (time.time() - exploration_start_time) / len(radii)
         for radius in radii:
-            if not res and not self.budget_exceeded:
+            if not res and not total_time_budget_exceeded:
                 self.set_metrics_prefix(f"04_rad{radius}")
                 tic = time.time()
                 closeby_objects = get_items_closeby(
@@ -123,28 +146,58 @@ class Explorer:
                     self.robot_uid_,
                     distance_limit=radius,
                 )
-                self.add_metric("closeby_objects", closeby_objects)
-                res = self._explore_goal_objects(sequences_tried, special_objects)
+                special_objects = {"goal": goal_objects, "closeby": closeby_objects}
+                time_left = total_time_budget - (tic - exploration_start_time)
+                time_budget = np.min([time_left, time_per_radius])
+                self.add_metric("time_budget", time_budget)
+                self.add_metric("special_objects", special_objects)
+                res = self._explore_goal_objects(
+                    sequences_tried, special_objects, time_budget
+                )
                 total_time = time.time() - tic
                 self.add_metric("total_time", total_time)
+                total_time_budget_exceeded = (
+                    tic + total_time - exploration_start_time > total_time_budget
+                )
         return res, self.metrics
 
     # ----- Different sampling strategies ------------------------------------
 
     @staticmethod
     def get_sampling_counters_dict():
-        return OrderedDict.fromkeys(
-            ("valid_sequences", "preplan_success", "plan_success", "goal_reached"), 0
+        return OrderedDict(
+            [
+                (key, defaultdict(int))
+                for key in (
+                    "valid_sequences",
+                    "preplan_success",
+                    "plan_success",
+                    "goal_reached",
+                )
+            ]
         )
 
     @staticmethod
     def get_timing_counters_dict():
-        return OrderedDict.fromkeys(
-            ("sampling", "sequence_completion", "execution", "domain_extension"), 0.0
+        return OrderedDict(
+            [
+                (key, defaultdict(float))
+                for key in (
+                    "sampling",
+                    "sequence_completion",
+                    "execution",
+                    "domain_extension",
+                )
+            ]
         )
 
     def _explore_demonstration(
-        self, demo_sequence, demo_parameters, special_objects, sequences_tried
+        self,
+        demo_sequence,
+        demo_parameters,
+        special_objects,
+        sequences_tried,
+        time_budget,
     ):
         print("Exploring demonstration ...")
         found_plan = self._sampling_loops_caller(
@@ -152,12 +205,15 @@ class Explorer:
             len(demo_sequence),
             len(demo_sequence),
             sequences_tried,
-            demo_sequence,
-            demo_parameters,
+            time_budget,
+            given_sequence=demo_sequence,
+            given_parameters=demo_parameters,
         )
         return found_plan
 
-    def _explore_prepending_sequence(self, special_objects, sequences_tried):
+    def _explore_prepending_sequence(
+        self, special_objects, sequences_tried, time_budget, start_time
+    ):
         print("Exploring prepending sequence ...")
         plan = self.knowledge_base.solve()
         if not plan:
@@ -178,13 +234,16 @@ class Explorer:
             min_sequence_length,
             max_sequence_length,
             sequences_tried,
-            relevant_sequence,
-            relevant_parameters,
+            time_budget=time_budget - (time.time() - start_time),
+            given_sequence=relevant_sequence,
+            given_parameters=relevant_parameters,
             planning_failed=False,
         )
         return found_plan
 
-    def _explore_generalized_action(self, special_objects, sequences_tried):
+    def _explore_generalized_action(
+        self, special_objects, sequences_tried, time_budget, start_time
+    ):
         print("Exploring generalizing action ...")
 
         # Check if an action with a similar effect already exists
@@ -208,18 +267,23 @@ class Explorer:
             min_sequence_length,
             max_sequence_length,
             sequences_tried,
-            relevant_sequence,
-            relevant_parameters,
+            time_budget=time_budget - (time.time() - start_time),
+            given_sequence=relevant_sequence,
+            given_parameters=relevant_parameters,
             planning_failed=False,
         )
         return found_plan
 
-    def _explore_goal_objects(self, sequences_tried, special_objects=None):
+    def _explore_goal_objects(self, sequences_tried, special_objects, time_budget):
         print("Exploring goal objects ...")
         min_sequence_length = self.config_params["min_sequence_length"]
         max_sequence_length = self.config_params["max_sequence_length"]
         found_plan = self._sampling_loops_caller(
-            special_objects, min_sequence_length, max_sequence_length, sequences_tried
+            special_objects,
+            min_sequence_length,
+            max_sequence_length,
+            sequences_tried,
+            time_budget,
         )
         return found_plan
 
@@ -231,61 +295,54 @@ class Explorer:
         min_sequence_length,
         max_sequence_length,
         sequences_tried,
+        time_budget,
         given_sequence=None,
         given_parameters=None,
         planning_failed=True,
     ):
         found_plan = False
+        budget_exceeded = False
         sampling_counters = self.get_sampling_counters_dict()
         sampling_timers = self.get_timing_counters_dict()
         sequence_lengths = list(range(min_sequence_length, max_sequence_length + 1))
-        for rep_idx in range(self.config_params["max_sample_repetitions"]):
-            print(f"Repetition {rep_idx}")
-            for sample_idx in range(
-                len(sequence_lengths)
-                * self.config_params["max_samples_per_sequence_length"]
-            ):
-                # Stop if search budget is exceeded
-                if (
-                    time.time() - self.exploration_start_time
-                    > self.config_params["search_budget_sec"]
-                ):
-                    print("Search budget exceeded")
-                    self.budget_exceeded = True
-                    break
+        time_per_sequence_length = time_budget / len(sequence_lengths)
 
-                # Determine sequence length
-                if self.config_params["alternating_sequence_length"]:
-                    seq_len_idx = sample_idx % len(sequence_lengths)
-                else:
-                    seq_len_idx = int(
-                        np.floor(
-                            sample_idx
-                            / self.config_params["max_samples_per_sequence_length"]
-                        )
-                    )
-                seq_len = sequence_lengths[seq_len_idx]
+        local_start_time = time.time()
 
-                # Run one loop iteration
-                found_plan = self._sampling_loop(
-                    sequences_tried,
-                    sampling_counters,
-                    sampling_timers,
-                    seq_len,
-                    given_seq=given_sequence,
-                    given_params=given_parameters,
-                    special_objects=special_objects,  # TODO check if it makes sense that we only sample goal actions
-                    planning_failed=planning_failed,
-                )
-                if found_plan:
-                    self.add_metric("successful_seq_len", seq_len)
-                    break
-                else:
-                    # Avoid large numbers of samples piling up. Keeps symbolic description light.
-                    self.knowledge_base.clear_temp_samples()
-            sequences_tried.clear()
-            if found_plan or self.budget_exceeded:
+        sample_idx = 0
+        while True:
+            # Time keeping
+            iteration_start_time = time.time()
+            run_time = iteration_start_time - local_start_time
+            if run_time >= time_budget:
+                budget_exceeded = True
                 break
+
+            # Determine sequence length
+            if self.config_params["alternating_sequence_length"]:
+                seq_len_idx = sample_idx % len(sequence_lengths)
+                sample_idx += 1
+            else:
+                seq_len_idx = int(np.floor(run_time / time_per_sequence_length))
+            seq_len = sequence_lengths[seq_len_idx]
+
+            # Run one loop iteration
+            found_plan = self._sampling_loop(
+                sequences_tried,
+                sampling_counters,
+                sampling_timers,
+                seq_len,
+                given_seq=given_sequence,
+                given_params=given_parameters,
+                special_objects=special_objects,
+                planning_failed=planning_failed,
+            )
+            if found_plan:
+                self.add_metric("successful_seq_len", seq_len)
+                break
+            else:
+                # Avoid large numbers of samples piling up. Keeps symbolic description light.
+                self.knowledge_base.clear_temp_samples()
 
         # Store counters
         for counter in sampling_counters:
@@ -293,7 +350,7 @@ class Explorer:
         for timer in sampling_timers:
             self.add_metric(f"t_{timer}", sampling_timers[timer])
         self.add_metric("found_plan", found_plan)
-        self.add_metric("time_budget_exceeded", self.budget_exceeded)
+        self.add_metric("time_budget_exceeded", budget_exceeded)
 
         # Restore initial state
         self.world.restore_state(self.current_state_id)
@@ -329,16 +386,16 @@ class Explorer:
         if not success:
             print("Sampling failed. Abort searching in this sequence length.")
             return found_plan
-        counters["valid_sequences"] += 1
+        counters["valid_sequences"][seq_len] += 1
 
         tic = time.time()
         test_success, test_success_idx = self._test_completed_sequence(
             completion_result
         )
-        sampling_timers["execution"] += time.time() - tic
-        counters["preplan_success"] += test_success[0]
-        counters["plan_success"] += test_success[1]
-        counters["goal_reached"] += test_success[2]
+        sampling_timers["execution"][seq_len] += time.time() - tic
+        counters["preplan_success"][seq_len] += test_success[0]
+        counters["plan_success"][seq_len] += test_success[1]
+        counters["goal_reached"][seq_len] += test_success[2]
         if test_success[2] == 0:
             return found_plan
         print("SUCCESS. Achieved goal, now extending symbolic description.")
@@ -518,7 +575,7 @@ class Explorer:
                 additional_preconditions=effects_last_action,
             )
             print("Previous action generalized")
-        sampling_timers["domain_extension"] += time.time() - tic
+        sampling_timers["domain_extension"][seq_len] += time.time() - tic
         found_plan = True
         return found_plan
 
@@ -572,15 +629,15 @@ class Explorer:
                 continue
             sequence_tuple = (tuple(seq), tuple(params_tuple))
             if sequence_tuple in sequences_tried:
-                sampling_timers["sampling"] += time.time() - tic
+                sampling_timers["sampling"][sequence_length] += time.time() - tic
                 continue
             sequences_tried.add(sequence_tuple)
-            sampling_timers["sampling"] += time.time() - tic
+            sampling_timers["sampling"][sequence_length] += time.time() - tic
 
             # Fill in the gaps of the sequence to make it feasible
             tic = time.time()
             completion_result = complete_sequence(seq, params, relevant_objects, self)
-            sampling_timers["sequence_completion"] += time.time() - tic
+            sampling_timers["sequence_completion"][sequence_length] += time.time() - tic
             if completion_result is False:
                 continue
             break
