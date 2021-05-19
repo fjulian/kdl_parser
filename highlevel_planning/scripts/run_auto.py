@@ -5,24 +5,24 @@ from datetime import datetime
 import pybullet as p
 
 # Simulation
-from highlevel_planning.sim.scene_planning_1 import ScenePlanning1
+from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
 
 # Skills
-from highlevel_planning.skills.navigate import SkillNavigate
-from highlevel_planning.skills.grasping import SkillGrasping
-from highlevel_planning.skills.placing import SkillPlacing
-from highlevel_planning.execution.es_sequential_execution import (
+from highlevel_planning_py.skills.navigate import SkillNavigate
+from highlevel_planning_py.skills.grasping import SkillGrasping
+from highlevel_planning_py.skills.placing import SkillPlacing
+from highlevel_planning_py.execution.es_sequential_execution import (
     execute_plan_sequentially,
 )
 
 # Learning
-from highlevel_planning.learning.explorer import Explorer
-from highlevel_planning.learning.pddl_extender import PDDLExtender
+from highlevel_planning_py.exploration.explorer import Explorer
+from highlevel_planning_py.exploration.pddl_extender import PDDLExtender
 
 # Other
-from highlevel_planning.tools.config import ConfigYaml
-from highlevel_planning.tools import run_util
-from highlevel_planning.tools.reporter import Reporter
+from highlevel_planning_py.tools.config import ConfigYaml
+from highlevel_planning_py.tools import run_util
+from highlevel_planning_py.tools.reporter import Reporter
 
 # ----------------------------------------------------------------------
 
@@ -66,9 +66,13 @@ def main():
     atexit.register(exit_handler, rep)
 
     # Populate simulation
-    robot, scene = run_util.setup_pybullet_world(
-        ScenePlanning1, BASEDIR, savedir, objects, args, cfg, robot_mdl
+    scene, world = run_util.setup_pybullet_world(
+        ScenePlanning1, BASEDIR, args, savedir, objects
     )
+    robot = run_util.setup_robot(world, cfg, BASEDIR, robot_mdl)
+
+    # Save state
+    run_util.save_pybullet_sim(args, savedir, scene, robot)
 
     # -----------------------------------
 

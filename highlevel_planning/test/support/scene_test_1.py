@@ -9,7 +9,6 @@ class SceneTest1(SceneBase):
         SceneBase.__init__(self, world, base_dir, restored_objects)
 
         if restored_objects is None:
-            self._world.add_plane()
 
             self.objects = dict()
             self.objects["table"] = ObjectInfo(

@@ -36,7 +36,6 @@ def getHandLinkOrient(robot):
 class TestCartesianVelocity(unittest.TestCase):
     def setUp(self):
         self.world = World(gui_=False, sleep_=False)
-        self.world.add_plane()
         self.robot = RobotArm(self.world)
         self.robot.reset()
         self.robot.to_start()
