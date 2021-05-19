@@ -87,10 +87,38 @@ def main():
     # Save state
     run_util.save_pybullet_sim(args, savedir, scene, robot)
 
+    # ---------------------------------------------------
+
+    # User input
+
+    # Set goal
+    # goals = [("in-hand", True, ("duck", "robot1"))]
+    # goals = [("at", True, ("container1", "robot1"))]
+    # goals = [("at", True, ("cupboard", "robot1"))]
+    # goals = [("on", True, ("cupboard", "cube1"))]
+    # goals = [("on", True, ("cupboard", "duck"))]
+    # goals = [
+    #     ("on", True, ("cupboard", "cube1")),
+    #     ("at", True, ("container1", "robot1")),
+    # ]
+    # goals = [("on", True, ("container2", "cube1"))]
+    # goals = [("on", True, ("container2", "lego"))]
+    goals = [("inside", True, ("container2", "cube1"))]
+    # goals = [("inside", True, ("container1", "cube1"))]
+    # goals = [("inside", True, ("container1", "lego"))]
+    # goals = [("inside", True, ("container1", "duck"))]
+    # goals = [("inside", True, ("shelf", "tall_box"))]
+    # goals = [("inside", True, ("container2", "cube2"))]
+
+    # Define a demonstration to guide exploration
+    demo_sequence, demo_parameters = None, None
+    # demo_sequence = ["place", "place"]
+    # demo_parameters = [{"obj": "lid2"}, {"obj": "cube1"}]
+
     # -----------------------------------
 
     kb, preds = run_util.setup_knowledge_base(
-        PATHS, scene, robot, cfg, time_string, args.domain_file
+        PATHS, scene, robot, cfg, time_string, goals, domain_file=args.domain_file
     )
 
     # Set up skills
@@ -104,11 +132,6 @@ def main():
 
     # Set up exploration
     xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg, world)
-
-    # Define a demonstration to guide exploration
-    demo_sequence, demo_parameters = None, None
-    # demo_sequence = ["place", "place"]
-    # demo_parameters = [{"obj": "lid2"}, {"obj": "cube1"}]
 
     # ---------------------------------------------------------------
 

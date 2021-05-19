@@ -42,24 +42,7 @@ class KnowledgeBase:
         self.visible_objects = set()
         self.object_predicates = set()
         self.initial_state_predicates = set()
-        # self.goals = list()
-        # self.goals = [("in-hand", True, ("duck", "robot1"))]
-        # self.goals = [("at", True, ("container1", "robot1"))]
-        # self.goals = [("at", True, ("cupboard", "robot1"))]
-        # self.goals = [("on", True, ("cupboard", "cube1"))]
-        # self.goals = [("on", True, ("cupboard", "duck"))]
-        # self.goals = [
-        #     ("on", True, ("cupboard", "cube1")),
-        #     ("at", True, ("container1", "robot1")),
-        # ]
-        # self.goals = [("on", True, ("container2", "cube1"))]
-        # self.goals = [("on", True, ("container2", "lego"))]
-        # self.goals = [("inside", True, ("container2", "cube1"))]
-        self.goals = [("inside", True, ("container1", "cube1"))]
-        # self.goals = [("inside", True, ("container1", "lego"))]
-        # self.goals = [("inside", True, ("container2", "duck"))]
-        # self.goals = [("inside", True, ("shelf", "tall_box"))]
-        # self.goals = [("inside", True, ("container2", "cube2"))]
+        self.goals = list()
 
         # Value lookups (e.g. for positions)
         self.lookup_table = dict()
@@ -241,6 +224,10 @@ class KnowledgeBase:
 
         # Remove duplicates
         self.goals = list(dict.fromkeys(self.goals))
+
+    def set_goals(self, goal_list):
+        self.goals = goal_list
+        self.goals = list(set(self.goals))
 
     # ----- Solving ------------------------------------------------------------
 

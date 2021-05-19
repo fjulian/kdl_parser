@@ -96,7 +96,7 @@ def setup_robot(world, cfg, asset_dir, robot_mdl):
 
 
 def setup_knowledge_base(
-    paths, scene, robot, cfg, time_string, domain_file="_domain.pkl"
+    paths, scene, robot, cfg, time_string, goals, domain_file="_domain.pkl"
 ):
     # Set up planner interface and domain representation
     kb = KnowledgeBase(
@@ -105,6 +105,7 @@ def setup_knowledge_base(
         time_string=time_string,
         domain_file=domain_file,
     )
+    kb.set_goals(goals)
 
     # Add basic skill descriptions
     skill_descriptions = pddl_descriptions.get_action_descriptions()
