@@ -95,7 +95,9 @@ class Explorer:
             self.add_metric("demo_sequence", demo_sequence)
             self.add_metric("demo_parameters", demo_parameters)
             tic = time.time()
-            time_budget = 0.8 * (total_time_budget - (tic - exploration_start_time))
+            time_budget = self.config_params["time_proportion_demo"] * (
+                total_time_budget - (tic - exploration_start_time)
+            )
             self.add_metric("time_budget", time_budget)
             res = self._explore_demonstration(
                 demo_sequence,
@@ -112,7 +114,9 @@ class Explorer:
         if not planning_failed and not res and not total_time_budget_exceeded:
             self.set_metrics_prefix("02_prepend")
             tic = time.time()
-            time_budget = 0.8 * (total_time_budget - (tic - exploration_start_time))
+            time_budget = self.config_params["time_proportion_prepend"] * (
+                total_time_budget - (tic - exploration_start_time)
+            )
             self.add_metric("time_budget", time_budget)
             res = self._explore_prepending_sequence(
                 special_objects, sequences_tried, time_budget, tic
@@ -125,7 +129,9 @@ class Explorer:
         if not res and not total_time_budget_exceeded:
             self.set_metrics_prefix("03_generalize")
             tic = time.time()
-            time_budget = 0.8 * (total_time_budget - (tic - exploration_start_time))
+            time_budget = self.config_params["time_proportion_generalize"] * (
+                total_time_budget - (tic - exploration_start_time)
+            )
             self.add_metric("time_budget", time_budget)
             res = self._explore_generalized_action(
                 special_objects, sequences_tried, time_budget, tic
@@ -135,7 +141,9 @@ class Explorer:
             total_time_budget_exceeded = (
                 tic + total_time - exploration_start_time > total_time_budget
             )
-        time_per_radius = (time.time() - exploration_start_time) / len(radii)
+        time_per_radius = (
+            total_time_budget - (time.time() - exploration_start_time)
+        ) / len(radii)
         for radius in radii:
             if not res and not total_time_budget_exceeded:
                 self.set_metrics_prefix(f"04_rad{radius}")
@@ -199,7 +207,7 @@ class Explorer:
         sequences_tried,
         time_budget,
     ):
-        print("Exploring demonstration ...")
+        print(f"Exploring demonstration (budget: {time_budget}) ...")
         found_plan = self._sampling_loops_caller(
             special_objects,
             len(demo_sequence),
@@ -214,7 +222,7 @@ class Explorer:
     def _explore_prepending_sequence(
         self, special_objects, sequences_tried, time_budget, start_time
     ):
-        print("Exploring prepending sequence ...")
+        print(f"Exploring prepending sequence (budget: {time_budget}) ...")
         plan = self.knowledge_base.solve()
         if not plan:
             return False
@@ -244,7 +252,7 @@ class Explorer:
     def _explore_generalized_action(
         self, special_objects, sequences_tried, time_budget, start_time
     ):
-        print("Exploring generalizing action ...")
+        print(f"Exploring generalizing action (budget: {time_budget}) ...")
 
         # Check if an action with a similar effect already exists
         self.knowledge_base.clear_temp()
@@ -275,9 +283,10 @@ class Explorer:
         return found_plan
 
     def _explore_goal_objects(self, sequences_tried, special_objects, time_budget):
-        print("Exploring goal objects ...")
+        print(f"Exploring goal objects (budget: {time_budget}) ...")
         min_sequence_length = self.config_params["min_sequence_length"]
         max_sequence_length = self.config_params["max_sequence_length"]
+        self.knowledge_base.clear_temp()
         found_plan = self._sampling_loops_caller(
             special_objects,
             min_sequence_length,
