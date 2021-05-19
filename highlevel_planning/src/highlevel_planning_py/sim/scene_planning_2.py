@@ -65,15 +65,15 @@ class ScenePlanning2(SceneBase):
                 grasp_links_=[5],
                 friction_setting_=[{"link_name": "handle", "lateral_friction": 1.0}],
             )
-            self.objects["cube2"] = ObjectInfo(
-                urdf_path_="cube_small.urdf",
-                init_pos_=np.array([3.55, -0.23, 0.7]),
-                # init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
-                init_orient_=rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "z", -20.0),
-                grasp_links_=[-1],
-                grasp_pos_={-1: [np.array([0.0, 0.0, 0.0])]},
-                grasp_orient_={-1: [np.array([0.0, 0.0, 0.0, 1.0])]},
-            )
+            # self.objects["cube2"] = ObjectInfo(
+            #     urdf_path_="cube_small.urdf",
+            #     init_pos_=np.array([3.55, -0.23, 0.7]),
+            #     # init_orient_=np.array([0.0, 0.0, 0.0, 1.0]),
+            #     init_orient_=rotate_orient(np.array([0.0, 0.0, 0.0, 1.0]), "z", -20.0),
+            #     grasp_links_=[-1],
+            #     grasp_pos_={-1: [np.array([0.0, 0.0, 0.0])]},
+            #     grasp_orient_={-1: [np.array([0.0, 0.0, 0.0, 1.0])]},
+            # )
             self.objects["container2"] = ObjectInfo(
                 urdf_name_="container/container_no_lid.urdf",
                 urdf_path_=os.path.join(base_dir, "container/container_no_lid.urdf"),
