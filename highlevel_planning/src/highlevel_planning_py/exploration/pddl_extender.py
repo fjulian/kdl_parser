@@ -56,14 +56,35 @@ class PDDLExtender(object):
                 self._retype_argument(arg, action_params, already_retyped, time_string)
             action_preconditions.append(meta_precond)
 
+        # Determine translation between meta action argument names and sub action argument names
+        param_translator = [dict.fromkeys(param_dict) for param_dict in parameters]
+        for idx, params in enumerate(parameters):
+            for param_name, param_value in params.items():
+                if param_value in already_retyped:
+                    param_translator[idx][param_name] = param_value
+                else:
+                    param_translator[idx][param_name] = param_name
+
         # Collect any effects that shall be ignored during execution
         action_exec_ignore_effects = list()
-        for action in sequence:
+        for action_idx, action in enumerate(sequence):
             for ignore_effect in self.knowledge_base.actions[action][
                 "exec_ignore_effects"
             ]:
-                if ignore_effect in action_effects:
-                    action_exec_ignore_effects.append(ignore_effect)
+                # Translate parameter names
+                new_param_names = [
+                    param_translator[action_idx][old_param_name]
+                    for old_param_name in ignore_effect[2]
+                ]
+                new_param_names = tuple(new_param_names)
+                new_ignore_effect = (
+                    ignore_effect[0],
+                    ignore_effect[1],
+                    new_param_names,
+                )
+
+                if new_ignore_effect in action_effects:
+                    action_exec_ignore_effects.append(new_ignore_effect)
 
         # Submit new action description
         new_action_description = {
@@ -87,15 +108,6 @@ class PDDLExtender(object):
                     hidden_parameters[idx][param_name] = param_value
                     if param_value not in self.knowledge_base.objects:
                         self.knowledge_base.make_permanent(param_value)
-
-        # Determine translation between meta action argument names and sub action argument names
-        param_translator = [dict.fromkeys(param_dict) for param_dict in parameters]
-        for idx, params in enumerate(parameters):
-            for param_name, param_value in params.items():
-                if param_value in already_retyped:
-                    param_translator[idx][param_name] = param_value
-                else:
-                    param_translator[idx][param_name] = param_name
 
         # Full action parameters: list of tuples (name, type, value)
         full_action_params = list()
