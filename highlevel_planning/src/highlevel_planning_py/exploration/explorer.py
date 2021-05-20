@@ -194,6 +194,8 @@ class Explorer:
                     "sampling",
                     "sequence_completion",
                     "execution",
+                    "goal_testing",
+                    "sequence_refinement",
                     "domain_extension",
                 )
             ]
@@ -397,17 +399,22 @@ class Explorer:
             return found_plan
         counters["valid_sequences"][seq_len] += 1
 
-        tic = time.time()
-        test_success, test_success_idx = self._test_completed_sequence(
+        test_success, test_success_idx, test_timing = self._test_completed_sequence(
             completion_result
         )
-        sampling_timers["execution"][seq_len] += time.time() - tic
+        sampling_timers["execution"][seq_len] += test_timing[0]
+        sampling_timers["goal_testing"][seq_len] += test_timing[1]
         counters["preplan_success"][seq_len] += test_success[0]
         counters["plan_success"][seq_len] += test_success[1]
         counters["goal_reached"][seq_len] += test_success[2]
         if test_success[2] == 0:
             return found_plan
         print("SUCCESS. Achieved goal, now extending symbolic description.")
+
+        # -----------------------------------------------
+        # Extend the symbolic description appropriately
+
+        tic = time.time()
 
         # Trim sequence if not the whole sequence was needed for success
         assert test_success_idx[0] == "pre" or test_success_idx[0] == "main"
@@ -427,17 +434,12 @@ class Explorer:
                 short_seq, short_params, relevant_objects, self
             )
 
-        # -----------------------------------------------
-        # Extend the symbolic description appropriately
-
-        tic = time.time()
-        completed_sequence = completion_result[0]
-        completed_parameters = completion_result[1]
-        key_actions = completion_result[4]
-
         # Try to find actual key actions (only if there is more than 1 key action)
         last_working_completion_result = completion_result
+        key_actions = completion_result[4]
         if len(key_actions) > 1:
+            completed_sequence = completion_result[0]
+            completed_parameters = completion_result[1]
             maximum_pushback = [0] * len(key_actions)
             for key_action_idx in range(len(key_actions) - 2, -1, -1):
                 pushback = 0
@@ -470,7 +472,7 @@ class Explorer:
                     )
                     if modified_completion_result is False:
                         continue
-                    test_success, _ = self._test_completed_sequence(
+                    test_success, _, _ = self._test_completed_sequence(
                         modified_completion_result
                     )
                     if not test_success[2]:
@@ -478,14 +480,18 @@ class Explorer:
                     maximum_pushback[key_action_idx] = pushback
                     last_working_completion_result = modified_completion_result
                 key_actions[key_action_idx] += maximum_pushback[key_action_idx]
-            key_actions = last_working_completion_result[4]
             self.add_metric("maximum_pushback", maximum_pushback)
             print("Key actions refined")
 
+        toc = time.time()
+        sampling_timers["sequence_refinement"][seq_len] += toc - tic
+
+        tic = toc
         completed_sequence = last_working_completion_result[0]
         completed_parameters = last_working_completion_result[1]
         precondition_sequence = last_working_completion_result[2]
         precondition_parameters = last_working_completion_result[3]
+        key_actions = last_working_completion_result[4]
 
         effects_last_action = list()
         no_effect_key_actions = (
@@ -896,6 +902,9 @@ class Explorer:
         success = np.array([0, 0, 0])
         success_idx = None
 
+        time_execution = 0.0
+        time_goal_testing = 0.0
+
         (
             completed_sequence,
             completed_parameters,
@@ -913,15 +922,21 @@ class Explorer:
         )
         es.setup()
         for i in range(len(precondition_sequence)):
+            tic = time.time()
             step_success, _, step_msgs = es.step(index=i)
+            toc = time.time()
+            time_execution += toc - tic
             if not step_success:
-                return success, success_idx
+                return success, success_idx, (time_execution, time_goal_testing)
+            tic = toc
             goal_success = self.knowledge_base.test_goals()
+            toc = time.time()
+            time_goal_testing += toc - tic
             if goal_success:
                 success[0] = 1
                 success[2] = 1
                 success_idx = ("pre", i)
-                return success, success_idx
+                return success, success_idx, (time_execution, time_goal_testing)
         success[0] = 1
 
         # Main sequence
@@ -933,13 +948,19 @@ class Explorer:
         )
         es.setup()
         for i in range(len(completed_sequence)):
+            tic = time.time()
             step_success, _, step_msgs = es.step(index=i)
+            toc = time.time()
+            time_execution += toc - tic
             if not step_success:
-                return success, success_idx
+                return success, success_idx, (time_execution, time_goal_testing)
+            tic = toc
             goal_success = self.knowledge_base.test_goals()
+            toc = time.time()
+            time_goal_testing += toc - tic
             if goal_success:
                 success[2] = 1
                 success_idx = ("main", i)
                 break
         success[1] = 1
-        return success, success_idx
+        return success, success_idx, (time_execution, time_goal_testing)
