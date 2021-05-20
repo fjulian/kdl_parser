@@ -49,9 +49,10 @@ class Explorer:
 
     def set_metrics_prefix(self, prefix: str):
         self.metrics_prefix = prefix
+        self.metrics[prefix] = OrderedDict()
 
     def add_metric(self, key: str, value):
-        self.metrics[f"{self.metrics_prefix}_{key}"] = value
+        self.metrics[self.metrics_prefix][key] = value
 
     def exploration(
         self,
@@ -66,6 +67,8 @@ class Explorer:
         total_time_budget_exceeded = False
         self.metrics = OrderedDict()
         self.knowledge_base.clear_temp()
+
+        self.metrics["config"] = self.config_params
 
         if not no_seed:
             np.random.seed(0)
