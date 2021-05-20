@@ -95,7 +95,7 @@ def main():
     # goals = [("in-hand", True, ("duck", "robot1"))]
     # goals = [("at", True, ("container1", "robot1"))]
     # goals = [("at", True, ("cupboard", "robot1"))]
-    # goals = [("on", True, ("cupboard", "cube1"))]
+    goals = [("on", True, ("cupboard", "cube1"))]
     # goals = [("on", True, ("cupboard", "duck"))]
     # goals = [
     #     ("on", True, ("cupboard", "cube1")),
@@ -103,7 +103,7 @@ def main():
     # ]
     # goals = [("on", True, ("container2", "cube1"))]
     # goals = [("on", True, ("container2", "lego"))]
-    goals = [("inside", True, ("container2", "cube1"))]
+    # goals = [("inside", True, ("container2", "cube1"))]
     # goals = [("inside", True, ("container1", "cube1"))]
     # goals = [("inside", True, ("container1", "lego"))]
     # goals = [("inside", True, ("container1", "duck"))]
