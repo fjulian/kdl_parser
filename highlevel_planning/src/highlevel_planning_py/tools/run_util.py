@@ -48,6 +48,13 @@ def parse_arguments():
         default="_domain.pkl",
         help="The file name of the domain file loaded/stored by the knowledge base.",
     )
+    parser.add_argument(
+        "-c",
+        "--config-file-path",
+        action="store",
+        help="Absolute path to the config file to use.",
+        default="",
+    )
     args = parser.parse_args()
     return args
 
