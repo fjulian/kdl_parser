@@ -1,17 +1,14 @@
 import numpy as np
 import os
 import json
-import atexit
 import pickle
 from datetime import datetime
 import networkx as nx
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-mpl.use("TkAgg")
-
 # Simulation
-from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
+# from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
 from highlevel_planning_py.sim.scene_planning_2 import ScenePlanning2
 
 # Skills
@@ -29,9 +26,10 @@ from highlevel_planning_py.knowledge.knowledge_base import KnowledgeBase
 # Other
 from highlevel_planning_py.tools.config import ConfigYaml
 from highlevel_planning_py.tools import run_util
-from highlevel_planning_py.tools.reporter import Reporter
 
 from highlevel_planning_py.exploration.exploration_tools import get_items_closeby
+
+mpl.use("TkAgg")
 
 # ----------------------------------------------------------------------
 
@@ -110,7 +108,30 @@ def main():
 
     # -----------------------------------
 
-    kb, preds = run_util.setup_knowledge_base(PATHS, scene, robot, cfg, time_string)
+    # Set goal
+    # goals = [("in-hand", True, ("duck", "robot1"))]
+    # goals = [("at", True, ("container1", "robot1"))]
+    # goals = [("at", True, ("cupboard", "robot1"))]
+    goals = [("on", True, ("cupboard", "cube1"))]
+    # goals = [("on", True, ("cupboard", "duck"))]
+    # goals = [
+    #     ("on", True, ("cupboard", "cube1")),
+    #     ("at", True, ("container1", "robot1")),
+    # ]
+    # goals = [("on", True, ("container2", "cube1"))]
+    # goals = [("on", True, ("container2", "lego"))]
+    # goals = [("inside", True, ("container2", "cube1"))]
+    # goals = [("inside", True, ("container1", "cube1"))]
+    # goals = [("inside", True, ("container1", "lego"))]
+    # goals = [("inside", True, ("container1", "duck"))]
+    # goals = [("inside", True, ("shelf", "tall_box"))]
+    # goals = [("inside", True, ("container2", "cube2"))]
+
+    # -----------------------------------
+
+    kb, preds = run_util.setup_knowledge_base(
+        PATHS, scene, robot, cfg, time_string, goals
+    )
 
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot, cfg)

@@ -83,7 +83,7 @@ if __name__ == "__main__":
             num_started += 1
             file_idx += 1
             currently_running += 1
-            time.sleep(5)
+            time.sleep(3)
         else:
             idx = 0
             while True:
@@ -92,7 +92,7 @@ if __name__ == "__main__":
                     break
                 idx += 1
                 idx = idx % currently_running
-                time.sleep(4)
+                time.sleep(3)
             p = open_processes.pop(idx)
             out, err = p.communicate()
             with open(stdout_file, "a") as f:
@@ -113,8 +113,10 @@ if __name__ == "__main__":
             num_done += 1
             currently_running -= 1
         print("----------------")
-        print(f"Currently running: {currently_running}")
-        print(f"Started: {num_started}/{NUM_REPETITIONS}")
-        print(f"Done: {num_done}/{NUM_REPETITIONS}")
+        print(
+            f"Currently running: {currently_running}, "
+            f"Started: {num_started}/{NUM_REPETITIONS}, "
+            f"Done: {num_done}/{NUM_REPETITIONS}"
+        )
     print("==================================")
     print(f"All done. Total time elapsed: {time.time()-tic}")
