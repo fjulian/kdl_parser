@@ -1,10 +1,12 @@
 import pickle
 import os
+from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 import pandas as pd
 import seaborn as sns
+from collections import defaultdict
 
 print_human_readable = False
 
@@ -35,97 +37,118 @@ def filter_data_files(files):
         del files[idx]
 
 
-def summarize_experiment(base_dir, name_string, success_label):
-    raw_data_dir = os.path.join(base_dir, name_string)
+def summarize_experiment(base_dir, file_name, method_string, experiment_type):
+    raw_data_dir = os.path.join(base_dir, file_name)
     files = os.listdir(raw_data_dir)
     filter_data_files(files)
 
     num_runs = len(files)
-    success_count = 0
-    timeout_count = 0
-    summary_data = dict.fromkeys(
-        [
-            "file_name",
-            "num_seq_samples",
-            "num_preplan_exec_success",
-            "num_plan_exec_success",
-            "time_sampling",
-            "time_sequence_completion",
-            "time_execution",
-            "time_domain_extension",
-            "time_total",
-        ]
-    )
-    for key in summary_data:
-        summary_data[key] = list()
+    new_df = pd.DataFrame()
     for i in range(num_runs):
         with open(os.path.join(raw_data_dir, files[i]), "rb") as f:
             data = pickle.load(f)
         metrics = data["metrics"]
-        success = False
-        timed_out = False
-        this_success_labels = list()
-        for key in metrics:
-            # Check for success
-            found_success_label = [key.find(l) > -1 for l in success_label]
-            if np.all(np.array(found_success_label)):
-                this_success_labels.append(key)
-                if metrics[key]:
-                    success = True
-                    success_count += 1
-                    break
+        assert "explore_1" not in metrics
+        metrics = metrics["explore_0"]["counters"]
 
-            # Check for timeout
-            found_timeout_label = "time_budget_exceeded" in key
-            if found_timeout_label and metrics[key]:
-                timed_out = True
-                timeout_count += 1
-                break
-        assert not (success and timed_out)
-        if success:
-            label_prefixes = [
-                label[: -(len("_found_plan"))] for label in this_success_labels
-            ]
+        successes = list()
+        total_times = list()
+        times = defaultdict(list)
+        counts = defaultdict(list)
+        for method_name, method_metrics in metrics.items():
+            if "config" in method_name:
+                continue
 
-            summary_data["file_name"].append(files[i])
-            summary_data["num_seq_samples"].append(
-                sum_metrics(metrics, label_prefixes, "#_valid_sequences")
-            )
-            summary_data["num_preplan_exec_success"].append(
-                sum_metrics(metrics, label_prefixes, "#_preplan_success")
-            )
-            summary_data["num_plan_exec_success"].append(
-                sum_metrics(metrics, label_prefixes, "#_plan_success")
-            )
-            summary_data["time_sampling"].append(
-                sum_metrics(metrics, label_prefixes, "t_sampling")
-            )
-            summary_data["time_sequence_completion"].append(
-                sum_metrics(metrics, label_prefixes, "t_sequence_completion")
-            )
-            summary_data["time_execution"].append(
-                sum_metrics(metrics, label_prefixes, "t_execution")
-            )
-            summary_data["time_domain_extension"].append(
-                sum_metrics(metrics, label_prefixes, "t_domain_extension")
-            )
-            summary_data["time_total"].append(
-                sum_metrics(metrics, label_prefixes, "total_time")
-            )
-    return summary_data, success_count, timeout_count
+            total_times.append(method_metrics["total_time"])
+            if "found_plan" in method_metrics:
+                successes.append(method_metrics["found_plan"])
+                for metric_label in method_metrics:
+                    if metric_label.startswith("t_"):
+                        time_sum = 0.0
+                        for _, individual_time in method_metrics[metric_label].items():
+                            time_sum += individual_time
+                        times[metric_label].append(time_sum)
+                    elif metric_label.startswith("#_"):
+                        count_sum = 0
+                        for _, individual_count in method_metrics[metric_label].items():
+                            count_sum += individual_count
+                        counts[metric_label].append(count_sum)
+
+        new_row_data = dict()
+
+        # Common fields
+        new_row_data["method"] = [method_string]
+        new_row_data["experiment"] = [experiment_type]
+        new_row_data["success"] = [np.any(successes)]
+        new_row_data["total_time"] = [np.sum(total_times)]
+
+        # Method specific fields
+        for label in times:
+            new_row_data[label] = [np.sum(times[label])]
+        for label in counts:
+            new_row_data[label] = [np.sum(counts[label])]
+
+        # Timing comparison
+        tmp_sum = 0.0
+        tmp_summand = (
+            new_row_data["t_sampling"][0] + new_row_data["t_sequence_completion"][0]
+        )
+        tmp_sum += tmp_summand
+        new_row_data["t_comp_sampling"] = [tmp_summand]
+        tmp_summand = new_row_data["t_execution"][0]
+        tmp_sum += tmp_summand
+        new_row_data["t_comp_simulating"] = [tmp_summand]
+        tmp_summand = (
+            new_row_data["t_sequence_refinement"][0]
+            + new_row_data["t_domain_extension"][0]
+        )
+        tmp_sum += tmp_summand
+        new_row_data["t_comp_domain_extension"] = [tmp_summand]
+        new_row_data["t_comp_other"] = [new_row_data["total_time"][0] - tmp_sum]
+        assert new_row_data["t_comp_other"][0] > 0
+
+        new_row = pd.DataFrame(new_row_data)
+        new_df = new_df.append(new_row)
+    return new_df
 
 
-def summarize_mcts_experiment(base_dir, name_string, success_label):
+def summarize_mcts_experiment(base_dir, name_string, method_string, experiment_type):
     raw_data_dir = os.path.join(base_dir, name_string)
     files = os.listdir(raw_data_dir)
     filter_data_files(files)
 
     num_runs = len(files)
-    success_count = 0
-    timeout_count = 0
-    summary_data = dict.fromkeys(
-        [
-            "file_name",
+    new_df = pd.DataFrame()
+    for i in range(num_runs):
+        with open(os.path.join(raw_data_dir, files[i]), "rb") as f:
+            data = pickle.load(f)
+        metrics = data["metrics"]
+
+        new_row_data = dict()
+
+        # Common fields
+        new_row_data["method"] = [method_string]
+        new_row_data["experiment"] = [experiment_type]
+        new_row_data["success"] = [metrics["success"]]
+        new_row_data["total_time"] = [metrics["time_until_result"]]
+
+        tmp_sum = 0.0
+        tmp_summand = (
+            metrics["time_check_expanding"]
+            + metrics["time_select_child"]
+            + metrics["time_sample_feasible"]
+        )
+        tmp_sum += tmp_summand
+        new_row_data["t_comp_sampling"] = [tmp_summand]
+        tmp_summand = metrics["time_sim"]
+        tmp_sum += tmp_summand
+        new_row_data["t_comp_simulating"] = [tmp_summand]
+        new_row_data["t_comp_domain_extension"] = [0.0]
+        new_row_data["t_comp_other"] = [new_row_data["total_time"][0] - tmp_sum]
+        assert new_row_data["t_comp_other"][0] > 0
+
+        # Method specific fields
+        counters = [
             "max_depth",
             "num_restarts",
             "num_expand",
@@ -134,127 +157,13 @@ def summarize_mcts_experiment(base_dir, name_string, success_label):
             "time_expand",
             "time_sim",
             "time_sample_feasible",
-            "time_total",
+            "num_expand_tries",
         ]
-    )
-    for key in summary_data:
-        summary_data[key] = list()
-    for i in range(num_runs):
-        with open(os.path.join(raw_data_dir, files[i]), "rb") as f:
-            data = pickle.load(f)
-        metrics = data["metrics"]
-        success = False
-        timed_out = False
-        this_success_labels = list()
-        for key in metrics:
-            found_success_label = [key.find(l) > -1 for l in success_label]
-            if np.all(np.array(found_success_label)):
-                this_success_labels.append(key)
-                if metrics[key]:
-                    success = True
-                    success_count += 1
-                    break
-
-            # Check for timeout
-            found_timeout_label = "time_until_result" in key
-            if found_timeout_label:
-                if metrics[key] >= data["config"]["mcts"]["search_budget_sec"]:
-                    timed_out = True
-                    timeout_count += 1
-                    break
-        assert not (success and timed_out)
-        if success:
-            summary_data["file_name"].append(files[i])
-            summary_data["max_depth"].append(metrics["max_depth"])
-            summary_data["num_restarts"].append(metrics["num_restarts"])
-            summary_data["num_expand"].append(metrics["num_expand"])
-            summary_data["time_check_expanding"].append(metrics["time_check_expanding"])
-            summary_data["time_select_child"].append(metrics["time_select_child"])
-            summary_data["time_expand"].append(metrics["time_expand"])
-            summary_data["time_sim"].append(metrics["time_sim"])
-            summary_data["time_sample_feasible"].append(metrics["time_sample_feasible"])
-            summary_data["time_total"].append(metrics["time_until_result"])
-    return summary_data, success_count, timeout_count
-
-
-def main_evaluate_hlp():
-    basedir = os.path.join(
-        os.getenv("HOME"),
-        "Polybox",
-        "PhD",
-        "Publications",
-        "2021 ICRA HLP",
-        "Second try",
-        "Experiments",
-    )
-    experiment_string = ["210423_110900"]
-    experiment_success_label = ["found_plan"]
-    titles = ["(a)", "(b)", "(c)", "(d)", "(e)"]
-    num_seq_samples_data = list()
-    for i in range(len(experiment_string)):
-        summary, success_cnt, _ = summarize_experiment(
-            basedir, experiment_string[i], experiment_success_label
-        )
-        if print_human_readable:
-            print("==================================================")
-            print(f"Experiment ID: {experiment_string[i]}")
-            print(f"Success count: {success_cnt}")
-            for key in summary:
-                print(
-                    f"{key} [median] mean (std): [{np.median(summary[key])}] {np.mean(summary[key])} ({np.std(summary[key])})"
-                )
-
-            print("------------------------------------------")
-        funcs = [np.median, np.mean, np.std]
-        starts = [
-            f"\\multirow{{3}}{{*}}{{{titles[i]}}} & \\multirow{{3}}{{*}}{{{success_cnt}}} & $m$ & ",
-            f"& & $\\mu$ & ",
-            f"& & $\\sigma$ & ",
-        ]
-        for j in range(len(funcs)):
-            print(starts[j], end="")
-            print(
-                f"\\num{{{number_formatter(funcs[j](summary['num_seq_samples']))}}} & \\num{{{number_formatter(funcs[j](summary['num_plan_exec_success']))}}}"
-                f" & \\num{{{number_formatter(funcs[j](summary['time_sampling']))}}} & \\num{{{number_formatter(funcs[j](summary['time_sequence_completion']))}}} & "
-                f"\\num{{{number_formatter(funcs[j](summary['time_execution']))}}} & \\num{{{number_formatter(funcs[j](summary['time_domain_extension']))}}} \\\\"
-            )
-        print("\\hline")
-        # & & $\sigma$ & \num{21.26} & \num{8.02} & \num{1.1e-2} & \num{1.04} & \num{4.79} & \num{8.1e-6} \\
-        # \hline")
-        num_seq_samples_data.append(summary["num_seq_samples"])
-
-    # Font sizes
-    parameters = {
-        "axes.labelsize": 18,
-        # "axes.titlesize": 25,
-        "xtick.labelsize": 15,
-        "ytick.labelsize": 15,
-    }
-    plt.rcParams.update(parameters)
-
-    fig1, ax1 = plt.subplots(figsize=(7, 3.5))
-    # ax1.set_title("Number of sampled sequences")
-    ax1.boxplot(
-        list(reversed(num_seq_samples_data)),
-        vert=False,
-        labels=list(reversed(titles)),
-        notch=False,
-        widths=0.7,
-    )
-    # ax1.set_aspect(20)
-    plt.xlabel("Number of sampled sequences [-]")
-    plt.ylabel("Experiment ID")
-    plt.grid()
-
-    plt.show()
-
-    time_now = datetime.now()
-    time_string = time_now.strftime("%y%m%d-%H%M%S")
-
-    # fig1.savefig(
-    #     os.path.join(basedir, "Output", f"{time_string}_boxplot.pdf"),
-    #     bbox_inches="tight",
-    # )
+        for counter in counters:
+            new_row_data[counter] = [metrics[counter]]
+        new_row = pd.DataFrame(new_row_data)
+        new_df = new_df.append(new_row)
+    return new_df
 
 
 def compare_hlp_mcts():
@@ -270,43 +179,44 @@ def compare_hlp_mcts():
     method_strings = [
         "ours, w/ alt",
         "ours, w/o alt",
-        "ours, chck evry",
+        "ours, full len",
         "ours, demo",
         "mcts",
     ]
     experiment_strings = {
         # cube on cupboard
         "(a)": {
-            method_strings[0]: "210426_093200",
-            method_strings[1]: "210426_093600",
-            method_strings[2]: "210507_123600",
-            method_strings[4]: "210426_093900",
+            method_strings[0]: "210520_164800",
+            method_strings[1]: "210520_165100",
+            method_strings[2]: "210520_170400",
+            method_strings[3]: "210521_151500",
+            method_strings[4]: "210521_150300",
         },
         # box on shelf
-        "(b)": {
-            method_strings[0]: "210426_103100",
-            method_strings[1]: "210426_110600",
-            method_strings[2]: "210507_133700",
-            method_strings[4]: "210426_113200",
-        },
-        # cube in container (w/lid)
-        "(c1)": {
-            method_strings[0]: "210423_181300",
-            method_strings[1]: "210426_075600",
-            method_strings[2]: "210507_145600",
-            method_strings[3]: "210427_142300",
-            method_strings[4]: "210426_082000",
-        },
-        # duck in container (knowledge from (c1), same container)
-        "(c2)": {method_strings[2]: "210507_181100"},
-        # cube from container to container (w/lids)
-        "(d)": {
-            method_strings[0]: "210427_130200",
-            method_strings[1]: "210427_141400",
-            method_strings[2]: "210507_161200",
-            method_strings[3]: "210427_101600",
-            method_strings[4]: "210426_190200",
-        },
+        # "(b)": {
+        #     method_strings[0]: "210426_103100",
+        #     method_strings[1]: "210426_110600",
+        #     method_strings[2]: "210507_133700",
+        #     method_strings[4]: "210426_113200",
+        # },
+        # # cube in container (w/lid)
+        # "(c1)": {
+        #     method_strings[0]: "210423_181300",
+        #     method_strings[1]: "210426_075600",
+        #     method_strings[2]: "210507_145600",
+        #     method_strings[3]: "210427_142300",
+        #     method_strings[4]: "210426_082000",
+        # },
+        # # duck in container (knowledge from (c1), same container)
+        # "(c2)": {method_strings[2]: "210507_181100"},
+        # # cube from container to container (w/lids)
+        # "(d)": {
+        #     method_strings[0]: "210427_130200",
+        #     method_strings[1]: "210427_141400",
+        #     method_strings[2]: "210507_161200",
+        #     method_strings[3]: "210427_101600",
+        #     method_strings[4]: "210426_190200",
+        # },
     }
     plot_data = pd.DataFrame(columns=["experiment", "method", "total_time"])
     table_combined_str = ""
@@ -314,47 +224,43 @@ def compare_hlp_mcts():
     table_mcts_str = ""
     funcs = [np.median, np.mean, np.std]
     counts = dict()
-    for experiment_id, methods in experiment_strings.items():
+    for experiment_label, methods in experiment_strings.items():
         table_data = dict()
         for method in method_strings:
-            table_data[method] = dict.fromkeys(
-                ["success_cnt", "timeout_cnt", "summary"], None
-            )
+            table_data[method] = {
+                key: None for key in ["success_cnt", "timeout_cnt", "total_times"]
+            }
             if method not in methods:
                 continue
-            experiment_string = methods[method]
+            experiment_id = methods[method]
 
             if "ours" in method:
-                experiment_success_label = ["found_plan"]
-                summary, success_cnt, timeout_cnt = summarize_experiment(
-                    basedir, experiment_string, experiment_success_label
+                new_data = summarize_experiment(
+                    basedir, experiment_id, method, experiment_label
                 )
             else:
                 assert "mcts" in method
-                experiment_success_label = ["success"]
-                summary, success_cnt, timeout_cnt = summarize_mcts_experiment(
-                    basedir, experiment_string, experiment_success_label
+                new_data = summarize_mcts_experiment(
+                    basedir, experiment_id, method, experiment_label
                 )
 
+            if len(new_data) == 0:
+                continue
+
             # Plot data
-            new_rows = [
-                [experiment_id, method, summary["time_total"][sum_idx]]
-                for sum_idx in range(success_cnt)
-            ]
-            new_rows = pd.DataFrame(
-                new_rows, columns=["experiment", "method", "total_time"]
-            )
-            plot_data = plot_data.append(new_rows)
+            plot_data = plot_data.append(new_data)
 
             # Table data
-            table_data[method]["success_cnt"] = success_cnt
-            table_data[method]["timeout_cnt"] = timeout_cnt
-            table_data[method]["summary"] = summary
+            table_data[method]["success_cnt"] = new_data.success.value_counts()[True]
+            table_data[method]["timeout_cnt"] = (
+                len(new_data) - table_data[method]["success_cnt"]
+            )
+            table_data[method]["total_times"] = new_data.total_time.to_numpy()
 
-        counts[experiment_id] = table_data
+        counts[experiment_label] = table_data
 
         # Combined table
-        table_combined_str += f"\\multirow{{4}}{{*}}{{{experiment_id}}} & \\multicolumn{{2}}{{c|}}{{Success count [-]}} "
+        table_combined_str += f"\\multirow{{4}}{{*}}{{{experiment_label}}} & \\multicolumn{{2}}{{c|}}{{Success count [-]}} "
         for method in method_strings:
             if table_data[method]["success_cnt"] is None:
                 table_combined_str += "& "
@@ -367,7 +273,7 @@ def compare_hlp_mcts():
             f"& & $\\sigma$ ",
         ]
         starts_individual = [
-            f"\\multirow{{3}}{{*}}{{{experiment_id}}} & $m$ ",
+            f"\\multirow{{3}}{{*}}{{{experiment_label}}} & $m$ ",
             f"& $\\mu$ ",
             f"& $\\sigma$ ",
         ]
@@ -380,7 +286,7 @@ def compare_hlp_mcts():
                 ):
                     table_combined_str += "& "
                 else:
-                    table_combined_str += f" & \\num{{{number_formatter(funcs[j](table_data[method]['summary']['time_total']))}}} "
+                    table_combined_str += f" & \\num{{{number_formatter(funcs[j](table_data[method]['total_times']))}}} "
             table_combined_str += "\\\\\n"
 
             # table_ours_str += starts_individual[j]
@@ -410,7 +316,7 @@ def compare_hlp_mcts():
     for i in range(len(experiment_strings)):
         for j in range(len(method_strings)):
             pos_x = i + label_offsets[j]
-            pos_y = 790
+            pos_y = 890
             tmp = list(experiment_strings.keys())
             tmt_cnt = counts[tmp[i]][method_strings[j]]["timeout_cnt"]
             label_text = f"{tmt_cnt}" if tmt_cnt is not None else ""
@@ -430,7 +336,7 @@ def compare_hlp_mcts():
     )
     vline_pos = np.arange(0.5, len(experiment_strings) - 0.5, 1.0)
     plt.vlines(vline_pos, ymin=0, ymax=830, colors="gray", linestyles="dashed")
-    plt.ylim([-20, 850])
+    plt.ylim([-20, 950])
     plt.xlim([-0.5, len(experiment_strings) - 1 + 0.5])
     plt.show()
 
