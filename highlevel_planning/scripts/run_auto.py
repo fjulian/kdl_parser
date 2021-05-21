@@ -1,10 +1,11 @@
 import numpy as np
 import os
 import atexit
+import ast
 from datetime import datetime
 
 # Simulation
-from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
+# from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
 from highlevel_planning_py.sim.scene_planning_2 import ScenePlanning2
 
 # Skills
@@ -64,7 +65,11 @@ def main():
     objects, robot_mdl = run_util.restore_pybullet_sim(savedir, args)
 
     # Load config file
-    cfg = ConfigYaml(os.path.join(SRCROOT, "config", "main.yaml"))
+    if len(args.config_file_path) == 0:
+        config_file_path = os.path.join(SRCROOT, "config", "main.yaml")
+    else:
+        config_file_path = args.config_file_path
+    cfg = ConfigYaml(config_file_path)
 
     # Populate simulation
     scene, world = run_util.setup_pybullet_world(
@@ -95,7 +100,7 @@ def main():
     # goals = [("in-hand", True, ("duck", "robot1"))]
     # goals = [("at", True, ("container1", "robot1"))]
     # goals = [("at", True, ("cupboard", "robot1"))]
-    goals = [("on", True, ("cupboard", "cube1"))]
+    # goals = [("on", True, ("cupboard", "cube1"))]
     # goals = [("on", True, ("cupboard", "duck"))]
     # goals = [
     #     ("on", True, ("cupboard", "cube1")),
@@ -109,11 +114,18 @@ def main():
     # goals = [("inside", True, ("container1", "duck"))]
     # goals = [("inside", True, ("shelf", "tall_box"))]
     # goals = [("inside", True, ("container2", "cube2"))]
+    goals = ast.literal_eval(cfg.getparam(["user_input", "goals"]))
 
     # Define a demonstration to guide exploration
-    demo_sequence, demo_parameters = None, None
     # demo_sequence = ["place", "place"]
     # demo_parameters = [{"obj": "lid2"}, {"obj": "cube1"}]
+    # demo_sequence = ["place"]
+    # demo_parameters = [{"obj": "cube1"}]
+    demo_sequence = ast.literal_eval(cfg.getparam(["user_input", "demo_sequence"]))
+    demo_parameters = ast.literal_eval(cfg.getparam(["user_input", "demo_parameters"]))
+    if len(demo_sequence) == 0:
+        print("No demonstration given")
+        demo_sequence, demo_parameters = None, None
 
     # -----------------------------------
 

@@ -2,6 +2,7 @@ import numpy as np
 import os
 import json
 import pickle
+import ast
 from datetime import datetime
 import networkx as nx
 import matplotlib as mpl
@@ -90,7 +91,11 @@ def main():
     objects, robot_mdl = run_util.restore_pybullet_sim(savedir, args)
 
     # Load config file
-    cfg = ConfigYaml(os.path.join(SRCROOT, "config", "main.yaml"))
+    if len(args.config_file_path) == 0:
+        config_file_path = os.path.join(SRCROOT, "config", "main.yaml")
+    else:
+        config_file_path = args.config_file_path
+    cfg = ConfigYaml(config_file_path)
 
     time_now = datetime.now()
     time_string = time_now.strftime("%y%m%d-%H%M%S")
@@ -112,7 +117,7 @@ def main():
     # goals = [("in-hand", True, ("duck", "robot1"))]
     # goals = [("at", True, ("container1", "robot1"))]
     # goals = [("at", True, ("cupboard", "robot1"))]
-    goals = [("on", True, ("cupboard", "cube1"))]
+    # goals = [("on", True, ("cupboard", "cube1"))]
     # goals = [("on", True, ("cupboard", "duck"))]
     # goals = [
     #     ("on", True, ("cupboard", "cube1")),
@@ -126,6 +131,7 @@ def main():
     # goals = [("inside", True, ("container1", "duck"))]
     # goals = [("inside", True, ("shelf", "tall_box"))]
     # goals = [("inside", True, ("container2", "cube2"))]
+    goals = ast.literal_eval(cfg.getparam(["user_input", "goals"]))
 
     # -----------------------------------
 
@@ -149,7 +155,7 @@ def main():
         goal_objects,
         scene.objects,
         robot.model.uid,
-        distance_limit=0.1,  # TODO move magic number to parameters
+        distance_limit=cfg.getparam(["mcts", "closeby_objects_distance_threshold"]),
     )
     relevant_objects = goal_objects + closeby_objects
     action_list = [act for act in kb.actions if act not in kb.meta_actions]
@@ -165,7 +171,6 @@ def main():
         mcts_state, action_list, graph, relevant_objects=relevant_objects
     )
     mcts_search = mcts.HLPTreeSearch(mcts_root_node, xplorer, cfg)
-    # atexit.register(mcts_exit_handler, node=mcts_root_node, time_string=time_string)
 
     # ---------------------------------------------------------------
 

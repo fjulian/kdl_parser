@@ -1,3 +1,7 @@
+user_input:
+  goals: '[("on", True, ("cupboard", "cube1"))]'
+  demo_sequence: '[]'
+  demo_parameters: '[]'
 predicates:
   at:
     max_distance: 1.0
@@ -8,8 +12,8 @@ explorer:
   time_proportion_demo: 0.8
   time_proportion_prepend: 0.8
   time_proportion_generalize: 0.8
-  alternating_sequence_length: true
-  min_sequence_length: 1
+  alternating_sequence_length: false
+  min_sequence_length: 4
   max_sequence_length: 4
   max_failed_samples: 50
   bounding_box_inflation_length: 0.1
@@ -23,3 +27,4 @@ grasping:
 mcts:
   search_budget_sec: 900
   max_depth: 16
+  closeby_objects_distance_threshold: 0.1
