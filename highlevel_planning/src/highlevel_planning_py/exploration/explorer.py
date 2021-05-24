@@ -640,16 +640,17 @@ class Explorer:
                 fixed_params = given_params
 
             try:
-                params, params_tuple = self._sample_parameters(
+                params, params_tuple, contains_position_parameter = self._sample_parameters(
                     seq, fixed_params, relevant_objects
                 )
             except NameError:
                 continue
-            sequence_tuple = (tuple(seq), tuple(params_tuple))
-            if sequence_tuple in sequences_tried:
-                sampling_timers["sampling"][sequence_length] += time.time() - tic
-                continue
-            sequences_tried.add(sequence_tuple)
+            if not contains_position_parameter:
+                sequence_tuple = (tuple(seq), tuple(params_tuple))
+                if sequence_tuple in sequences_tried:
+                    sampling_timers["sampling"][sequence_length] += time.time() - tic
+                    continue
+                sequences_tried.add(sequence_tuple)
             sampling_timers["sampling"][sequence_length] += time.time() - tic
 
             # Fill in the gaps of the sequence to make it feasible
@@ -700,6 +701,8 @@ class Explorer:
         types_by_parent = logic_tools.invert_dict(self.knowledge_base.types)
         objects_of_interest_by_type = logic_tools.invert_dict(objects_of_interest_dict)
 
+        contains_position_parameter = False
+
         for idx_action, action in enumerate(sequence):
             parameter_samples.append(dict())
             parameters_current_action = list()
@@ -717,6 +720,7 @@ class Explorer:
                         obj_sample = self.knowledge_base.add_temp_object(
                             object_type=obj_type, object_value=position
                         )
+                        contains_position_parameter = True
                     elif self.knowledge_base.type_x_child_of_y(obj_type, "grasp_id"):
                         object_name = None
                         if "obj" in parameter_samples[idx_action]:
@@ -786,7 +790,7 @@ class Explorer:
             parameter_samples_tuples.append(tuple(parameters_current_action))
         assert len(parameter_samples) == len(sequence)
         assert len(parameter_samples_tuples) == len(sequence)
-        return parameter_samples, parameter_samples_tuples
+        return parameter_samples, parameter_samples_tuples, contains_position_parameter
 
     def sample_position(self, relevant_objects):
         # Choose one goal object next to which to sample

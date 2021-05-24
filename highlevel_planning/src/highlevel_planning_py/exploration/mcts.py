@@ -267,7 +267,7 @@ class HLPTreeNode:
 
     def _sample_step(self, explorer):
         sequence = explorer._sample_sequence(length=1)
-        parameters, _ = explorer._sample_parameters(
+        parameters, _, _ = explorer._sample_parameters(
             sequence, relevant_objects=self.relevant_objects
         )
         sequence_tuple = (tuple(sequence), tuple(parameters))

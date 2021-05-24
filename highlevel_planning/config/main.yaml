@@ -1,7 +1,7 @@
 user_input:
-  goals: '[("on", True, ("cupboard", "cube1"))]'
-  demo_sequence: '[]'
-  demo_parameters: '[]'
+  goals: '[("inside", True, ("shelf", "tall_box"))]'
+  demo_sequence: '["place"]'
+  demo_parameters: '[{"obj": "tall_box"}]'
 predicates:
   at:
     max_distance: 1.0
@@ -13,7 +13,7 @@ explorer:
   time_proportion_prepend: 0.8
   time_proportion_generalize: 0.8
   alternating_sequence_length: false
-  min_sequence_length: 4
+  min_sequence_length: 1
   max_sequence_length: 4
   max_failed_samples: 50
   bounding_box_inflation_length: 0.1

@@ -55,17 +55,18 @@ def mcts_run(individual_index, config_file):
 
 
 class ExperimentSpec:
-    def __init__(self, label: str, method_type: str, config_file: str):
+    def __init__(self, label: str, method_type: str, config_file: str, start_idx=0):
         assert method_type in ["ours", "mcts"]
         self.method = method_type
         self.config_file = config_file
         self.label = label
+        self.start_idx = start_idx
 
 
 def single_experiment(spec: ExperimentSpec):
     stdout_file = os.path.join(DATA_DIR, "reports", "repeated_stdout.txt")
     num_done, num_started = 0, 0
-    file_idx = 0
+    file_idx = spec.start_idx
     currently_running = 0
     open_processes = list()
     tic = time.time()
