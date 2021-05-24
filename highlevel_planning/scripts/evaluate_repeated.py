@@ -193,20 +193,21 @@ def compare_hlp_mcts():
             method_strings[4]: "210521_150300",
         },
         # box on shelf
-        # "(b)": {
-        #     method_strings[0]: "210426_103100",
-        #     method_strings[1]: "210426_110600",
-        #     method_strings[2]: "210507_133700",
-        #     method_strings[4]: "210426_113200",
-        # },
+        "(b)": {
+            method_strings[0]: "210521_192344",
+            method_strings[1]: "210521_194355",
+            method_strings[2]: "210521_201857",
+            method_strings[3]: "210524_170708",
+            method_strings[4]: "210524_175907",
+        },
         # # cube in container (w/lid)
-        # "(c1)": {
-        #     method_strings[0]: "210423_181300",
-        #     method_strings[1]: "210426_075600",
-        #     method_strings[2]: "210507_145600",
-        #     method_strings[3]: "210427_142300",
-        #     method_strings[4]: "210426_082000",
-        # },
+        "(c1)": {
+            method_strings[0]: "210524_193859",
+            method_strings[1]: "210524_195423",
+            method_strings[2]: "210524_200445",
+            method_strings[3]: "210524_230812",
+            method_strings[4]: "210524_213307",
+        },
         # # duck in container (knowledge from (c1), same container)
         # "(c2)": {method_strings[2]: "210507_181100"},
         # # cube from container to container (w/lids)

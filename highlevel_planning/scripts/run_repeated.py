@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import time
 from datetime import datetime
+from collections import OrderedDict
 
 
 DATA_DIR = os.path.join(os.path.expanduser("~"), "Data", "highlevel_planning")
@@ -142,8 +143,9 @@ if __name__ == "__main__":
         ExperimentSpec("[o2]", "ours", os.path.join(in_dir, "config_o2.yaml")),
         ExperimentSpec("[o3]", "ours", os.path.join(in_dir, "config_o3.yaml")),
         ExperimentSpec("[o4]", "ours", os.path.join(in_dir, "config_o4.yaml")),
-        ExperimentSpec("[m1]", "ours", os.path.join(in_dir, "config_m1.yaml")),
+        ExperimentSpec("[m1]", "mcts", os.path.join(in_dir, "config_m1.yaml")),
     ]
+    summary = OrderedDict()
     for spec in experiments:
         # Assert the individual output dirs are empty
         assert len(os.listdir(report_dir)) == 0
@@ -180,5 +182,11 @@ if __name__ == "__main__":
         print(
             f"Moved all result files for method {spec.label} to directory {out_dir_this_run}."
         )
+        summary[spec.label] = out_dir_this_run
 
         print("==================================")
+
+    print("Names of the output directories:")
+    for label in summary:
+        print(f"{label}: {summary[label]}")
+    print("Bye :)")
