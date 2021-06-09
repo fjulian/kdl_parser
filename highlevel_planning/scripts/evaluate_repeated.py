@@ -177,11 +177,11 @@ def compare_hlp_mcts():
         "quantitative_experiments",
     )
     method_strings = [
-        "ours, w/ alt",
-        "ours, w/o alt",
-        "ours, full len",
-        "ours, demo",
-        "mcts",
+        "ours, alternating",
+        "ours, no alternating",
+        "ours, full length",
+        "ours, from demonstration",
+        "MCTS",
     ]
     experiment_strings = {
         # cube on cupboard
@@ -200,7 +200,7 @@ def compare_hlp_mcts():
             method_strings[3]: "210524_170708",
             method_strings[4]: "210524_175907",
         },
-        # # cube in container (w/lid)
+        # cube in container (w/lid)
         "(c1)": {
             method_strings[0]: "210524_193859",
             method_strings[1]: "210524_195423",
@@ -208,16 +208,36 @@ def compare_hlp_mcts():
             method_strings[3]: "210524_230812",
             method_strings[4]: "210524_213307",
         },
-        # # duck in container (knowledge from (c1), same container)
-        # "(c2)": {method_strings[2]: "210507_181100"},
-        # # cube from container to container (w/lids)
-        # "(d)": {
-        #     method_strings[0]: "210427_130200",
-        #     method_strings[1]: "210427_141400",
-        #     method_strings[2]: "210507_161200",
-        #     method_strings[3]: "210427_101600",
-        #     method_strings[4]: "210426_190200",
-        # },
+        # duck in container (knowledge from (c1), same container)
+        "(c2)": {
+            method_strings[0]: "210525_075055",
+            method_strings[1]: "210525_075841",
+            method_strings[2]: "210525_081117",
+            method_strings[3]: "210525_081557",
+            method_strings[4]: "210525_084416",
+        },
+        "(c3)": {
+            method_strings[0]: "210525_121109",
+            method_strings[1]: "210525_121706",
+            method_strings[2]: "210525_122325",
+            method_strings[3]: "210525_122840",
+            method_strings[4]: "210525_125842",
+        },
+        "(c4)": {
+            method_strings[0]: "210525_140616",
+            method_strings[1]: "210525_141823",
+            method_strings[2]: "210525_142756",
+            method_strings[3]: "210525_143623",
+            method_strings[4]: "210525_150115",
+        },
+        # cube from container to container (w/lids)
+        "(d)": {
+            method_strings[0]: "210525_000737",
+            method_strings[1]: "210525_005854",
+            method_strings[2]: "210525_013438",
+            method_strings[3]: "210525_015642",
+            method_strings[4]: "210525_025227",
+        },
     }
     plot_data = pd.DataFrame(columns=["experiment", "method", "total_time"])
     table_combined_str = ""
@@ -240,7 +260,7 @@ def compare_hlp_mcts():
                     basedir, experiment_id, method, experiment_label
                 )
             else:
-                assert "mcts" in method
+                assert "mcts" in method.lower()
                 new_data = summarize_mcts_experiment(
                     basedir, experiment_id, method, experiment_label
                 )
@@ -296,14 +316,14 @@ def compare_hlp_mcts():
     print(table_combined_str)
 
     # Plot timing data
-    fig1, ax1 = plt.subplots(figsize=(8, 4))
+    fig1, ax1 = plt.subplots(figsize=(12, 3.5))
     color_palette = ["#007F5F", "#55A630", "#AACC00", "#D4D700", "#ff006e"]
     sns.boxplot(
         x="experiment",
         y="total_time",
         hue="method",
         hue_order=method_strings,
-        data=plot_data,
+        data=plot_data[plot_data["success"] == True],
         dodge=True,
         palette=color_palette,
         ax=ax1,
@@ -317,7 +337,7 @@ def compare_hlp_mcts():
     for i in range(len(experiment_strings)):
         for j in range(len(method_strings)):
             pos_x = i + label_offsets[j]
-            pos_y = 890
+            pos_y = 960
             tmp = list(experiment_strings.keys())
             tmt_cnt = counts[tmp[i]][method_strings[j]]["timeout_cnt"]
             label_text = f"{tmt_cnt}" if tmt_cnt is not None else ""
@@ -336,9 +356,11 @@ def compare_hlp_mcts():
         borderaxespad=0.0,
     )
     vline_pos = np.arange(0.5, len(experiment_strings) - 0.5, 1.0)
-    plt.vlines(vline_pos, ymin=0, ymax=830, colors="gray", linestyles="dashed")
-    plt.ylim([-20, 950])
+    plt.vlines(vline_pos, ymin=0, ymax=900, colors="gray", linestyles="dashed")
+    plt.ylim([-20, 1030])
     plt.xlim([-0.5, len(experiment_strings) - 1 + 0.5])
+    plt.xlabel("Experiment ID")
+    plt.ylabel("Time until result [s]")
     plt.show()
 
     # Plot success data
@@ -347,7 +369,7 @@ def compare_hlp_mcts():
         x="experiment",
         hue="method",
         hue_order=method_strings,
-        data=plot_data,
+        data=plot_data[plot_data["success"] == True],
         palette=color_palette,
         ax=ax2,
     )
@@ -360,9 +382,37 @@ def compare_hlp_mcts():
     )
     plt.show()
 
+    # Plot how time is spent
+    grouped_data = plot_data.groupby(["experiment", "method"]).mean()
+    grouped_data.reset_index(inplace=True)
+    fig3, ax3 = plt.subplots(figsize=(8, 4))
+    sns.set_color_codes("pastel")
+    sns.barplot(
+        x="experiment",
+        hue="method",
+        y="total_time",
+        # palette=color_palette,
+        color="b",
+        hue_order=method_strings,
+        data=grouped_data,
+        ax=ax3,
+    )
+    sns.set_color_codes("muted")
+    sns.barplot(
+        x="experiment",
+        hue="method",
+        y="t_comp_simulating",
+        # palette=color_palette,
+        color="b",
+        hue_order=method_strings,
+        data=grouped_data,
+        ax=ax3,
+    )
+    plt.show()
+
     # Save figures
-    # time_now = datetime.now()
-    # time_string = time_now.strftime("%y%m%d-%H%M%S")
+    time_now = datetime.now()
+    time_string = time_now.strftime("%y%m%d-%H%M%S")
     # fig1.savefig(
     #     os.path.join(basedir, "Output", f"{time_string}_boxplot.pdf"),
     #     bbox_extra_artists=(lgd1,),
@@ -371,6 +421,11 @@ def compare_hlp_mcts():
     # fig2.savefig(
     #     os.path.join(basedir, "Output", f"{time_string}_barplot.pdf"),
     #     bbox_extra_artists=(lgd2,),
+    #     bbox_inches="tight",
+    # )
+    # fig3.savefig(
+    #     os.path.join(basedir, "Output", f"{time_string}_timings.pdf"),
+    #     # bbox_extra_artists=(lgd2,),
     #     bbox_inches="tight",
     # )
 

@@ -10,7 +10,7 @@ DATA_DIR = os.path.join(os.path.expanduser("~"), "Data", "highlevel_planning")
 SRCROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 NUM_REPETITIONS = 20
-MAX_SIMULTANEOUSLY = 6
+MAX_SIMULTANEOUSLY = 5
 
 
 def hlp_run(individual_index, config_file):
@@ -188,5 +188,5 @@ if __name__ == "__main__":
 
     print("Names of the output directories:")
     for label in summary:
-        print(f"{label}: {summary[label]}")
+        print(f"{label}: {summary[label].split('/')[-1]}")
     print("Bye :)")

@@ -1,7 +1,7 @@
 user_input:
-  goals: '[("inside", True, ("shelf", "tall_box"))]'
-  demo_sequence: '["place"]'
-  demo_parameters: '[{"obj": "tall_box"}]'
+  goals: '[("inside", True, ("container2", "duck"))]'
+  demo_sequence: '[]'
+  demo_parameters: '[]'
 predicates:
   at:
     max_distance: 1.0

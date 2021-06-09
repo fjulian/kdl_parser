@@ -11,6 +11,7 @@ from highlevel_planning_py.tools import run_util
 
 import pybullet as p
 import numpy as np
+import ast
 from scipy.spatial.transform import Rotation as R
 import os
 from datetime import datetime
@@ -194,10 +195,12 @@ def main():
     # Save state
     run_util.save_pybullet_sim(args, savedir, scene, robot)
 
+    goals = ast.literal_eval(cfg.getparam(["user_input", "goals"]))
+
     time_now = datetime.now()
     time_string = time_now.strftime("%y%m%d-%H%M%S")
     kb, preds = run_util.setup_knowledge_base(
-        PATHS, scene, robot, cfg, time_string, args.domain_file
+        PATHS, scene, robot, cfg, time_string, goals, args.domain_file
     )
 
     # Set up skills
