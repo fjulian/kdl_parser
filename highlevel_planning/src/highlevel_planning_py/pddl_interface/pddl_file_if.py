@@ -31,14 +31,20 @@ def type_x_child_of_y(type_dict, x, y):
     return type_x_child_of_y(type_dict, parent_type, y)
 
 
-def _preprocess_knowledge(actions, objects, types, parameterizations, joker_objects):
+def _preprocess_knowledge(
+    actions,
+    objects,
+    types,
+    parameterizations,
+    joker_objects,
+    specific_generalized_objects,
+):
     actions_processed = dict()
     types_processed = deepcopy(types)
     objects_processed = deepcopy(objects)
 
     for action_name in actions:
         action_descr = actions[action_name]
-        param_type_dict = {param[0]: param[1] for param in action_descr["params"]}
         if action_name in parameterizations:
             action_suffix = 1
             type_suffix = 1
@@ -50,6 +56,9 @@ def _preprocess_knowledge(actions, objects, types, parameterizations, joker_obje
                     add_type(types_processed, new_type, object_param[1])
                     add_object(objects_processed, object_param[2], new_type)
                     new_param_types[object_param[0]] = new_type
+                    if object_param[1] in specific_generalized_objects:
+                        for gen_obj in specific_generalized_objects[object_param[1]]:
+                            add_object(objects_processed, gen_obj, new_type)
                 for hidden_param_name in parameterizations[action_name][
                     object_param_set
                 ]:
@@ -107,14 +116,23 @@ class PDDLFileInterface:
     # ----- Loading and saving PDDL files --------------------------------------
 
     def write_pddl(
-        self, knowledge_base, objects, initial_predicates, goals, joker_objects=None
+        self,
+        knowledge_base,
+        objects,
+        initial_predicates,
+        goals,
+        joker_objects=None,
+        specific_generalized_objects=None,
     ):
+        if specific_generalized_objects is None:
+            specific_generalized_objects = dict()
         (actions_processed, types_processed, object_processed) = _preprocess_knowledge(
             knowledge_base.actions,
             objects,
             knowledge_base.types,
             knowledge_base.parameterizations,
             joker_objects,
+            specific_generalized_objects,
         )
 
         # Write files

@@ -259,13 +259,46 @@ class Explorer:
     ):
         print(f"Exploring generalizing action (budget: {time_budget}) ...")
 
+        if len(self.knowledge_base.goals) > 1:
+            # TODO change this
+            print("Generalization cannot deal with more than 1 goal right now.")
+            return False
+
         # Check if an action with a similar effect already exists
         self.knowledge_base.clear_temp()
-        relevant_objects = special_objects["goal"] + special_objects["closeby"]
-        for obj in relevant_objects:
-            self.knowledge_base.generalize_temp_object(obj)
-        plan = self.knowledge_base.solve_temp(self.knowledge_base.goals)
-        if not plan:
+        plan = False
+        goal = self.knowledge_base.goals[0]
+        for act, act_spec in self.knowledge_base.actions.items():
+            for effect in act_spec["effects"]:
+                if goal[0] == effect[0] and goal[1] == effect[1]:
+                    # TODO count how many parameter assignments already fit the type
+                    # Prioritize the generalization attempt accordingly
+
+                    # Give the goal parameter the new types
+                    param_dict = {param[0]: param[1] for param in act_spec["params"]}
+                    generalized_objects = dict()
+                    for goal_param_i, goal_param in enumerate(goal[2]):
+                        param_name = effect[2][goal_param_i]
+                        new_type = param_dict[param_name]
+                        self.knowledge_base.add_temp_object(
+                            new_type, object_name=goal_param
+                        )
+                        if new_type not in generalized_objects:
+                            generalized_objects[new_type] = set()
+                        generalized_objects[new_type].add(goal_param)
+
+                    plan = self.knowledge_base.solve_temp(
+                        self.knowledge_base.goals,
+                        specific_generalized_objects=generalized_objects,
+                    )
+                    if plan is not False:
+                        # This only tests the first match.
+                        # TODO make this compatible with going through all possible matches
+                        break
+            if plan is not False:
+                break
+
+        if plan is False:
             return False
         sequence, parameters = plan
 

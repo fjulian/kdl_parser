@@ -458,12 +458,14 @@ class KnowledgeBase:
         objects = deepcopy(self._temp_objects)
         for obj in self.objects:
             if obj in objects:
-                objects[obj] = list(dict.fromkeys(objects[obj] + self.objects[obj]))
+                objects[obj] = list(dict.fromkeys(self.objects[obj] + objects[obj]))
             else:
                 objects[obj] = self.objects[obj]
         return objects
 
-    def solve_temp(self, goals, initial_predicates=None):
+    def solve_temp(
+        self, goals, initial_predicates=None, specific_generalized_objects=None
+    ):
         objects = self.joined_objects()
         if initial_predicates is None:
             initial_predicates = self.initial_state_predicates
@@ -475,6 +477,7 @@ class KnowledgeBase:
             ),
             goals,
             self._temp_generalized_objects,
+            specific_generalized_objects,
         )
         return planner_interface.pddl_planner(
             self.pddl_if_temp.domain_file_pddl,
