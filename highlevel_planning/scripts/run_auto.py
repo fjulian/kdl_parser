@@ -175,9 +175,10 @@ def main():
                 break
             else:
                 print("Failure during plan execution.")
-                if explored:
-                    print("Already explored once, aborting.")
-                    break
+
+        if explored:
+            print("Already explored once, aborting.")
+            break
 
         # Decide what happens next
         if not args.noninteractive:

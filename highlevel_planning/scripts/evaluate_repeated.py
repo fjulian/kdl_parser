@@ -3,6 +3,7 @@ import os
 from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 from datetime import datetime
 import pandas as pd
 import seaborn as sns
@@ -48,7 +49,6 @@ def summarize_experiment(base_dir, file_name, method_string, experiment_type):
         with open(os.path.join(raw_data_dir, files[i]), "rb") as f:
             data = pickle.load(f)
         metrics = data["metrics"]
-        assert "explore_1" not in metrics
         metrics = metrics["explore_0"]["counters"]
 
         successes = list()
@@ -231,12 +231,20 @@ def compare_hlp_mcts():
             method_strings[4]: "210525_150115",
         },
         # cube from container to container (w/lids)
-        "(d)": {
+        "(d1)": {
             method_strings[0]: "210525_000737",
             method_strings[1]: "210525_005854",
             method_strings[2]: "210525_013438",
             method_strings[3]: "210525_015642",
             method_strings[4]: "210525_025227",
+        },
+        # duck from container to container (w/lids)
+        "(d2)": {
+            method_strings[0]: "210609_163459",
+            method_strings[1]: "210609_164141",
+            method_strings[2]: "210609_165015",
+            method_strings[3]: "210609_175538",
+            method_strings[4]: "210609_185741",
         },
     }
     plot_data = pd.DataFrame(columns=["experiment", "method", "total_time"])
@@ -316,98 +324,149 @@ def compare_hlp_mcts():
     print(table_combined_str)
 
     # Plot timing data
-    fig1, ax1 = plt.subplots(figsize=(12, 3.5))
-    color_palette = ["#007F5F", "#55A630", "#AACC00", "#D4D700", "#ff006e"]
-    sns.boxplot(
-        x="experiment",
-        y="total_time",
-        hue="method",
-        hue_order=method_strings,
-        data=plot_data[plot_data["success"] == True],
-        dodge=True,
-        palette=color_palette,
-        ax=ax1,
-    )
-    label_dist = 0.33
-    label_offsets = np.arange(
-        -label_dist,
-        label_dist + 2 * label_dist / (len(method_strings) - 1),
-        2 * label_dist / (len(method_strings) - 1),
-    )
-    for i in range(len(experiment_strings)):
-        for j in range(len(method_strings)):
-            pos_x = i + label_offsets[j]
-            pos_y = 960
-            tmp = list(experiment_strings.keys())
-            tmt_cnt = counts[tmp[i]][method_strings[j]]["timeout_cnt"]
-            label_text = f"{tmt_cnt}" if tmt_cnt is not None else ""
-            plt.text(
-                pos_x,
-                pos_y,
-                label_text,
-                horizontalalignment="center",
-                color=color_palette[j],
-            )
-    lgd1 = plt.legend(
-        bbox_to_anchor=(0.0, 1.02, 1.0, 0.102),
-        loc="lower left",
-        ncol=3,
-        mode="expand",
-        borderaxespad=0.0,
-    )
-    vline_pos = np.arange(0.5, len(experiment_strings) - 0.5, 1.0)
-    plt.vlines(vline_pos, ymin=0, ymax=900, colors="gray", linestyles="dashed")
-    plt.ylim([-20, 1030])
-    plt.xlim([-0.5, len(experiment_strings) - 1 + 0.5])
-    plt.xlabel("Experiment ID")
-    plt.ylabel("Time until result [s]")
-    plt.show()
+    plot_timing = True
+    color_palette = ["#007F5F", "#55A630", "#AACC00", "#D4D700", "#FF006E"]
+    color_palette_lighter = ["#21FFC8", "#98D87A", "#E1FF4E", "#FCFF53", "#FF6BAB"]
+    if plot_timing:
+        fig1, ax1 = plt.subplots(figsize=(12, 3.5))
+        sns.boxplot(
+            x="experiment",
+            y="total_time",
+            hue="method",
+            hue_order=method_strings,
+            data=plot_data[plot_data["success"] == True],
+            dodge=True,
+            palette=color_palette,
+            ax=ax1,
+        )
+        label_dist = 0.33
+        label_offsets = np.arange(
+            -label_dist,
+            label_dist + 2 * label_dist / (len(method_strings) - 1),
+            2 * label_dist / (len(method_strings) - 1),
+        )
+        for i in range(len(experiment_strings)):
+            for j in range(len(method_strings)):
+                pos_x = i + label_offsets[j]
+                pos_y = 960
+                tmp = list(experiment_strings.keys())
+                tmt_cnt = counts[tmp[i]][method_strings[j]]["timeout_cnt"]
+                label_text = f"{tmt_cnt}" if tmt_cnt is not None else ""
+                plt.text(
+                    pos_x,
+                    pos_y,
+                    label_text,
+                    horizontalalignment="center",
+                    color=color_palette[j],
+                )
+        lgd1 = plt.legend(
+            bbox_to_anchor=(0.0, 1.02, 1.0, 0.102),
+            loc="lower left",
+            ncol=3,
+            mode="expand",
+            borderaxespad=0.0,
+        )
+        vline_pos = np.arange(0.5, len(experiment_strings) - 0.5, 1.0)
+        plt.vlines(vline_pos, ymin=0, ymax=900, colors="gray", linestyles="dashed")
+        plt.ylim([-20, 1030])
+        plt.xlim([-0.5, len(experiment_strings) - 1 + 0.5])
+        plt.xlabel("Experiment ID")
+        plt.ylabel("Time until result [s]")
+        plt.show()
 
     # Plot success data
-    fig2, ax2 = plt.subplots(figsize=(8, 4))
-    sns.countplot(
+    plot_success = False
+    if plot_success:
+        fig2, ax2 = plt.subplots(figsize=(8, 4))
+        sns.countplot(
+            x="experiment",
+            hue="method",
+            hue_order=method_strings,
+            data=plot_data[plot_data["success"] == True],
+            palette=color_palette,
+            ax=ax2,
+        )
+        lgd2 = plt.legend(
+            bbox_to_anchor=(0.0, 1.02, 1.0, 0.102),
+            loc="lower left",
+            ncol=3,
+            mode="expand",
+            borderaxespad=0.0,
+        )
+        plt.show()
+
+    # Plot how time is spent
+    grouped_data = (
+        plot_data[plot_data["success"] == True].groupby(["experiment", "method"]).mean()
+    )
+    grouped_data.reset_index(inplace=True)
+
+    grouped_data["t_comp_all_wo_sim"] = (
+        grouped_data["t_comp_sampling"]
+        + grouped_data["t_comp_domain_extension"]
+        + grouped_data["t_comp_other"]
+    )
+    grouped_data["t_comp_percent_simulating"] = (
+        grouped_data["t_comp_simulating"]
+        / (grouped_data["t_comp_all_wo_sim"] + grouped_data["t_comp_simulating"])
+        * 100
+    )
+    grouped_data["t_comp_percent_all_wo_sim"] = (
+        grouped_data["t_comp_all_wo_sim"]
+        / (grouped_data["t_comp_all_wo_sim"] + grouped_data["t_comp_simulating"])
+        * 100
+    )
+    grouped_data["t_comp_percent_checksum"] = (
+        grouped_data["t_comp_percent_simulating"]
+        + grouped_data["t_comp_percent_all_wo_sim"]
+    )
+
+    fig3, ax3 = plt.subplots(figsize=(5, 1.5))
+    sns.barplot(
         x="experiment",
         hue="method",
+        y="t_comp_percent_checksum",
+        palette=color_palette_lighter,
+        color="b",
         hue_order=method_strings,
-        data=plot_data[plot_data["success"] == True],
-        palette=color_palette,
-        ax=ax2,
+        data=grouped_data,
+        ax=ax3,
+        hatch="..",
+        alpha=0.99,
     )
-    lgd2 = plt.legend(
+    sns.barplot(
+        x="experiment",
+        hue="method",
+        y="t_comp_percent_simulating",
+        palette=color_palette,
+        color="b",
+        hue_order=method_strings,
+        data=grouped_data,
+        ax=ax3,
+        hatch="--",
+        alpha=0.99,
+    )
+    legend_elements = list()
+    # for i in range(len(method_strings)):
+    #     legend_elements.append(
+    #         Patch(facecolor=color_palette[i], label=method_strings[i])
+    #     )
+    legend_elements.append(
+        Patch(facecolor="white", edgecolor="gray", hatch="--", label="Simulation")
+    )
+    legend_elements.append(
+        Patch(facecolor="white", edgecolor="gray", hatch="..", label="Other")
+    )
+    lgd3 = plt.legend(
+        handles=legend_elements,
         bbox_to_anchor=(0.0, 1.02, 1.0, 0.102),
         loc="lower left",
-        ncol=3,
+        ncol=2,
         mode="expand",
         borderaxespad=0.0,
     )
-    plt.show()
-
-    # Plot how time is spent
-    grouped_data = plot_data.groupby(["experiment", "method"]).mean()
-    grouped_data.reset_index(inplace=True)
-    fig3, ax3 = plt.subplots(figsize=(8, 4))
-    sns.set_color_codes("pastel")
-    sns.barplot(
-        x="experiment",
-        hue="method",
-        y="total_time",
-        # palette=color_palette,
-        color="b",
-        hue_order=method_strings,
-        data=grouped_data,
-        ax=ax3,
-    )
-    sns.set_color_codes("muted")
-    sns.barplot(
-        x="experiment",
-        hue="method",
-        y="t_comp_simulating",
-        # palette=color_palette,
-        color="b",
-        hue_order=method_strings,
-        data=grouped_data,
-        ax=ax3,
-    )
+    plt.xlabel("Experiment ID")
+    plt.ylabel("Relative time [%]")
     plt.show()
 
     # Save figures
@@ -423,11 +482,11 @@ def compare_hlp_mcts():
     #     bbox_extra_artists=(lgd2,),
     #     bbox_inches="tight",
     # )
-    # fig3.savefig(
-    #     os.path.join(basedir, "Output", f"{time_string}_timings.pdf"),
-    #     # bbox_extra_artists=(lgd2,),
-    #     bbox_inches="tight",
-    # )
+    fig3.savefig(
+        os.path.join(basedir, "Output", f"{time_string}_timings.pdf"),
+        bbox_extra_artists=(lgd3,),
+        bbox_inches="tight",
+    )
 
 
 if __name__ == "__main__":
