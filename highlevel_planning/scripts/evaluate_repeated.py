@@ -285,6 +285,9 @@ def compare_hlp_mcts():
                 len(new_data) - table_data[method]["success_cnt"]
             )
             table_data[method]["total_times"] = new_data.total_time.to_numpy()
+            table_data[method]["total_times_success"] = new_data[
+                new_data["success"] == True
+            ].total_time.to_numpy()
 
         counts[experiment_label] = table_data
 
@@ -315,7 +318,7 @@ def compare_hlp_mcts():
                 ):
                     table_combined_str += "& "
                 else:
-                    table_combined_str += f" & \\num{{{number_formatter(funcs[j](table_data[method]['total_times']))}}} "
+                    table_combined_str += f" & \\num{{{number_formatter(funcs[j](table_data[method]['total_times_success']))}}} "
             table_combined_str += "\\\\\n"
 
             # table_ours_str += starts_individual[j]
@@ -325,7 +328,8 @@ def compare_hlp_mcts():
 
     # Plot timing data
     plot_timing = True
-    color_palette = ["#007F5F", "#55A630", "#AACC00", "#D4D700", "#FF006E"]
+    color_palette = ["#007F5F", "#55A630", "#AACC00", "#D4D700", "#FF006E"]  # green
+    # color_palette = ["#9D0208", "#D00000", "#E85D04", "#FFBA08", "#491892"]  # orange
     color_palette_lighter = ["#21FFC8", "#98D87A", "#E1FF4E", "#FCFF53", "#FF6BAB"]
     if plot_timing:
         fig1, ax1 = plt.subplots(figsize=(12, 3.5))
@@ -482,11 +486,19 @@ def compare_hlp_mcts():
     #     bbox_extra_artists=(lgd2,),
     #     bbox_inches="tight",
     # )
-    fig3.savefig(
-        os.path.join(basedir, "Output", f"{time_string}_timings.pdf"),
-        bbox_extra_artists=(lgd3,),
-        bbox_inches="tight",
-    )
+    # fig3.savefig(
+    #     os.path.join(basedir, "Output", f"{time_string}_timings.pdf"),
+    #     bbox_extra_artists=(lgd3,),
+    #     bbox_inches="tight",
+    # )
+
+    # Print some metrics
+    print("============================================")
+    for i in range(len(method_strings)):
+        print(
+            f"{method_strings[i]} success count: {plot_data[plot_data['method'] == method_strings[i]].success.value_counts()[True]}, "
+            f"average time: {np.mean(plot_data[(plot_data['success'] == True) & (plot_data['method'] == method_strings[i])].total_time)}"
+        )
 
 
 if __name__ == "__main__":
