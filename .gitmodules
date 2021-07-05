@@ -4,3 +4,7 @@
 [submodule "submodules/monte-carlo-tree-search"]
 	path = submodules/monte-carlo-tree-search
 	url = git@github.com:int8/monte-carlo-tree-search.git
+[submodule "submodules/kdl_parser"]
+	url = git@github.com:fjulian/kdl_parser.git
+[submodule "submodules/orocos_kinematics_dynamics"]
+	url = git@github.com:fjulian/orocos_kinematics_dynamics.git
