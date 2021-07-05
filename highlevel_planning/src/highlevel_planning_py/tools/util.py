@@ -1,3 +1,4 @@
+import os
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 import pybullet as p
@@ -84,6 +85,13 @@ def get_object_position(object_name, scene_objects, knowledge_base):
         raise ValueError("Invalid object")
 
 
+def dir_levels_up(filepath, num_levels_up):
+    res = filepath
+    for _ in range(num_levels_up):
+        res = os.path.dirname(res)
+    return res
+
+
 class IKError(Exception):
     pass
 
@@ -146,3 +154,23 @@ class ObjectInfo:
         # res &= self.friction_setting == other.friction_setting
         # res &= self.joint_setting == other.joint_setting
         return res
+
+
+class ConstraintSpec:
+    def __init__(
+        self,
+        parent_uid,
+        parent_link_id,
+        child_uid,
+        child_link_id,
+        trafo_pos,
+        trafo_orient,
+    ):
+        self.parent_uid = parent_uid
+        self.parent_link_id = parent_link_id
+        self.child_uid = child_uid
+        self.child_link_id = child_link_id
+        self.trafo_pos = trafo_pos
+        self.trafo_orient = trafo_orient
+
+        self.constrain_id = None

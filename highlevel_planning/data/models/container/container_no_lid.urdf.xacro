@@ -1,7 +1,12 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="container_no_lid">
 
-<xacro:include filename="container_common.xacro"/>
+<xacro:include filename="$(cwd)/common.xacro"/>
+<xacro:property name="wall_thickness" value="0.01"/>
+<xacro:property name="total_height" value="0.1"/>
+<xacro:property name="total_width" value="0.3"/>
+<xacro:property name="total_depth" value="0.2"/>
+<xacro:property name="lid_spacing" value="0.01"/>
 
 <link name="base_link">
   <inertial>

@@ -1,18 +1,30 @@
+user_input:
+  goals: '[("inside", True, ("container2", "duck"))]'
+  demo_sequence: '[]'
+  demo_parameters: '[]'
 predicates:
   at:
     max_distance: 1.0
   on-pred:
-    max_above: 0.05
+    max_above: 0.03
 explorer:
-  max_sample_repetitions: 1
-  max_sequence_length: 2
-  max_samples_per_sequence_length: 100
+  search_budget_sec: 900
+  time_proportion_demo: 0.8
+  time_proportion_prepend: 0.8
+  time_proportion_generalize: 0.8
+  alternating_sequence_length: false
+  min_sequence_length: 1
+  max_sequence_length: 4
   max_failed_samples: 50
-  bounding_box_inflation_length: 0.2
-  action_denylist: ["nav-in-reach", "nav-at"]
+  bounding_box_inflation_length: 0.1
+  action_denylist: ["nav-in-reach", "nav-at", "grasp"]
   predicate_precondition_allowlist: ["inside", "on"]
-  radii: [0.1, 1.5, 10.0]
+  radii: [0.1, 1.0]
 robot_arm:
   max_force_magnitude: 150
 grasping:
   pregrasp_z_offset: 0.15
+mcts:
+  search_budget_sec: 900
+  max_depth: 16
+  closeby_objects_distance_threshold: 0.1

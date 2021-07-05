@@ -2,7 +2,7 @@ import os
 import atexit
 import pickle
 import numpy as np
-import rospy
+from highlevel_planning_py.predicate_learning.rules.base import RulesBase
 
 
 class RuleData:
@@ -21,24 +21,17 @@ class RuleData:
         )  # if the value for a rule is true, the rule was confirmed
 
 
-class RuleDataManager:
+class ManualRules(RulesBase):
     def __init__(self, basedir, feature_manager):
+        RulesBase.__init__(self, basedir)
+
         self.data = dict()
-
-        pred_dir = os.path.join(basedir, "data", "predicates")
-        self.feature_dir = os.path.join(pred_dir, "features")
-        self.rule_dir = os.path.join(pred_dir, "rules")
-        os.makedirs(self.rule_dir, exist_ok=True)
-
         self.pfm = feature_manager
-
         self.open_inquiry = None
 
     def build_rules(self, pred_name: str):
         # Load features
-        feature_file = os.path.join(self.feature_dir, f"{pred_name}.pkl")
-        with open(feature_file, "rb") as f:
-            feature_data, feature_meta_data = pickle.load(f)
+        feature_data, feature_meta_data = self._get_feature_data(pred_name)
 
         num_entities = len(feature_data)
         num_demos = len(feature_meta_data["demos_processed"])
@@ -132,7 +125,7 @@ class RuleDataManager:
             ]
             this_res = larger_value > smaller_value
             res &= this_res
-        rospy.loginfo(f"Classification result: {res}")
+        # rospy.loginfo(f"Classification result: {res}")
         return res
 
     def _construct_candidate(

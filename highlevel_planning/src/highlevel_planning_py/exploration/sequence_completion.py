@@ -25,24 +25,33 @@ def complete_sequence(sequence, parameters, relevant_objects, explorer):
         )
         if plan is False:
             return False
-        fill_sequence, fill_parameters = plan
+        elif len(plan) > 0:
+            fill_sequence, fill_parameters = plan
 
-        # Resample positions because the planner just randomly picked some
-        resample_positions(
-            fill_sequence,
-            fill_parameters,
-            relevant_objects,
-            states,
-            parameterized_goals,
-            explorer,
-        )
+            # Resample positions because the planner just randomly picked some
+            resample_positions(
+                fill_sequence,
+                fill_parameters,
+                relevant_objects,
+                states,
+                parameterized_goals,
+                explorer,
+            )
 
-        fill_sequence_effects = logic_tools.determine_sequence_effects(
-            explorer.knowledge_base, fill_sequence, fill_parameters
-        )
+            fill_sequence_effects = logic_tools.determine_sequence_effects(
+                explorer.knowledge_base, fill_sequence, fill_parameters
+            )
 
-        # Apply fill sequence to current state
-        logic_tools.apply_effects_to_state(states, fill_sequence_effects)
+            # Apply fill sequence to current state
+            logic_tools.apply_effects_to_state(states, fill_sequence_effects)
+
+            # Save the sequence extension
+            if action_idx == 0:
+                precondition_sequence = deepcopy(fill_sequence)
+                precondition_params = deepcopy(fill_parameters)
+            else:
+                completed_sequence.extend(fill_sequence)
+                completed_parameters.extend(fill_parameters)
 
         # Apply actual action to current state
         parameterized_effects = logic_tools.parametrize_predicate_list(
@@ -50,13 +59,6 @@ def complete_sequence(sequence, parameters, relevant_objects, explorer):
         )
         logic_tools.apply_effects_to_state(states, parameterized_effects)
 
-        # Save the sequence extension
-        if action_idx == 0:
-            precondition_sequence = deepcopy(fill_sequence)
-            precondition_params = deepcopy(fill_parameters)
-        else:
-            completed_sequence.extend(fill_sequence)
-            completed_parameters.extend(fill_parameters)
         completed_sequence.append(action_name)
         completed_parameters.append(parameters[action_idx])
         key_action_indices[action_idx] = len(completed_sequence) - 1
@@ -161,12 +163,10 @@ def resample_positions(
         action_description = explorer.knowledge_base.actions[action]
         for param_name, param_type in action_description["params"]:
             param_value = parameters[idx][param_name]
-            if not parameters_fixed[idx][
-                param_name
-            ] and explorer.knowledge_base.is_type(param_value, "position"):
+            if not parameters_fixed[idx][param_name]:
                 if param_value in resampled_parameters:
                     parameters[idx][param_name] = resampled_parameters[param_value]
-                else:
+                elif explorer.knowledge_base.is_type(param_value, "position"):
                     new_position = explorer.sample_position(relevant_objects)
                     new_param_value = explorer.knowledge_base.add_temp_object(
                         object_type="position", object_value=new_position

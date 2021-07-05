@@ -1,28 +1,14 @@
 import os
-import pickle
 import pandas as pd
 from sklearn.svm import SVC
 import seaborn as sns
-import matplotlib.pyplot as plt
+from highlevel_planning_py.predicate_learning.rules.base import RulesBase
 
 
-def dir_levels_up(filepath, num_levels_up):
-    res = filepath
-    for _ in range(num_levels_up):
-        res = os.path.dirname(res)
-    return res
-
-
-class SVMRules:
-    def __init__(self, basedir, feature_manager):
-        self.basedir = basedir
+class SVMRules(RulesBase):
+    def __init__(self, data_dir, feature_manager):
+        RulesBase.__init__(self, data_dir)
         self.pfm = feature_manager
-
-        pred_dir = os.path.join(basedir, "data", "predicates")
-        self.demo_dir = os.path.join(pred_dir, "demonstrations")
-        self.feature_dir = os.path.join(pred_dir, "features")
-        # self.rule_dir = os.path.join(pred_dir, "rules_svm")
-        # os.makedirs(self.rule_dir, exist_ok=True)
         self.clfs = dict()
 
     def build_rules(self, pred_name):
@@ -30,9 +16,7 @@ class SVMRules:
             self.clfs[pred_name] = SVC(kernel="linear")
 
         # Load features
-        feature_file = os.path.join(self.feature_dir, f"{pred_name}.pkl")
-        with open(feature_file, "rb") as f:
-            feature_data, _ = pickle.load(f)
+        feature_data, _ = self._get_feature_data(pred_name)
 
         merged_data = self._merge_data(feature_data)
         merged_data = merged_data.drop(columns="label_r")
@@ -61,7 +45,7 @@ class SVMRules:
 
 
 if __name__ == "__main__":
-    basedir_ = dir_levels_up(os.path.abspath(__file__), 4)
-    assert basedir_.split("/")[-1] == "highlevel_planning"
-    svmr = SVMRules(basedir_, None)
-    svmr.build_rules("on")
+    data_dir_ = os.path.join(os.path.expanduser("~"), "Data", "highlevel_planning")
+    os.makedirs(data_dir_, exist_ok=True)
+    svmr = SVMRules(data_dir_, None)
+    svmr.build_rules("in")

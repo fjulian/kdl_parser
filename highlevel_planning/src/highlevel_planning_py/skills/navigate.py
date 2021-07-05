@@ -1,10 +1,12 @@
 import pybullet as p
 import numpy as np
+from icecream import ic
 from scipy.spatial.transform import Rotation as R
 from highlevel_planning_py.tools.util import (
     homogenous_trafo,
     invert_hom_trafo,
     pos_and_orient_from_hom_trafo,
+    SkillExecutionError,
 )
 
 
@@ -66,9 +68,9 @@ class SkillNavigate:
         else:
             alphas = np.array([nav_angle])
         if nav_min_dist is None:
-            radii = np.arange(0.4, 2.0, 0.1)
+            radii = np.arange(0.4, 2.0, 0.05)
         else:
-            radii = nav_min_dist + np.arange(0.4, 2.0, 0.1)
+            radii = nav_min_dist + np.arange(0.4, 2.0, 0.05)
 
         # Iterate through points on circles around the target
         # First vary the radius
@@ -94,7 +96,8 @@ class SkillNavigate:
     def _find_object_in_hand(self):
         # Determine which object is in the robot's hand
         object_in_hand_uid = None
-        for _, obj in self.scene_.objects.items():
+        object_in_hand_name = "nothing"
+        for obj_name, obj in self.scene_.objects.items():
             temp = p.getClosestPoints(
                 self.robot_uid_,
                 obj.model.uid,
@@ -103,10 +106,14 @@ class SkillNavigate:
             )
             if len(temp) > 0:
                 if object_in_hand_uid is not None:
-                    raise RuntimeError(
+                    ic("---")
+                    ic(object_in_hand_name)
+                    ic(obj_name)
+                    raise SkillExecutionError(
                         "Don't know how to deal with more than one object in robot's hand"
                     )
                 object_in_hand_uid = obj.model.uid
+                object_in_hand_name = obj_name
         return object_in_hand_uid
 
     def _get_object_relative_pose(self, object_in_hand_uid, robot_pos, robot_orient):
@@ -157,11 +164,12 @@ def get_nav_in_reach_description():
     action_params = [
         ["current_pos", "navgoal"],
         ["goal_pos", "navgoal"],
+        ["gid", "grasp_id"],
         ["rob", "robot"],
     ]
     action_preconditions = [
         ("at", True, ["current_pos", "rob"]),
-        ("has-grasp", True, ["goal_pos"]),
+        ("has-grasp", True, ["goal_pos", "gid"]),
     ]
     action_effects = [
         ("in-reach", True, ["goal_pos", "rob"]),
@@ -169,12 +177,17 @@ def get_nav_in_reach_description():
         ("at", True, ["goal_pos", "rob"]),
         ("at", False, ["current_pos", "rob"]),
     ]
+    action_exec_ignore_effects = [
+        ("at", False, ["current_pos", "rob"]),
+        ("in-reach", False, ["current_pos", "rob"]),
+    ]
     return (
         action_name,
         {
             "params": action_params,
             "preconds": action_preconditions,
             "effects": action_effects,
+            "exec_ignore_effects": action_exec_ignore_effects,
         },
     )
 
@@ -192,11 +205,16 @@ def get_nav_at_description():
         ("at", False, ["current_pos", "rob"]),
         ("in-reach", False, ["current_pos", "rob"]),
     ]
+    action_exec_ignore_effects = [
+        ("at", False, ["current_pos", "rob"]),
+        ("in-reach", False, ["current_pos", "rob"]),
+    ]
     return (
         action_name,
         {
             "params": action_params,
             "preconds": action_preconditions,
             "effects": action_effects,
+            "exec_ignore_effects": action_exec_ignore_effects,
         },
     )

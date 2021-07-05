@@ -11,15 +11,25 @@ from datetime import datetime
 
 
 class PredicateDemonstrationManager:
-    def __init__(self, basedir, scene):
+    def __init__(self, basedir, scene, perception):
         self.scene = scene
+        self.perception = perception
         self._data = dict()
         self._meta_data = dict()
-        pred_dir = os.path.join(basedir, "data", "predicates")
+        pred_dir = os.path.join(basedir, "predicates")
         self.demo_dir = os.path.join(pred_dir, "demonstrations")
         os.makedirs(self.demo_dir, exist_ok=True)
 
     def capture_demonstration(self, name: str, arguments: list, label: bool):
+        # Assert that arguments actually exist
+        for arg in arguments:
+            assert arg in self.perception.object_info["object_ids_by_name"]
+
+        # Create directory to save data
+        time_now = datetime.now()
+        time_string = time_now.strftime("%y%m%d-%H%M%S")
+        this_demo_dir = os.path.join(self.demo_dir, name, time_string)
+        os.makedirs(this_demo_dir, exist_ok=False)
 
         meta_file = os.path.join(self.demo_dir, name, "_meta.pkl")
         if os.path.isfile(meta_file):
@@ -30,12 +40,6 @@ class PredicateDemonstrationManager:
             meta_data = {"num_args": len(arguments)}
             with open(meta_file, "wb") as f:
                 pickle.dump(meta_data, f)
-
-        time_now = datetime.now()
-        time_string = time_now.strftime("%y%m%d-%H%M%S")
-
-        this_demo_dir = os.path.join(self.demo_dir, name, time_string)
-        os.makedirs(this_demo_dir, exist_ok=False)
 
         # Save pickle
         save_data = (name, arguments, label, self.scene.objects)

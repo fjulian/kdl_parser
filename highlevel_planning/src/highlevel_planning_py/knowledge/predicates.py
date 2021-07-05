@@ -14,6 +14,7 @@ class Predicates:
             "inside": self.inside,
             "on": self.on,
             "has-grasp": self.has_grasp,
+            "grasped-with": self.grasped_with,
         }
 
         self.descriptions = {
@@ -23,7 +24,8 @@ class Predicates:
             "at": [["target", "navgoal"], ["rob", "robot"]],
             "inside": [["container", "item"], ["contained", "item"]],
             "on": [["supporting", "item"], ["supported", "item"]],
-            "has-grasp": [["obj", "navgoal"]],
+            "has-grasp": [["obj", "navgoal"], ["gid", "grasp_id"]],
+            "grasped-with": [["obj", "item"], ["gid", "grasp_id"], ["rob", "robot"]],
         }
 
         self.sk_grasping = SkillGrasping(scene, robot, cfg)
@@ -51,19 +53,14 @@ class Predicates:
                 dist_finger1 = contact[8] if contact[8] < dist_finger1 else dist_finger1
             elif contact[3] == robot.joint_idx_fingers[1]:
                 dist_finger2 = contact[8] if contact[8] < dist_finger2 else dist_finger2
-        desired_object_in_hand = (abs(dist_finger1) < 0.001) and (
-            abs(dist_finger2) < 0.001
+        desired_object_in_hand = (abs(dist_finger1) < 0.01) and (
+            abs(dist_finger2) < 0.01
         )
         return (not empty_hand_res) and desired_object_in_hand
 
     def in_reach(self, target_item, robot_name):
         if self._kb.is_type(target_item, "position"):
             return self.in_reach_pos(self._kb.lookup_table[target_item], robot_name)
-        elif type(target_item) is list:
-            print(
-                "wooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
-            )  # Want to see if this ever happens
-            return self.in_reach_pos(target_item, robot_name)
         elif type(target_item) is str:
             return self.in_reach_obj(target_item, robot_name)
         else:
@@ -151,6 +148,8 @@ class Predicates:
         Returns:
             bool: Whether the container object contains the contained one.
         """
+        if contained_object == container_object:
+            return False
         container_uid = self._scene.objects[container_object].model.uid
         contained_uid = self._scene.objects[contained_object].model.uid
         aabb_container = get_combined_aabb(container_uid)
@@ -167,6 +166,8 @@ class Predicates:
             supporting_object ([type]): [description]
             supported_object ([type]): [description]
         """
+        if supporting_object == supported_object:
+            return False
         supporting_uid = self._scene.objects[supporting_object].model.uid
         supported_uid = self._scene.objects[supported_object].model.uid
         aabb_supporting = get_combined_aabb(supporting_uid)
@@ -183,7 +184,11 @@ class Predicates:
         above_tol = self._cfg.getparam(
             ["predicates", "on-pred", "max_above"], default_value=0.05
         )
-        above = lower_supported[2] > upper_supporting[2] - above_tol
+        above = (
+            upper_supporting[2] - above_tol
+            < lower_supported[2]
+            < upper_supporting[2] + above_tol
+        )
 
         # Check if supported object is within footprint of supporting one (xy-plane).
         # Currently this is based on the position of the supported object. Need to see whether this makes sense.
@@ -193,5 +198,24 @@ class Predicates:
 
         return above and within
 
-    def has_grasp(self, obj):
-        return len(self._scene.objects[obj].grasp_pos) > 0
+    def has_grasp(self, obj, gid):
+        if obj in self._scene.objects:
+            grasp_spec = self._kb.lookup_table[gid]
+            success = True
+            success &= 0 <= grasp_spec[0] < len(self._scene.objects[obj].grasp_links)
+            if not success:
+                return False
+            link_id = self._scene.objects[obj].grasp_links[grasp_spec[0]]
+            success &= (
+                0 <= grasp_spec[1] < len(self._scene.objects[obj].grasp_pos[link_id])
+            )
+            return success
+        else:
+            return False
+
+    def grasped_with(self, obj, gid, rob):
+        # TODO: add check whether object is actually grasped with correct grasp
+        success = True
+        success &= self.has_grasp(obj, gid)
+        success &= self.in_hand(obj, rob)
+        return success

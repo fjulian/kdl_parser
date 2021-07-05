@@ -6,6 +6,8 @@ import time
 from math import ceil
 import atexit
 
+# from dishwasher_challenge.utils import add_mesh_object
+
 
 class World(object):
     def __init__(self, sleep=True):
@@ -28,7 +30,7 @@ class World(object):
         }
 
         self.velocity_setter = None
-        atexit.register(self.close)
+        # atexit.register(self.close)
 
     def sleep(self, seconds):
         if self.sleep_flag:
@@ -55,13 +57,33 @@ class _Model:
 
     def load(self, path, position, orientation, scale):
         model_path = os.path.expanduser(path)
-        self.uid = pb.loadURDF(
-            model_path,
-            position,
-            orientation,
-            globalScaling=scale,
-            physicsClientId=self._physics_client,
-        )
+        ending = model_path.split(".")[-1]
+        if ending == "urdf":
+            self.uid = pb.loadURDF(
+                model_path,
+                position,
+                orientation,
+                globalScaling=scale,
+                physicsClientId=self._physics_client,
+            )
+        elif ending == "sdf":
+            tmp = pb.loadSDF(
+                sdfFileName=model_path,
+                globalScaling=scale,
+                physicsClientId=self._physics_client,
+            )
+            assert len(tmp) == 1
+            self.uid = tmp[0]
+            pb.resetBasePositionAndOrientation(
+                self.uid,
+                posObj=position,
+                ornObj=orientation,
+                physicsClientId=self._physics_client,
+            )
+        else:
+            self.uid = add_mesh_object(
+                model_path, position, orientation, self._physics_client
+            )
         self.name = pb.getBodyInfo(self.uid, physicsClientId=self._physics_client)
 
         for i in range(pb.getNumJoints(self.uid, physicsClientId=self._physics_client)):
@@ -91,14 +113,20 @@ class WorldPybullet(World):
         if load_objects:
             pb.resetSimulation(physicsClientId=self.client_id)
         else:
-            self.restore_state(os.path.join(savedir, "state.bullet"))
+            self.restore_state_file(os.path.join(savedir, "state.bullet"))
             pb.removeAllUserDebugItems(physicsClientId=self.client_id)
 
+        pb.configureDebugVisualizer(pb.COV_ENABLE_GUI, 0)
         self.basic_settings()
+
+        # Persistance for storing states
+        self.active_constraints = list()
 
     def basic_settings(self):
         pb.setGravity(0, 0, -9.81, physicsClientId=self.client_id)
-        pb.setAdditionalSearchPath(pybullet_data.getDataPath())
+        pb.setAdditionalSearchPath(
+            pybullet_data.getDataPath(), physicsClientId=self.client_id
+        )
         pb.loadURDF("plane.urdf", physicsClientId=self.client_id)
 
     def add_model(self, path, position, orientation, scale=1.0):
@@ -165,5 +193,38 @@ class WorldPybullet(World):
     def close(self):
         pb.disconnect(physicsClientId=self.client_id)
 
-    def restore_state(self, filepath):
+    def restore_state_file(self, filepath):
         pb.restoreState(fileName=filepath, physicsClientId=self.client_id)
+
+    def save_state(self):
+        state_id = pb.saveState(physicsClientId=self.client_id)
+        constraint_list = [constraint[1] for constraint in self.active_constraints]
+        return state_id, constraint_list
+
+    def restore_state(self, saved_state):
+        self.delete_all_constraints()
+        pb.restoreState(stateId=saved_state[0], physicsClientId=self.client_id)
+        for constraint in saved_state[1]:
+            self.add_constraint(constraint)
+
+    def add_constraint(self, constraint_spec):
+        constraint_id = pb.createConstraint(
+            constraint_spec.parent_uid,
+            constraint_spec.parent_link_id,
+            constraint_spec.child_uid,
+            constraint_spec.child_link_id,
+            jointType=pb.JOINT_FIXED,
+            jointAxis=[1.0, 0.0, 0.0],
+            parentFramePosition=constraint_spec.trafo_pos,
+            childFramePosition=[0.0, 0.0, 0.0],
+            parentFrameOrientation=constraint_spec.trafo_orient,
+            physicsClientId=self.client_id,
+        )
+        self.active_constraints.append((constraint_id, constraint_spec))
+
+    def delete_all_constraints(self):
+        for constraint in self.active_constraints:
+            pb.removeConstraint(
+                userConstraintUniqueId=constraint[0], physicsClientId=self.client_id
+            )
+        self.active_constraints.clear()

@@ -27,10 +27,16 @@ class SkillPlacing:
 
         self.robot.to_start()
 
+        self.robot._world.draw_cross(np.squeeze(target_pos))
+
         # ----- Compute place location in robot frame -------
 
         # Get robot arm base pose
-        temp1 = p.getLinkState(self.robot.model.uid, self.robot.arm_base_link_idx)
+        temp1 = p.getLinkState(
+            self.robot.model.uid,
+            self.robot.arm_base_link_idx,
+            physicsClientId=self.robot.pb_id,
+        )
         r_O_O_rob = np.array(temp1[4]).reshape((-1, 1))
         C_O_rob = R.from_quat(np.array(temp1[5]))
         T_O_rob = homogenous_trafo(r_O_O_rob, C_O_rob)
@@ -41,7 +47,8 @@ class SkillPlacing:
         r_R_R_obj = np.matmul(T_rob_O, np.reshape(np.append(r_O_O_obj, 1.0), (-1, 1)))
 
         # Orientation in robot frame
-        C_rob_ee = R.from_quat(self.robot.start_orient)
+        # C_rob_ee = R.from_quat(self.robot.start_orient)
+        C_rob_ee = R.from_quat(self.robot.grasp_orientation)
 
         # ----- Place object -------
 
@@ -53,6 +60,7 @@ class SkillPlacing:
             pos_pre = pos - np.matmul(orient.as_dcm(), np.array([0.0, 0.0, 0.15]))
             pos_pre_joints = self.robot.ik(pos_pre, orient.as_quat())
             if pos_pre_joints.tolist() is None:
+                print("IK failed for pre place pose")
                 raise IKError
             collision_during_pre = False
             if not self.robot.transition_cmd_to(pos_pre_joints, stop_on_contact=True):
@@ -60,13 +68,24 @@ class SkillPlacing:
 
             # Go to place pose
             if not collision_during_pre:
-                self.robot.transition_cartesian(
-                    pos, orient.as_quat(), stop_on_contact=True
-                )
+                cartesian = False
+                if cartesian:
+                    self.robot.transition_cartesian(
+                        pos, orient.as_quat(), stop_on_contact=True
+                    )
+                else:
+                    pos_joints = self.robot.ik(pos, orient.as_quat())
+                    if pos_joints.tolist() is None:
+                        print("IK failed for place pose")
+                        raise IKError
+                    self.robot.transition_cmd_to(pos_joints, stop_on_contact=True)
+
+            # Remove grasp constraints
+            self.robot._world.delete_all_constraints()
 
             self.robot._world.step_seconds(0.2)
             self.robot.open_gripper()
-            self.robot._world.step_seconds(0.4)
+            self.robot._world.step_seconds(0.5)
 
             # Go back to pre-place-pose
             if not collision_during_pre:
@@ -86,18 +105,30 @@ class SkillPlacing:
 
 def get_placing_description():
     action_name = "place"
-    action_params = [["obj", "item"], ["pos", "position"], ["rob", "robot"]]
+    action_params = [
+        ["obj", "item-graspable"],
+        ["pos", "position"],
+        ["gid", "grasp_id"],
+        ["rob", "robot"],
+    ]
     action_preconditions = [
         ("in-reach", True, ["pos", "rob"]),
         ("empty-hand", False, ["rob"]),
         ("in-hand", True, ["obj", "rob"]),
+        ("grasped-with", True, ["obj", "gid", "rob"]),
     ]
-    action_effects = [("empty-hand", True, ["rob"]), ("in-hand", False, ["obj", "rob"])]
+    action_effects = [
+        ("empty-hand", True, ["rob"]),
+        ("in-hand", False, ["obj", "rob"]),
+        ("grasped-with", False, ["obj", "gid", "rob"]),
+    ]
+    action_exec_ignore_effects = list()
     return (
         action_name,
         {
             "params": action_params,
             "preconds": action_preconditions,
             "effects": action_effects,
+            "exec_ignore_effects": action_exec_ignore_effects,
         },
     )

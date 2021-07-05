@@ -3,13 +3,13 @@ import os
 from highlevel_planning_py.exploration.logic_tools import parse_plan
 
 
-def pddl_planner(domain_file, problem_file, action_specs, base_dir, debug_print=False):
+def pddl_planner(domain_file, problem_file, action_specs, bin_dir, debug_print=False):
     try:
         res = subprocess.check_output(
             [
-                os.path.join(base_dir, "bin", "ff"),
+                os.path.join(bin_dir, "ff"),
                 "-s",
-                "2",
+                "0",
                 "-o",
                 domain_file,
                 "-f",

@@ -166,7 +166,13 @@ knowledge_base.objects = {
 The external planner can be called from a terminal using the following command:
 
 ```bash
-./highlevel_planning/bin/ff -s 2 -o highlevel_planning/knowledge/chimera/main/200721-150827_domain.pddl -f highlevel_planning/knowledge/chimera/main/200721-150827_problem.pddl
+./highlevel_planning/bin/ff -s 2 -o ~/Data/highlevel_planning/knowledge/ScenePlanning1/explore/210410-001641_domain.pddl -f ~/Data/highlevel_planning/knowledge/ScenePlanning1/explore/210410-001641_problem.pddl
 ```
 
 Replace domain and problem files appropriately.
+
+### Copy code to EULER
+
+```bash
+rsync -r --progress --delete --exclude=.venv --exclude=.git --exclude=__pycache__ --exclude=.idea ./asl_highlevel_planning fjulian@euler.ethz.ch:Code/
+```

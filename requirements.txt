@@ -1,12 +1,18 @@
-pybullet==3.0.7
-numpy==1.19.2
-scipy==1.5.2
-urdf-parser-py==0.0.3
+pybullet
+numpy
+scipy
+urdf-parser-py
 pandas
-cython
 ipython
 
 argparse
 PyYAML
 matplotlib
 tqdm
+
+pytest
+networkx
+seaborn
+sklearn
+scikit-learn
+icecream

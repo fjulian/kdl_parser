@@ -55,16 +55,18 @@ class SequentialExecution(ExecutionSystem):
             ],
         }
 
-    def step(self):
+    def step(self, index=None):
+        idx = self.current_idx_ if index is None else index
+
         success = True
         msgs = []
         if not self.finished_plan:
-            action_name = self.sequence[self.current_idx_]
+            action_name = self.sequence[idx]
             action_name = action_name.split("_")[0]
-            action_parameters = self.parameters[self.current_idx_]
+            action_parameters = self.parameters[idx]
             success, msgs = self.execute_action(action_name, action_parameters)
 
-            if success:
+            if success and index is None:
                 self.current_idx_ += 1
                 if self.current_idx_ == len(self.sequence):
                     self.finished_plan = True
@@ -83,8 +85,10 @@ class SequentialExecution(ExecutionSystem):
             try:
                 if action_name == "grasp":
                     target_name = action_parameters["obj"]
-                    target_link_idx = 0
-                    target_grasp_idx = 0
+                    grasp_spec = action_parameters["gid"]
+                    grasp_spec = self.knowledge_base.lookup_table[grasp_spec]
+                    target_link_idx = grasp_spec[0]
+                    target_grasp_idx = grasp_spec[1]
                     res = self.skill_set_["grasp"].grasp_object(
                         target_name, target_link_idx, target_grasp_idx
                     )
@@ -94,7 +98,7 @@ class SequentialExecution(ExecutionSystem):
                     target_name = action_parameters["goal_pos"]
                     if self.knowledge_base.is_type(target_name, type_query="position"):
                         position = self.knowledge_base.lookup_table[target_name]
-                        self.skill_set_["nav"].move_to_pos(position, nav_min_dist=0.3)
+                        self.skill_set_["nav"].move_to_pos(position, nav_min_dist=0.2)
                     else:
                         self.skill_set_["nav"].move_to_object(target_name)
                 elif action_name == "place":
@@ -115,22 +119,28 @@ class SequentialExecution(ExecutionSystem):
         # Check if the effects were reached successfully
         action_description = self.knowledge_base.actions[action_name]
         for effect in action_description["effects"]:
-            if action_name in self.ignore_effects:
-                skip_effect = False
-                for ignore_effect in self.ignore_effects[action_name]:
-                    if ignore_effect == effect:
-                        skip_effect = True
-                if skip_effect:
-                    continue
+            skip_effect = False
+            for ignore_effect in action_description["exec_ignore_effects"]:
+                if ignore_effect == effect:
+                    skip_effect = True
+                    break
+            if skip_effect:
+                continue
+
             parameterized_effect = parametrize_predicate(effect, action_parameters)
             res = self.knowledge_base.predicate_funcs.call[effect[0]](
                 *parameterized_effect[2]
             )
             if not res == effect[1]:
+                # Try it a second time because especially grasp detection is wonky at times.
+                res = self.knowledge_base.predicate_funcs.call[effect[0]](
+                    *parameterized_effect[2]
+                )
+            if not res == effect[1]:
                 success = False
                 msgs.append(
                     "Failed to reach effect {} during action {}".format(
-                        effect[0], action_name
+                        parameterized_effect, action_name
                     )
                 )
 

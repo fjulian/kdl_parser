@@ -56,24 +56,6 @@ class PDDLExtender(object):
                 self._retype_argument(arg, action_params, already_retyped, time_string)
             action_preconditions.append(meta_precond)
 
-        # Submit new action description
-        new_action_description = {
-            "params": action_params,
-            "preconds": action_preconditions,
-            "effects": action_effects,
-        }
-
-        self.knowledge_base.add_action(
-            action_name, new_action_description, overwrite=False
-        )
-
-        # Determine hidden parameters
-        hidden_parameters = [{}] * len(parameters)
-        for idx, params in enumerate(parameters):
-            for param_name, param_value in params.items():
-                if param_value not in already_retyped:
-                    hidden_parameters[idx][param_name] = param_value
-
         # Determine translation between meta action argument names and sub action argument names
         param_translator = [dict.fromkeys(param_dict) for param_dict in parameters]
         for idx, params in enumerate(parameters):
@@ -82,6 +64,50 @@ class PDDLExtender(object):
                     param_translator[idx][param_name] = param_value
                 else:
                     param_translator[idx][param_name] = param_name
+
+        # Collect any effects that shall be ignored during execution
+        action_exec_ignore_effects = list()
+        for action_idx, action in enumerate(sequence):
+            for ignore_effect in self.knowledge_base.actions[action][
+                "exec_ignore_effects"
+            ]:
+                # Translate parameter names
+                new_param_names = [
+                    param_translator[action_idx][old_param_name]
+                    for old_param_name in ignore_effect[2]
+                ]
+                new_param_names = tuple(new_param_names)
+                new_ignore_effect = (
+                    ignore_effect[0],
+                    ignore_effect[1],
+                    new_param_names,
+                )
+
+                if new_ignore_effect in action_effects:
+                    action_exec_ignore_effects.append(new_ignore_effect)
+
+        # Submit new action description
+        new_action_description = {
+            "params": action_params,
+            "preconds": action_preconditions,
+            "effects": action_effects,
+            "exec_ignore_effects": action_exec_ignore_effects,
+        }
+
+        action_name = self.knowledge_base.add_action(
+            action_name, new_action_description, overwrite=False, rename_if_exists=True
+        )
+        if action_name is False:
+            raise ValueError("Failure when trying to add new action to knowledge base.")
+
+        # Determine hidden parameters
+        hidden_parameters = [{}] * len(parameters)
+        for idx, params in enumerate(parameters):
+            for param_name, param_value in params.items():
+                if param_value not in already_retyped:
+                    hidden_parameters[idx][param_name] = param_value
+                    if param_value not in self.knowledge_base.objects:
+                        self.knowledge_base.make_permanent(param_value)
 
         # Full action parameters: list of tuples (name, type, value)
         full_action_params = list()
@@ -106,6 +132,9 @@ class PDDLExtender(object):
     def generalize_action(
         self, action_name: str, parameters: dict, additional_preconditions=None
     ):
+        if action_name not in self.knowledge_base.meta_actions:
+            return
+
         parameters = deepcopy(parameters)
         time_string = time.strftime("%y%m%d%H%M%S")
 
@@ -143,8 +172,15 @@ class PDDLExtender(object):
             ):
                 self.knowledge_base.add_object(parameter_value, parameter_type)
             param_list.append((parameter_name, parameter_type, parameter_value))
-        self._add_parameterization(param_list, action_name)
         self._extend_parameterizations(action_name, new_description, parameters)
+
+        # Check if there already is a parameterization recorded for the objects passed.
+        # This can happen when the existing parameterization is flaky and often doesn't work
+        # in practice. If yes, remove old parameterization.
+        self._remove_parameterization(param_list, action_name)
+
+        # Add new parameterization
+        self._add_parameterization(param_list, action_name)
 
     def _retype_argument(self, arg, action_params, already_retyped, time_string):
         if arg not in already_retyped:
@@ -198,6 +234,20 @@ class PDDLExtender(object):
                     param[0]
                 ].add(param[2])
 
+    def _remove_parameterization(self, param_list, action_name):
+        object_params = list()
+        for param in param_list:
+            if param[1] != "position":
+                object_params.append(param)
+        object_params = tuple(object_params)
+        if object_params in self.knowledge_base.parameterizations[action_name]:
+            for name in self.knowledge_base.parameterizations[action_name][
+                object_params
+            ]:
+                self.knowledge_base.parameterizations[action_name][object_params][
+                    name
+                ] = set()
+
     def _extend_parameterizations(
         self, action_name: str, action_description, parameters
     ):
@@ -207,6 +257,11 @@ class PDDLExtender(object):
         Returns:
 
         """
+
+        if action_name not in self.knowledge_base.parameterizations:
+            # No need to extend anything
+            return
+
         parameterization_replacements = dict()
         gt_parameter_name_list = [
             param[0] for param in action_description["params"] if param[1] != "position"

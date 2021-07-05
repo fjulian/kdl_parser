@@ -199,26 +199,38 @@ def apply_effects_to_state(states: set, effects):
             states.add((effect[0],) + tuple(effect[2]))
 
 
-def determine_relevant_predicates(relevant_objects, knowledge_base):
+def find_all_parameter_assignments(parameters, relevant_objects, knowledge_base):
+    # Find possible parameter assignments
+    parameter_assignments = list()
+    for param_idx, param in enumerate(parameters):
+        assignments_this_param = list()
+        if param[1] == "robot":
+            assignments_this_param.append("robot1")
+        else:
+            for obj in relevant_objects:
+                if knowledge_base.is_type(obj, param[1]):
+                    assignments_this_param.append(obj)
+        parameter_assignments.append(assignments_this_param)
+    return parameter_assignments
+
+
+def determine_relevant_predicates(
+    relevant_objects, knowledge_base, ignore_predicates=None
+):
     """
     Determine all predicates of objects involved in this action and objects that are close to them
     """
     predicate_descriptions = knowledge_base.predicate_funcs.descriptions
     relevant_predicates = list()
     for pred in predicate_descriptions:
+        if ignore_predicates is not None and pred in ignore_predicates:
+            continue
+
         parameters = predicate_descriptions[pred]
 
-        # Find possible parameter assignments
-        parameter_assignments = list()
-        for param_idx, param in enumerate(parameters):
-            assignments_this_param = list()
-            if param[1] == "robot":
-                assignments_this_param.append("robot1")
-            else:
-                for obj in relevant_objects:
-                    if knowledge_base.is_type(obj, param[1]):
-                        assignments_this_param.append(obj)
-            parameter_assignments.append(assignments_this_param)
+        parameter_assignments = find_all_parameter_assignments(
+            parameters, relevant_objects, knowledge_base
+        )
 
         for parametrization in product(*parameter_assignments):
             relevant_predicates.append((pred, parametrization))

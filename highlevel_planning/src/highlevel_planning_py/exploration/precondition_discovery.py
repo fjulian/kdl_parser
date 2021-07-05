@@ -24,7 +24,7 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
     ) = completion_results
 
     # Restore initial state
-    p.restoreState(stateId=explorer.current_state_id)
+    explorer.world.restore_state(explorer.current_state_id)
 
     relevant_predicates = determine_relevant_predicates(
         relevant_objects, explorer.knowledge_base
@@ -41,6 +41,7 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
         explorer.knowledge_base,
     )
     if not res:
+        print("[precondition discovery] Failure during precondition sequence execution")
         return False
 
     current_predicates = measure_predicates(
@@ -67,6 +68,7 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
             explorer.knowledge_base,
         )
         if not res:
+            print(f"[precondition discovery] Failure during action {action}")
             return False
         current_predicates = measure_predicates(
             relevant_predicates, explorer.knowledge_base
@@ -105,8 +107,8 @@ def precondition_discovery(relevant_objects, completion_results, explorer):
             continue
         candidates_to_remove.extend([idx, opposite_index])
 
-    # Filter out side effects that do not concern goal objects
-    # TODO think about if this makes sense. If yes, implement it.
+    # TODO: Filter out side effects that don't have anything to do with the goal.
+    # Already checked side effects that only include goal objects. This does not make sense.
 
     candidates_to_remove = list(set(candidates_to_remove))
     candidates_to_remove.sort(reverse=True)

@@ -1,0 +1,7 @@
+simserver_ros2:
+  ros__parameters:
+    method: "gui",
+    reuse_objects: false,
+    sleep: true,
+    non_interactive: false,
+    no_seed: false,

@@ -1,11 +1,12 @@
 import numpy as np
 import os
 import atexit
+import ast
 from datetime import datetime
-import pybullet as p
 
 # Simulation
-from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
+# from highlevel_planning_py.sim.scene_planning_1 import ScenePlanning1
+from highlevel_planning_py.sim.scene_planning_2 import ScenePlanning2
 
 # Skills
 from highlevel_planning_py.skills.navigate import SkillNavigate
@@ -26,7 +27,13 @@ from highlevel_planning_py.tools.reporter import Reporter
 
 # ----------------------------------------------------------------------
 
-BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SRCROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PATHS = {
+    "data_dir": os.path.join(os.path.expanduser("~"), "Data", "highlevel_planning"),
+    "src_root_dir": SRCROOT,
+    "asset_dir": os.path.join(SRCROOT, "data", "models"),
+    "bin_dir": os.path.join(SRCROOT, "bin"),
+}
 
 
 def exit_handler(rep: Reporter):
@@ -54,29 +61,77 @@ def main():
         raise RuntimeError("Cannot reload objects when in direct mode.")
 
     # Load existing simulation data if desired
-    savedir = os.path.join(BASEDIR, "data", "sim")
+    savedir = os.path.join(PATHS["data_dir"], "simulator")
     objects, robot_mdl = run_util.restore_pybullet_sim(savedir, args)
 
     # Load config file
-    cfg = ConfigYaml(os.path.join(BASEDIR, "config", "main.yaml"))
-
-    time_now = datetime.now()
-    time_string = time_now.strftime("%y%m%d-%H%M%S")
-    rep = Reporter(BASEDIR, cfg, time_string, args.noninteractive)
-    atexit.register(exit_handler, rep)
+    if len(args.config_file_path) == 0:
+        config_file_path = os.path.join(SRCROOT, "config", "main.yaml")
+    else:
+        config_file_path = args.config_file_path
+    cfg = ConfigYaml(config_file_path)
 
     # Populate simulation
     scene, world = run_util.setup_pybullet_world(
-        ScenePlanning1, BASEDIR, args, savedir, objects
+        ScenePlanning2, PATHS["asset_dir"], args, savedir, objects
     )
-    robot = run_util.setup_robot(world, cfg, BASEDIR, robot_mdl)
+    robot = run_util.setup_robot(world, cfg, PATHS["asset_dir"], robot_mdl)
+
+    # Set up reporter
+    time_now = datetime.now()
+    time_string = time_now.strftime("%y%m%d-%H%M%S")
+    rep = Reporter(
+        PATHS,
+        cfg,
+        domain_name=scene.__class__.__name__,
+        time_string=time_string,
+        domain_file=args.domain_file,
+    )
+    atexit.register(exit_handler, rep)
 
     # Save state
     run_util.save_pybullet_sim(args, savedir, scene, robot)
 
+    # ---------------------------------------------------
+
+    # User input
+
+    # Set goal
+    # goals = [("in-hand", True, ("duck", "robot1"))]
+    # goals = [("at", True, ("container1", "robot1"))]
+    # goals = [("at", True, ("cupboard", "robot1"))]
+    # goals = [("on", True, ("cupboard", "cube1"))]
+    # goals = [("on", True, ("cupboard", "duck"))]
+    # goals = [
+    #     ("on", True, ("cupboard", "cube1")),
+    #     ("at", True, ("container1", "robot1")),
+    # ]
+    # goals = [("on", True, ("container2", "cube1"))]
+    # goals = [("on", True, ("container2", "lego"))]
+    # goals = [("inside", True, ("container2", "cube1"))]
+    # goals = [("inside", True, ("container1", "cube1"))]
+    # goals = [("inside", True, ("container1", "lego"))]
+    # goals = [("inside", True, ("container1", "duck"))]
+    # goals = [("inside", True, ("shelf", "tall_box"))]
+    # goals = [("inside", True, ("container2", "cube2"))]
+    goals = ast.literal_eval(cfg.getparam(["user_input", "goals"]))
+
+    # Define a demonstration to guide exploration
+    # demo_sequence = ["place", "place"]
+    # demo_parameters = [{"obj": "lid2"}, {"obj": "cube1"}]
+    # demo_sequence = ["place"]
+    # demo_parameters = [{"obj": "cube1"}]
+    demo_sequence = ast.literal_eval(cfg.getparam(["user_input", "demo_sequence"]))
+    demo_parameters = ast.literal_eval(cfg.getparam(["user_input", "demo_parameters"]))
+    if len(demo_sequence) == 0:
+        print("No demonstration given")
+        demo_sequence, demo_parameters = None, None
+
     # -----------------------------------
 
-    kb, preds = run_util.setup_knowledge_base(BASEDIR, scene, robot, cfg, time_string)
+    kb, preds = run_util.setup_knowledge_base(
+        PATHS, scene, robot, cfg, time_string, goals, domain_file=args.domain_file
+    )
 
     # Set up skills
     sk_grasp = SkillGrasping(scene, robot, cfg)
@@ -88,22 +143,18 @@ def main():
     pddl_ex = PDDLExtender(kb, preds)
 
     # Set up exploration
-    xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg)
-
-    # Define a demonstration to guide exploration
-    demo_sequence, demo_parameters = None, None
-    # demo_sequence = ["place", "place"]
-    # demo_parameters = [{"obj": "lid1"}, {"obj": "duck"}]
+    xplorer = Explorer(skill_set, robot, scene.objects, pddl_ex, kb, cfg, world)
 
     # ---------------------------------------------------------------
 
     # Store initial state
-    initial_state_id = p.saveState()
+    initial_state_id = world.save_state()
 
+    explored = False
     while True:
         # Plan
         plan = kb.solve()
-        rep.report_after_planning(plan)
+        rep.report_after_planning(plan, kb)
 
         # Execute
         if plan is False:
@@ -124,6 +175,9 @@ def main():
                 break
             else:
                 print("Failure during plan execution.")
+                if explored:
+                    print("Already explored once, aborting.")
+                    break
 
         # Decide what happens next
         if not args.noninteractive:
@@ -132,6 +186,7 @@ def main():
             choice = "e"
         if choice == "e":
             # Exploration
+            explored = True
             rep.report_before_exploration(kb, plan)
             success, metrics = xplorer.exploration(
                 planning_failed,
