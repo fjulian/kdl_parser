@@ -332,7 +332,7 @@ def compare_hlp_mcts():
     # color_palette = ["#9D0208", "#D00000", "#E85D04", "#FFBA08", "#491892"]  # orange
     color_palette_lighter = ["#21FFC8", "#98D87A", "#E1FF4E", "#FCFF53", "#FF6BAB"]
     if plot_timing:
-        fig1, ax1 = plt.subplots(figsize=(12, 3.5))
+        fig1, ax1 = plt.subplots(figsize=(8, 3.5))
         sns.boxplot(
             x="experiment",
             y="total_time",
@@ -352,7 +352,8 @@ def compare_hlp_mcts():
         for i in range(len(experiment_strings)):
             for j in range(len(method_strings)):
                 pos_x = i + label_offsets[j]
-                pos_y = 960
+                # pos_y = 960 - 50 * (j % 2)
+                pos_y = 960 - 50 * (len(method_strings) - j - 1)
                 tmp = list(experiment_strings.keys())
                 tmt_cnt = counts[tmp[i]][method_strings[j]]["timeout_cnt"]
                 label_text = f"{tmt_cnt}" if tmt_cnt is not None else ""
@@ -425,29 +426,29 @@ def compare_hlp_mcts():
         + grouped_data["t_comp_percent_all_wo_sim"]
     )
 
-    fig3, ax3 = plt.subplots(figsize=(5, 1.5))
+    fig3, ax3 = plt.subplots(figsize=(2, 3.5))
     sns.barplot(
-        x="experiment",
+        x="t_comp_percent_checksum",
         hue="method",
-        y="t_comp_percent_checksum",
+        y="experiment",
         palette=color_palette_lighter,
         color="b",
         hue_order=method_strings,
         data=grouped_data,
         ax=ax3,
-        hatch="..",
+        hatch="....",
         alpha=0.99,
     )
     sns.barplot(
-        x="experiment",
+        x="t_comp_percent_simulating",
         hue="method",
-        y="t_comp_percent_simulating",
+        y="experiment",
         palette=color_palette,
         color="b",
         hue_order=method_strings,
         data=grouped_data,
         ax=ax3,
-        hatch="--",
+        hatch="----",
         alpha=0.99,
     )
     legend_elements = list()
@@ -456,21 +457,21 @@ def compare_hlp_mcts():
     #         Patch(facecolor=color_palette[i], label=method_strings[i])
     #     )
     legend_elements.append(
-        Patch(facecolor="white", edgecolor="gray", hatch="--", label="Simulation")
+        Patch(facecolor="white", edgecolor="gray", hatch="----", label="Simulation")
     )
     legend_elements.append(
-        Patch(facecolor="white", edgecolor="gray", hatch="..", label="Other")
+        Patch(facecolor="white", edgecolor="gray", hatch="....", label="Other")
     )
     lgd3 = plt.legend(
         handles=legend_elements,
         bbox_to_anchor=(0.0, 1.02, 1.0, 0.102),
         loc="lower left",
-        ncol=2,
+        ncol=1,
         mode="expand",
         borderaxespad=0.0,
     )
-    plt.xlabel("Experiment ID")
-    plt.ylabel("Relative time [%]")
+    plt.ylabel("Experiment ID")
+    plt.xlabel("Relative time [%]")
     plt.show()
 
     # Save figures
